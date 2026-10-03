@@ -369,8 +369,9 @@ luna-send -n 1 -f luna://com.webos.service.tvpower/power/getPowerState '{}'
 luna-send -n 1 -f luna://com.webos.service.videooutput/getStatus '{}'
 cat /var/lib/webosbrew/tvweb-boot.log
 ```
+### Install Steps
 
-### 1. Get the files
+#### 1. Get the files
 
 > [!TIP]
 > **Git is required.** On Windows, install [Git for Windows](https://git-scm.com/download/win), which also provides the Git Bash window used by the commands below. macOS and most Linux distributions already include Git or make it available through their standard package manager.
@@ -382,7 +383,7 @@ git clone https://github.com/rorygallagher2024/lg-webos-dashboard.git
 cd lg-webos-dashboard/server
 ```
 
-### 2. Install the dashboard
+#### 2. Install the dashboard
 
 Find the TV's address under Settings → Network on the TV, or in the router's list of devices. The installer automatically uses SSH if the TV has it, and falls back to the Homebrew Channel's telnet if not.
 
