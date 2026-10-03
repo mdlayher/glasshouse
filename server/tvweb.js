@@ -39,6 +39,7 @@ var lunaTransport = require('./lib/luna');
 var say = require('./lib/say');
 var lgSettings = require('./lib/lgsettings');
 var game = require('./lib/game');
+var piccapTransport = require('./lib/piccap');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -72,6 +73,9 @@ var CONFIG = {
   // Optional shared secret. If non-empty, every /api/ request must carry
   // ?k=<token>. Keeps casual LAN devices out.
   token: '',
+
+  // PicCap status checks start a process on the TV, so this stays opt-in.
+  piccap: { enabled: false, pollIntervalMs: 30000 },
 
   // Home Assistant & MQTT Integration
   mqtt: {
@@ -347,6 +351,13 @@ var liveState = stateModule.init({
     clearLunaCache(LIVE_STALE[group]);
   }
 });
+
+var piccap = CONFIG.piccap && CONFIG.piccap.enabled === true
+  ? piccapTransport.init({
+      luna: luna,
+      pollIntervalMs: CONFIG.piccap.pollIntervalMs
+    })
+  : piccapTransport.initNoop();
 
 var notificationState = notifications.init({ luna: luna });
 
@@ -709,6 +720,7 @@ function setupHomeAssistant() {
       retain: true
     }
   });
+  piccap.attachMqtt({ client: mqttClient, prefix: pfx, allowControl: CONFIG.allowControl });
 
   MQTT_STATUS.broker = CONFIG.mqtt.host + ':' + mqttClient.opts.port;
   MQTT_STATUS.tls = useTls;
@@ -847,6 +859,7 @@ function setupHomeAssistant() {
     if (mqttClient.connected) {
       mqttClient.publish(statusTopic, statusPayload(), true);
       publishTelemetry();
+      piccap.refreshAndPublishState();
     }
     // After the publishes above: on a B8 the TV can be asleep within 5s.
     mqttClient.setWill(off ? 'asleep' : 'offline');
@@ -872,6 +885,7 @@ function setupHomeAssistant() {
   } catch (e) {}
   var lastPublish = 0;
   function tickTelemetry() {
+    if (!mqttClient.connected) return;
     if (tvOff && Date.now() - lastPublish < OFF_INTERVAL_MS) return;
     publishTelemetry();
   }
@@ -912,6 +926,8 @@ function setupHomeAssistant() {
        * instead, as the TV itself does when it comes back on. Only the
        * published copy is filled in: the state cache above stays as reported.
        */
+      var piccapState = piccap.getState();
+      if (piccapState) s.piccap = { power: piccapState.isRunning };
       if (!tvOff) {
         if ((s.app && s.app !== lastApp) || (s.app_id && s.app_id !== lastAppId)) {
           lastApp = s.app || lastApp;
@@ -1008,6 +1024,7 @@ function setupHomeAssistant() {
     });
     mqttClient.subscribe(pfx + '/command/#');
     publishTelemetry();
+    piccap.refreshAndPublishState(true);
     publishUpdate();
   });
 
@@ -1017,6 +1034,8 @@ function setupHomeAssistant() {
     var action = topic.substring(prefix.length);
     var val = payload ? payload.trim() : '';
     console.log('mqtt: command received: ' + action + ' -> ' + val);
+
+    if (piccap.handleMqttCommand(action, val)) return;
 
     if (action === 'screen') {
       var turnOff = (val.toUpperCase() === 'OFF');

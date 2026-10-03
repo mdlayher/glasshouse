@@ -606,5 +606,10 @@ Custom QML screensavers are staged in `/var/lib/tvweb/screensaver` and bind-moun
 * **Cold Boot vs Quick Start+**: On Quick Start+ suspend-to-RAM, active bind-mounts persist in memory. On a cold boot (such as after the 4-hour OLED Pixel Cleaning cycle or extended standby on webOS 24/25), `/var/lib/webosbrew/init.d/50-tvweb` re-applies the bind-mount if `/var/lib/tvweb/screensaver/.tvweb-screensaver` is present.
 * **Reverting to Stock**: When the user selects "LG default" (`stock`), `screensavers.setScreensaver('stock')` unmounts the live overlay and deletes `.tvweb-screensaver` along with all staged files. Without this cleanup, the boot hook would see the stale marker file on cold boot and re-mount the previously staged screensaver. `screensavers.init()` also auto-heals any orphaned marker files if the live screensaver is currently stock.
 
+---
+
+## Optional PicCap MQTT control
+
+PicCap MQTT support is off by default and runs only when `piccap.enabled` is `true`. It polls independently of telemetry, every `piccap.pollIntervalMs` milliseconds (30 seconds by default). When PicCap is available, telemetry includes boolean `piccap.power`; the bridge publishes retained `ON` or `OFF` to `<prefix>/state/piccap/power`. The `<prefix>/command/piccap/power` topic accepts `ON` or `OFF` when `allowControl` is enabled. The bridge refreshes state after commands and on each MQTT connection.
 
 
