@@ -74,6 +74,11 @@ var CONFIG = {
   // ?k=<token>. Keeps casual LAN devices out.
   token: '',
 
+  // Custom screen savers and tile hiding are held back on webOS 10 and later,
+  // where they have left the picture, sound and HDMI control off until a power
+  // cut (#366). File-only, like the settings above.
+  allowOnWebos10: false,
+
   // PicCap status checks start a process on the TV, so this stays opt-in.
   piccap: { enabled: false, pollIntervalMs: 30000 },
 

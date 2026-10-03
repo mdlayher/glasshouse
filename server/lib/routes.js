@@ -102,7 +102,7 @@ function setupPending() {
 
 /*
  * Settings the dashboard is allowed to write. Everything else in config.json
- * (port, host, allowControl, allowPower, token) stays file-only: those decide
+ * (port, host, allowControl, allowPower, token, allowOnWebos10) stays file-only: those decide
  * who may reach this server at all, and a UI that can widen its own exposure
  * defeats the point of setting them. The one exception is host, from the TV
  * itself during setup - see setNetworkAccess.
@@ -783,6 +783,8 @@ function handleRequest(req, res) {
     return appsModule.getApps(function (d) {
       d.tileHidingAvailable = !fromHomebrewChannel();
       if (!d.tileHidingAvailable) { d.systemTiles = []; d.tileHidingEnabled = false; d.hiddenCount = 0; }
+      d.tileHidingHeld = !!(screensaversModule && screensaversModule.held());
+      d.tileHidingOverridden = !!(screensaversModule && screensaversModule.heldOverridden());
       servicesModule.getServices(function (sRes) {
         if (sRes && sRes.services) d.services = sRes.services;
         send(res, 200, JSON.stringify(d));
