@@ -18,11 +18,52 @@ it before exposing it more widely.
   token. An MQTT-only install has no reason to expose one. The on-TV app runs on
   the same server, so it stops working too; a first install in this state does
   not add it.
-- **The upgrade endpoint installs code.** `allowControl` gates it along with
-  everything else, so on a default install anyone who can reach the port can
-  move the TV to the current release. It is a fixed repository over verified
-  TLS, so that is the whole of what they can do; `token` or
-  `"allowControl": false` closes it.
+- **The upgrade and install endpoints install code.** `allowControl` gates
+  them along with everything else, so on a default install anyone who can reach
+  the port can move the TV to the current release, and can install any app in
+  the Homebrew Channel catalog. The upgrade comes from a fixed repository over
+  verified TLS. A catalog install must use https and match the sha256 hash the
+  catalog lists, and the package must keep to its own ids: nothing under
+  `com.webos.`, `com.palm.` or `com.lge.`, nothing already on the TV's system
+  partition, and not the Homebrew Channel or the dashboard's own package. That
+  still lets a reachable client choose which catalog app runs on the TV, so
+  `token` or `"allowControl": false` closes it.
+- **Installing from a URL or an uploaded file is opt-in.** Such a package has
+  no catalog behind it, so the routes refuse unless `"apps": {"sideload": true}`
+  is set (by the switch on the Apps tab, after a warning, or in `config.json`),
+  a `token` is set, or the request comes from the TV itself. The switch answers
+  to any client that can reach the port, so on a default install it is a
+  speed bump, not a lock; a `token` is what keeps others from turning it on. The package is held
+  to the same id rules as a catalog one, and an optional sha256 is checked when
+  given, but nothing vouches for what it does. An upload must be sent as
+  `application/octet-stream` with a `Content-Length`, because a form post is a
+  request a page on another site can send without a preflight. Once sideloading
+  is on, a client that can reach the port can run any package on the TV, so
+  turn it on only with a token or a closed port. `apps.sideload` without a
+  token opens exactly that, and the server logs a warning at start.
+- **A catalog app can be given root.** On a default install, a client that can
+  reach the port can install an app from the Homebrew Channel catalog and run
+  its services as root, as the Homebrew Channel itself would. An app from the
+  Homebrew Channel's catalog whose services need root gets it on install
+  without a separate prompt, as it would through the Homebrew Channel, and
+  gets it again after each update, since a reinstall undoes it. Root needs
+  the Homebrew Channel. `token` or
+  `"allowControl": false` closes this too. A package from a URL, a file or an
+  `apps.repos` catalog is never elevated automatically: the request must name
+  the services listed in its preview, and a later update asks again. The TV's
+  own dashboard offers root only for the Homebrew Channel's catalog, since the
+  remote cannot name services.
+- **The install routes check the Host header.** A page on an attacker's domain
+  that resolves to the TV's address (DNS rebinding) passes the same-origin
+  check on `POST`s and looks like a request from the TV itself. The routes
+  therefore answer only to an IP address, `localhost` or a name listed in
+  `apps.hosts` in `config.json`, which is file-only. A name such as `lgtv.local`
+  has to be added there to install from it.
+- **`apps.repos` adds trust.** Each extra catalog listed there can offer
+  packages for installation, with their hashes. Its packages are not treated
+  as vetted: root for them is confirmed service by service, as for a URL, and
+  is never given back on an update. It is file-only and every entry must be
+  served over https.
 - **Never port-forward this.** It is designed for a trusted LAN.
 - **Bind to `127.0.0.1` to keep the on-TV app but close the port.** With
   `"host": "127.0.0.1"` nothing on the network can connect to port 8080, while

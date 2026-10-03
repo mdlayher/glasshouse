@@ -96,13 +96,17 @@ function clearStagedScreensaver() {
 }
 
 function unmountScreensaver(cb) {
-  execFile('/bin/umount', [SCREENSAVER_APP_DIR], { timeout: 4000 }, function (err) {
-    if (err) {
-      return execFile('/bin/umount', ['-l', SCREENSAVER_APP_DIR], { timeout: 4000 }, function () {
-        cb();
-      });
-    }
-    cb();
+  cb = cb || function () {};
+  var qmlFile = path.join(SCREENSAVER_APP_DIR, 'qml', 'main.qml');
+  execFile('/bin/umount', ['-l', qmlFile], { timeout: 4000 }, function () {
+    execFile('/bin/umount', [SCREENSAVER_APP_DIR], { timeout: 4000 }, function (err) {
+      if (err) {
+        return execFile('/bin/umount', ['-l', SCREENSAVER_APP_DIR], { timeout: 4000 }, function () {
+          cb();
+        });
+      }
+      cb();
+    });
   });
 }
 
@@ -217,6 +221,49 @@ function screensaverMode() {
   return 'stock';
 }
 
+function detectExternal() {
+  var active = false;
+  var hook = false;
+  try {
+    var info = fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n');
+    for (var i = 0; i < info.length; i++) {
+      var parts = info[i].split(' ');
+      if (parts.length >= 5) {
+        var root = parts[3];
+        var target = parts[4];
+        if (target.indexOf(SCREENSAVER_APP_DIR) === 0 && root.indexOf('/var/lib/tvweb/screensaver') === -1) {
+          active = true;
+          break;
+        }
+      }
+    }
+  } catch (e) {}
+  if (!active) {
+    try {
+      var mounts = fs.readFileSync('/proc/mounts', 'utf8').split('\n');
+      for (var m = 0; m < mounts.length; m++) {
+        var mparts = mounts[m].split(' ');
+        if (mparts.length >= 2 && mparts[1].indexOf(SCREENSAVER_APP_DIR) === 0) {
+          if (mparts[0].indexOf('/var/lib/tvweb/screensaver') === -1 && mparts[1] !== SCREENSAVER_APP_DIR) {
+            active = true;
+            break;
+          }
+        }
+      }
+    } catch (e2) {}
+  }
+  try {
+    var initFiles = fs.readdirSync('/var/lib/webosbrew/init.d');
+    for (var j = 0; j < initFiles.length; j++) {
+      if (/screensaver/i.test(initFiles[j])) {
+        hook = true;
+        break;
+      }
+    }
+  } catch (e3) {}
+  return { active: active, hook: hook };
+}
+
 function screensaverList() {
   var cur = screensaverMode();
   var out = [];
@@ -242,7 +289,8 @@ function screensaverList() {
     available: !held() || cur !== 'stock',
     held: held(),
     heldOverridden: heldOverridden(),
-    switching: switching()
+    switching: switching(),
+    external: detectExternal()
   };
 }
 
@@ -420,6 +468,15 @@ function trigger(cb) {
       }
       lunaFn('com.webos.service.tvpower/power/turnOnScreenSaver', {}, function (r) {
         if (r && r.returnValue) return cb({ ok: true });
+        if (r && r.errorText === 'Invalid State change Request') {
+          return lunaFn('com.webos.applicationManager/launch', { id: 'com.webos.app.screensaver' }, function (lr) {
+            if (lr && lr.returnValue) return cb({ ok: true });
+            cb({
+              ok: false,
+              error: msg('srv.saver.refused', 'the TV would not start a screen saver here: {error}', { error: r.errorText })
+            });
+          });
+        }
         cb({
           ok: false,
           error: (r && r.errorText)
@@ -443,6 +500,7 @@ module.exports = {
   screensaverMode: screensaverMode,
   screensaverList: screensaverList,
   switching: switching,
+  detectExternal: detectExternal,
   held: held,
   heldOverridden: heldOverridden,
   setScreensaver: setScreensaver,

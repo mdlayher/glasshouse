@@ -566,6 +566,67 @@ A custom client path can also be configured in `config.json` via `"update": { "c
 
 ---
 
+## Installing apps from the catalog
+
+`server/lib/repo.js` merges the Homebrew Channel catalog with `listApps`, and `server/lib/installer.js` runs one install job at a time. The catalog is `https://repo.webosbrew.org/api/apps.json` plus any `apps.repos`, paged as `apps/<n>.json`, cached for an hour, and each entry needs an https `ipkUrl` and a 64-digit sha256 or it is dropped. Update detection reuses the updater's version compare, which reads four numeric parts.
+
+### The install service
+
+The call is `luna://com.webos.appInstallService/dev/install` with `{id, ipkUrl: <local path>, subscribe: true}`.
+
+**Completion is `statusValue` 30 with `details.packageId`.** The service does not necessarily send `state: "installed"`, so waiting for that alone can hang on a finished install; both are accepted. Failure is `returnValue: false` (text in `errorText`) or `details.errorCode` (text in `details.reason`).
+
+**`luna-send` is spawned directly, not through `luna.Subscription`.** The subscription's close handler reconnects, and a reconnect would issue the install a second time. The child is killed on success, failure, timeout and server exit. The service keeps working after `luna-send` is given up on, so a timeout (120 s) checks `listApps` for the expected version before reporting a failure. Cancelling is possible only before the install starts; killing `luna-send` does not stop one in progress.
+
+**`dev/install` kills the package's services.** The Homebrew Channel and the dashboard's own package would lose root that way, so the installer refuses both and leaves them to update themselves.
+
+### Root
+
+Elevation runs `/media/developer/apps/usr/palm/services/org.webosbrew.hbchannel.service/elevate-service <service>` once per service in the package. The argument is a service name, not an app id, and each name must pass the same id rules as the install. The script is absent without the Homebrew Channel, which is how the installer knows to refuse the option.
+
+A reinstall rewrites the `luna-service2-dev` files that elevation changed, so root is gone after every update. `/var/lib/tvweb/elevated.json` records the services that were elevated, and a catalog update of the package is elevated again for those services whether or not the box was ticked. A `url` or `file` package is never elevated again from it.
+
+### Staging and space
+
+The package is staged in `/media/developer/temp/glasshouse-install/`, not `/tmp`, which is RAM-backed. Free space is read from `df -k` on that directory, since node 0.12 has no `statfs`; the parser accepts BusyBox output, one line per filesystem, and GNU output, where a long device name wraps onto its own line. After the download, twice the package size must be free on top of the staged file, for the installer's unpacking and the installed copy. The check is skipped when `df` cannot be read. The size limit is 512 MB.
+
+### Reading the package
+
+The package is hashed as a stream and read as a stream; it is never held in memory or unpacked to disk. The parser is bounded because the file is untrusted until it has been checked:
+
+* The `ar` archive must hold exactly `debian-binary`, `control.tar.gz` and `data.tar.gz`, once each, every member inside the file. Odd-length members are padded to even, and the last may omit the pad.
+* Each tarball is gunzipped as a stream and abandoned once it unpacks past its cap: 1 MB for the control tarball, 2 GB for the data tarball. A header checksum is verified on every entry, at most 20,000 entries are read, and `appinfo.json` may be at most 64 KB.
+* Long-name (`L`, `K`), pax (`x`, `g`, `X`) and base-256 size entries are refused rather than interpreted, as are entry types other than files, directories and links, and any path that is absolute or contains `..`. A tar that has data after its end-of-archive blocks is refused, and so is an `ar` member of the tarballs under 18 bytes, which cannot be gzip.
+* A link (symbolic or hard) is accepted only at least one level inside `usr/palm/{applications,services}/<id>/`, with a target that stays in that `<id>` directory, and no later entry may sit at or below a link's path. The path rules look at names, so a link that left its directory would let a later entry land where they never looked.
+* Only `usr/palm/applications/<id>/` and `usr/palm/services/<name>/` are read. Of the data, only `appinfo.json` is kept, plus the first 20 bytes of binaries in a service or an app's `bin/`, whose ELF `e_machine` is compared with that of `luna-send` or node. `uname -m` is not used, because some models report aarch64 with a 32-bit armhf userspace.
+* Every app and service id must be the package name or begin with it followed by a dot, and none may be under `com.webos.`, `com.palm.` or `com.lge.`, protected, or already present in a system app directory.
+
+### Job file and recovery
+
+The job state (`downloading`, `verifying`, `awaiting-confirm`, `installing`, `elevating`, `installed`, `error`) is written to `/var/lib/tvweb/install-job.json` at every step. At boot the staging directory is always cleared, and a job file in one of the unfinished states is reported as `interrupted`, which tells the owner to check the app list. The job is not resumed, since whether `dev/install` completed is unknown. An unconfirmed preview expires after ten minutes and its staged file is deleted. `isBusy()` (any unfinished state, including `awaiting-confirm`) stops another install from starting; `isWorking()` (`downloading`, `verifying`, `installing`, `elevating`) is what settings saves, network switches, restarts, the updater and `install-app.sh` wait on, so an open preview holds none of them. An app that came from the LG store (under `/media/cryptofs/apps`) is replaced only with a separate confirmation, since store updates stop afterwards.
+
+### Installing from a URL or a file
+
+`POST /api/apps/install/url` takes `{url, sha256?}` and `POST /api/apps/install/upload` takes the package as the request body. Both come after the Host check and the token check, and both are refused with 403 unless `sideloadVia()` in `routes.js` finds a reason: `apps.sideload === true` (`validateSettings` drops the whole `apps` section, so only `POST /api/apps/install/sideload {enabled}`, the Apps tab's switch, or the file sets it), a configured token, or a loopback remote address. `GET /api/apps/install/status` reports `sideload` and `sideloadVia` (`config`, `token`, `tv` or `null`) so the page can explain how to enable it.
+
+A URL goes through `fetch.validateUrl` (http or https, 2048 characters, no whitespace or control characters) and an optional 64-digit sha256, then `installer.start({source: 'url'})`.
+
+An upload is refused before any of it is read unless:
+
+* the type is exactly `application/octet-stream`, since `multipart/form-data` is a simple request that needs no preflight (415);
+* `Content-Length` is present and `Transfer-Encoding` is not (411), and the length is a positive integer (400);
+* the length is within the 512 MB cap (413), no job or other upload is running (409) and three times the length is free on the staging directory, when `df` can be read (507).
+
+`postGuard` holds the content type and Origin checks that `readJsonBody` shares. `installer.prepareUpload` makes the checks above, clears leftovers from the staging directory and reserves `upload-<random>.ipk` there; a reservation also makes other installs refuse, since a job's cleanup empties the directory, and lapses after 30 minutes without upload data. The route writes the stream with `req.on('data')` and a `fs.createWriteStream`, pausing the request until `drain`. The file is deleted when the connection aborts or closes early, on a write error, and when the byte count differs from `Content-Length`. A complete upload is handed over as `installer.start({source: 'file', path})`, which accepts only a path directly inside the staging directory.
+
+The preview carries `source` (`catalog`, `url` or `file`) and the package's sha256. For a `url` or `file` source the page asks again before elevating, naming each service that would run as root, and the confirm request must carry the same list as `confirmRoot` or the installer refuses. `willElevate` tells whether a catalog update will be elevated again from `elevated.json`; the on-TV page offers the root switch for catalog packages only.
+
+### Exclusion
+
+While a job is in a running state, `restartSelf` in `tvweb.js` refuses, which covers every restart path including `controls.doRestartSelf` over HTTP and MQTT. The routes that write the config and then restart (settings save, network access, phone setup) check first, so that nothing is written for a restart that will not happen. The updater, its rollback and `install-app.sh` refuse as well, and a new job refuses while the updater is downloading or installing.
+
+---
+
 ## Home Screen Tile Hiding & Cold Boot Sequence
 
 Home screen bloatware tile hiding allows built-in or preloaded system apps (which lack uninstallation mechanisms on the Luna bus) to be removed from the launcher view without modifying the read-only rootfs (`/`).

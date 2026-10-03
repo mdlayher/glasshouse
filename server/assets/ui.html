@@ -554,10 +554,17 @@ button.pill[disabled], button.pill-toggle[disabled]{cursor:default;opacity:.45}
 /* Collapsible privacy sections. The consent list alone runs to 21 rows, so the
    long sections fold. The summary keeps the pv-h size rather than borrowing the
    control column's small caps, so folding a section does not demote it. */
+/* Install confirmation modal popup */
+.modal-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);
+  display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+.modal-card{background:var(--bg);border:1px solid var(--w20);border-radius:10px;
+  padding:24px 28px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;
+  box-shadow:0 16px 40px rgba(0,0,0,0.6)}
 .pv-d{border:0;margin:0}
 .pv-d>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:16px;
   font-family:'Outfit';font-weight:300;font-size:clamp(20px,2.4vw,26px);color:var(--w100);
   margin:0;padding:20px 0 14px;min-height:44px;border-top:1px solid var(--w12)}
+#disc-install-apps>summary,#appspane>.pv-d:first-of-type>summary{border-top:0;padding-top:0}
 .pv-d>summary:hover .cur{color:var(--w80)}
 .pv-d>summary::-webkit-details-marker{display:none}
 .pv-d>summary::after{content:'+';font-family:'Manrope';font-size:20px;line-height:1;color:var(--w60)}
@@ -758,6 +765,11 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
   max-width:62ch;
 }
 .prot-status{flex-shrink:0}
+/* The disabled "Updates through Homebrew Channel" button is wider than a phone's spare width. */
+#apps-catalog-list .prot-row{flex-wrap:wrap}
+#apps-catalog-list .prot-main{flex:1 1 160px}
+#apps-catalog-list .prot-status{max-width:100%}
+#apps-catalog-list .prot-status button{max-width:100%;white-space:normal}
 /* Renaming a saved page happens in its own row: the name becomes the field. */
 .page-edit{display:flex;gap:8px;margin:0}
 .page-edit{flex-wrap:wrap}
@@ -771,6 +783,12 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 .page-add-msg:empty{display:none}
 .page-add #page-add-url{flex:2 1 260px}
 .page-add #page-add-name{flex:1 1 160px}
+/* The address takes a full row at every width, so its placeholder is not cut; the hash and the button share the next one. */
+#sl-url{flex:1 1 100%}
+#sl-sha{flex:1 1 160px}
+#sl-file{flex:1 1 200px}
+#sideload-box .prot-title{margin-top:20px}
+#catalog-msg{margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -1266,7 +1284,45 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
   <div class="lbl" data-t="apps.heading">Apps &amp; Home Screen Launcher</div>
 
 
-  <details class="pv-d" id="disc-installed-apps" open>
+  <details class="pv-d" id="disc-install-apps">
+    <summary><span data-t="apps.install">Install homebrew apps</span> <span class="cur" id="apps-catalog-summary"></span></summary>
+    <div class="pv-sub" data-t="apps.install.desc">Apps from the Homebrew Channel catalog.</div>
+    <form class="toast-form" onsubmit="event.preventDefault();">
+      <input type="search" id="catalog-search" placeholder="Search apps" data-t-placeholder="apps.install.search" maxlength="60"
+        autocomplete="off" spellcheck="false" oninput="renderCatalog()">
+    </form>
+    <div class="sub page-add-msg" id="catalog-msg" role="alert"></div>
+    <div class="pv-note" id="install-status" hidden></div>
+    <div id="install-modal" class="modal-backdrop" hidden onclick="if(event.target===this)cancelInstall()">
+      <div class="modal-card" id="install-panel" hidden>
+        <div class="prot-title" id="inst-title">&mdash;</div>
+        <div class="prot-desc" id="inst-meta">&mdash;</div>
+        <div class="prot-desc" id="inst-apps"></div>
+        <div id="inst-services-row" hidden>
+          <div class="prot-desc" id="inst-services"></div>
+          <label class="cfg-ent-chk"><input type="checkbox" id="inst-root"><span data-t="apps.install.root">Run services as root (needs the Homebrew Channel)</span></label>
+          <div class="prot-desc" id="inst-root-note" hidden></div>
+        </div>
+        <div class="prot-desc" id="inst-cpu" hidden></div>
+        <div class="prot-desc" id="inst-screensaver" hidden></div>
+        <div class="prot-desc" id="inst-space"></div>
+        <div class="prot-desc" id="inst-hash" hidden></div>
+        <div id="inst-store-row" hidden>
+          <div class="prot-desc" data-t="apps.install.store.warn">This app was installed from the LG store. Replacing it stops store updates for it.</div>
+          <label class="cfg-ent-chk"><input type="checkbox" id="inst-replace"><span data-t="apps.install.store.replace">Replace the store version</span></label>
+        </div>
+        <div class="btns" style="margin-top:16px;max-width:420px">
+          <button type="button" id="inst-confirm" onclick="confirmInstall()" data-t="apps.install.confirm">Install</button>
+          <button type="button" id="inst-cancel" onclick="cancelInstall()" data-t="common.cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div class="prot-table" id="apps-catalog-list">
+      <div class="sub" style="padding:16px 0" data-t="apps.install.loading">Loading the catalog&hellip;</div>
+    </div>
+  </details>
+
+  <details class="pv-d" id="disc-installed-apps">
     <summary><span data-t="apps.uninstall">Uninstall applications</span> <span class="cur" id="apps-installed-summary"></span></summary>
     <div class="pv-sub" data-t="apps.uninstall.desc">Store downloads and user-installed applications. Click Uninstall to permanently remove the application and free up internal eMMC flash storage space.</div>
     <div class="prot-table" id="apps-installed-list">
@@ -1290,7 +1346,7 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
     </div>
   </details>
 
-  <details class="pv-d" id="disc-system-services" open hidden>
+  <details class="pv-d" id="disc-system-services" hidden>
     <summary><span data-t="apps.services">Turn off background services</span> <span class="cur" id="apps-services-summary"></span></summary>
     <div class="pv-sub" data-t="apps.services.desc">Non-essential background services discovered on this TV. Disable unnecessary services to reduce memory usage, eliminate background telemetry, and speed up boot times.</div>
     <div class="prot-table" id="apps-services-list">
@@ -1298,7 +1354,7 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
     </div>
   </details>
 
-  <details class="pv-d" id="disc-saved-pages" open>
+  <details class="pv-d" id="disc-saved-pages">
     <summary><span data-t="apps.pages">Saved web pages</span> <span class="cur" id="apps-pages-summary"></span></summary>
     <div class="pv-sub" data-t="apps.pages.desc">Web pages on the TV's home screen, each opening in its browser. A page saved
       from the browser takes its whole title as its name, so a long one can be given a shorter name
@@ -1311,6 +1367,32 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
       <button type="submit" id="page-add-btn" data-t="apps.pages.add">Add to home screen</button>
     </form>
     <div class="sub page-add-msg" id="page-add-msg" role="alert"></div>
+  </details>
+
+  <details class="pv-d" id="disc-sideload-apps">
+    <summary><span data-t="apps.sideload.heading">Install app from a URL or file</span> <span class="cur" id="apps-sideload-summary"></span></summary>
+    <div class="pv-sub" data-t="apps.sideload.desc">Install an application package (.ipk) directly from a download link or by uploading a file from your computer.</div>
+    <div class="pv-note" id="sideload-off" hidden>
+      <div class="prot-title" data-t="apps.sideload.off.title">Install from a URL or a file</div>
+      <div class="prot-desc" data-t="apps.sideload.off.desc">This is off, because a package from outside the catalog can run anything on the TV. You can turn it on below, or by setting a token.</div>
+      <div style="margin-top:10px"><button type="button" class="pill warn" id="btn-sideload-enable" onclick="toggleSideload(true)" data-t="apps.sideload.enable">Turn on install from URL or file&hellip;</button></div>
+    </div>
+    <div id="sideload-box" hidden>
+      <div class="prot-title" data-t="apps.sideload.url.title">From URL&hellip;</div>
+      <form class="toast-form page-add" id="sl-url-form" onsubmit="event.preventDefault();startUrlInstall();">
+        <input type="text" id="sl-url" placeholder="Address of an .ipk, such as https://example.org/app.ipk" data-t-placeholder="apps.sideload.url.placeholder" maxlength="2048"
+          autocomplete="off" spellcheck="false">
+        <input type="text" id="sl-sha" placeholder="sha256 (optional)" data-t-placeholder="apps.sideload.sha.placeholder" maxlength="64"
+          autocomplete="off" spellcheck="false">
+        <button type="submit" id="sl-url-btn" data-t="apps.sideload.url.go">Download and check</button>
+      </form>
+      <div class="prot-title" data-t="apps.sideload.file.title">Upload .ipk</div>
+      <form class="toast-form page-add" id="sl-file-form" onsubmit="event.preventDefault();uploadIpk();">
+        <input type="file" id="sl-file" accept=".ipk" aria-label="Package file" data-t-aria-label="apps.sideload.file.label">
+        <button type="submit" id="sl-file-btn" data-t="apps.sideload.file.go">Upload and check</button>
+      </form>
+      <div style="margin-top:12px"><button type="button" class="pill idle" id="btn-sideload-disable" onclick="toggleSideload(false)" data-t="apps.sideload.disable">Turn off install from URL or file</button></div>
+    </div>
   </details>
 </section>
 
@@ -3056,8 +3138,24 @@ async function openUrl() {
 // panel compensation. The power button then turns it back on instead.
 let pwStandby = false;
 
-function pw(a) {
+// installSnap is only set once the Apps tab has polled, so ask the server when
+// it is unknown. An unreachable server counts as no install: the warning must
+// not stand in the way of a reboot.
+async function installRunning() {
+  let s = installSnap;
+  if (!s) {
+    try {
+      const r = await fetch(api('/api/apps/install/status'), { cache: 'no-store' });
+      s = await r.json();
+    } catch (e) { return false; }
+  }
+  return !!(s && INSTALL_BUSY[s.state]);
+}
+
+async function pw(a) {
   if (a === 'powerOn') return c(a);
+  if (await installRunning() &&
+      !confirm(t('ctl.power.installBusy', 'An app install is in progress. Interrupting it may leave the app half-installed. Continue anyway?'))) return;
   const msg = a === 'reboot'
     ? t('ctl.reboot.confirm', 'Reboot the TV now? It will be unavailable for about a minute.')
     : t('ctl.powerOff.confirm', 'Power off the TV now?');
@@ -3727,6 +3825,417 @@ async function loadApps() {
   }
 }
 
+/* ---- Install apps (Homebrew Channel catalog) ---- */
+let catalogData = null;
+let catalogLoading = false;
+let installSnap = null;     // last status from the server
+let installTimer = null;
+let installOwn = false;     // this page started or resumed the job, so it reports how it ended
+let installSideload = null; // whether the server takes URL and upload installs; null until known
+let uploading = false;
+const INSTALL_BUSY = { downloading: 1, verifying: 1, installing: 1, elevating: 1 };
+
+async function loadCatalog(force) {
+  if (catalogLoading) return;
+  catalogLoading = true;
+  try {
+    const r = await fetch(api('/api/apps/catalog' + (force ? '?force=1' : '')), { cache: 'no-store' });
+    const d = await r.json().catch(() => ({}));
+    catalogData = d;
+    if (!r.ok && d.error) showErr(d.error);
+  } catch (e) {
+    catalogData = { ok: false, apps: [], error: e.message };
+  } finally {
+    catalogLoading = false;
+  }
+  renderCatalog();
+}
+
+// Error text starts lower-case; a host name at the start keeps its case.
+function sentence(text) {
+  text = String(text || '');
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(?![\w-])/i.test(text)) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function installIdle() {
+  return !installSnap || !(INSTALL_BUSY[installSnap.state] || installSnap.state === 'awaiting-confirm');
+}
+
+function renderCatalog() {
+  const list = q('apps-catalog-list');
+  if (!list || !catalogData) return;
+  const d = catalogData;
+  const apps = d.apps || [];
+  const writable = !appsData || appsData.writable !== false;
+  q('apps-catalog-summary').textContent = d.ok ? t('apps.count', '{n} apps', { n: apps.length }) : '';
+  const msgEl = q('catalog-msg');
+  msgEl.textContent = sentence(d.error);
+  if (!d.ok) {
+    list.innerHTML = `<div class="sub" style="padding:16px 0">${esc(t('apps.install.unavailable', 'The catalog could not be loaded. The TV needs internet access to reach it.'))}</div>`;
+    return;
+  }
+  const term = q('catalog-search').value.trim().toLowerCase();
+  const shown = apps.filter(a => !term ||
+    (a.title || '').toLowerCase().includes(term) || (a.id || '').toLowerCase().includes(term) ||
+    (a.description || '').toLowerCase().includes(term));
+  if (!shown.length) {
+    list.innerHTML = `<div class="sub" style="padding:16px 0">${esc(t('apps.install.noMatch', 'No apps match.'))}</div>`;
+    return;
+  }
+  const idle = installIdle();
+  list.innerHTML = shown.map(a => {
+    let label, cls = 'idle', off = !writable || !idle, isInstalled = false;
+    if (a.state === 'hbc') { label = t('apps.install.viaHbc', 'Updates through Homebrew Channel'); off = true; }
+    else if (a.state === 'installed') { label = t('apps.uninstall.button', 'Uninstall'); cls = 'bad'; isInstalled = true; }
+    else if (a.state === 'update') { label = t('apps.install.update', 'Update'); cls = 'warn'; }
+    else { label = t('apps.install.button', 'Install'); cls = 'good'; }
+    const icon = a.iconUri
+      ? `<img src="${esc(a.iconUri)}" width="38" height="38" loading="lazy" referrerpolicy="no-referrer" alt="" style="border-radius:8px;object-fit:contain;background:var(--w06);flex-shrink:0" onerror="this.style.visibility='hidden'">`
+      : '<span style="width:38px;height:38px;flex-shrink:0"></span>';
+    const meta = [a.version ? 'v' + a.version : '',
+      a.size ? fmtSize(a.size) : '',
+      a.state === 'update' && a.installedVersion ? t('apps.install.have', 'installed: v{version}', { version: a.installedVersion }) : ''
+    ].filter(Boolean).join(' · ');
+    const root = a.rootRequired ? ` <span class="pill warn" style="padding:1px 8px">${esc(t('apps.install.rootBadge', 'root'))}</span>` : '';
+    const clickFn = isInstalled
+      ? `confirmUninstall('${jsq(a.id)}', '${jsq(a.title || a.id)}');`
+      : `startInstall('${jsq(a.id)}');`;
+    return `<div class="prot-row">
+      ${icon}
+      <div class="prot-main">
+        <div class="prot-title">${esc(a.title || a.id)}${root} <span class="prot-sub">&middot; ${esc(meta)}</span></div>
+        <div class="prot-desc">${esc(a.description || a.id)}</div>
+      </div>
+      <div class="prot-status">
+        <button type="button" class="pill ${cls}" onclick="${clickFn}" ${off ? 'disabled' : ''}>${esc(label)}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function fmtSize(n) {
+  if (typeof n !== 'number' || n <= 0) return '';
+  if (n < 1048576) return t('apps.install.kb', '{n} KB', { n: Math.round(n / 1024) });
+  const mb = n / 1048576;
+  return t('apps.install.mb', '{n} MB', { n: mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10 });
+}
+
+function fmtMb(n) { return t('apps.install.mb', '{n} MB', { n: Math.round(n / 1048576) }); }
+
+function setInstallStatus(text) {
+  const el = q('install-status');
+  el.hidden = !text;
+  el.textContent = text || '';
+}
+
+function progressText(s) {
+  const p = s.progress || {};
+  switch (s.state) {
+    case 'downloading':
+      return p.total ? t('apps.install.downloading.of', 'Downloading {done} of {total}', { done: fmtMb(p.bytes || 0), total: fmtMb(p.total) })
+        : t('apps.install.downloading', 'Downloading… {done}', { done: fmtMb(p.bytes || 0) });
+    case 'verifying': return t('apps.install.verifying', 'Checking the package…');
+    case 'installing': return t('apps.install.installing', 'Installing…');
+    case 'elevating': return t('apps.install.elevating', 'Setting up root access…');
+    default: return '';
+  }
+}
+
+function renderPreview(pv) {
+  const dir = pv.direction;
+  const ver = pv.version, from = pv.installedVersion;
+  q('inst-title').textContent = (pv.apps && pv.apps[0] && pv.apps[0].title) || pv.package;
+  q('inst-meta').textContent = pv.package + ' · ' + (
+    dir === 'up' ? t('apps.install.dir.up', 'upgrade from v{from} to v{version}', { from, version: ver })
+    : dir === 'down' ? t('apps.install.dir.down', 'downgrade from v{from} to v{version}', { from, version: ver })
+    : dir === 'same' ? t('apps.install.dir.same', 'reinstall of v{version}', { version: ver })
+    : t('apps.install.dir.new', 'new install of v{version}', { version: ver }));
+  const apps = (pv.apps || []).map(a => a.id);
+  q('inst-apps').textContent = apps.length > 1 ? t('apps.install.apps', 'Apps: {list}', { list: apps.join(', ') }) : '';
+  const svc = pv.services || [];
+  q('inst-services-row').hidden = !svc.length;
+  q('inst-services').textContent = svc.length ? t('apps.install.services', 'Background services: {list}', { list: svc.join(', ') }) : '';
+  q('inst-root').checked = false;
+  // An update to an app that had root gets it back without the box ticked.
+  const back = pv.reelevate || [];
+  const rootNote = back.length ? t('apps.install.root.restored', 'Root is given back to {list} after this update, as before.', { list: back.join(', ') })
+    : pv.rootRequired ? t('apps.install.root.needed', 'This app asks for its services to run as root, and may not work without it.') : '';
+  q('inst-root-note').hidden = !rootNote;
+  q('inst-root-note').textContent = rootNote;
+  q('inst-cpu').hidden = !pv.cpuMismatch;
+  q('inst-cpu').textContent = !pv.cpuMismatch ? ''
+    : t('apps.install.cpu', 'Its programs are built for a different processor than this TV\'s and may not run.');
+  q('inst-screensaver').hidden = !pv.isScreensaver;
+  q('inst-screensaver').textContent = pv.isScreensaver
+    ? t('apps.install.screensaver.warn', 'This app installs a custom screen saver, which will replace Glasshouse’s own screen savers.') : '';
+  q('inst-space').textContent = pv.freeBytes === null || pv.freeBytes === undefined ? ''
+    : t('apps.install.space', 'Free space: {free}. Needed: about {need}.', { free: fmtMb(pv.freeBytes), need: fmtMb(pv.needBytes) });
+  const showHash = pv.source !== 'catalog' && !!pv.sha256;
+  q('inst-hash').hidden = !showHash;
+  q('inst-hash').textContent = showHash ? 'sha256: ' + pv.sha256 : '';
+  q('inst-store-row').hidden = !pv.storeInstalled;
+  q('inst-replace').checked = false;
+}
+
+function renderSideload() {
+  q('sideload-off').hidden = installSideload !== false;
+  q('sideload-box').hidden = installSideload !== true;
+  const off = !installIdle() || uploading;
+  ['sl-url', 'sl-sha', 'sl-url-btn', 'sl-file', 'sl-file-btn'].forEach(id => { q(id).disabled = off; });
+  const disableBtn = q('btn-sideload-disable');
+  if (disableBtn) disableBtn.hidden = !installSnap || installSnap.sideloadVia !== 'config';
+  const cur = q('apps-sideload-summary');
+  if (cur) cur.textContent = installSideload ? t('common.on', 'On') : t('common.off', 'Off');
+}
+
+async function toggleSideload(enable) {
+  if (enable) {
+    if (!confirm(t('apps.sideload.enable.confirm', 'Allow installing apps from a URL or an uploaded file?\n\nPackages from outside the catalog are unvetted and can run anything on the TV. Only install packages you trust.'))) return;
+  }
+  try {
+    const r = await fetch(api('/api/apps/install/sideload'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: enable })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || t('apps.sideload.failed', 'Could not update sideload setting'));
+    installSideload = !!d.sideload;
+    if (installSnap) installSnap.sideloadVia = d.sideloadVia;
+    renderSideload();
+  } catch (e) {
+    showErr(e.message);
+  }
+}
+
+function prepareInstallTarget(source) {
+  const isSideload = source === 'url' || source === 'file';
+  const targetDisc = isSideload ? q('disc-sideload-apps') : q('disc-install-apps');
+  const targetAnchor = isSideload
+    ? (installSideload ? q('sideload-box') : q('sideload-off'))
+    : q('apps-catalog-list');
+  const statusEl = q('install-status');
+  if (targetDisc && targetAnchor && statusEl) {
+    if (statusEl.parentElement !== targetDisc) {
+      targetDisc.insertBefore(statusEl, targetAnchor);
+    }
+  }
+  return targetDisc;
+}
+
+function renderInstall() {
+  const s = installSnap;
+  const panel = q('install-panel');
+  const modal = q('install-modal');
+  renderSideload();
+  if (!s) return;
+  const targetDisc = prepareInstallTarget(s.source);
+  if (s.state === 'awaiting-confirm' && s.preview) {
+    if (targetDisc) targetDisc.open = true;
+    if (panel.dataset.job !== s.jobId) {
+      panel.dataset.job = s.jobId;
+      renderPreview(s.preview);
+    }
+    const wasHidden = modal ? modal.hidden : panel.hidden;
+    panel.hidden = false;
+    if (modal) modal.hidden = false;
+    q('inst-confirm').disabled = false;
+    q('inst-cancel').disabled = false;
+    if (wasHidden) q('inst-confirm').focus();
+    setInstallStatus('');
+  } else {
+    panel.hidden = true;
+    if (modal) modal.hidden = true;
+    delete panel.dataset.job;
+    setInstallStatus(progressText(s));
+  }
+}
+
+function installEnded(s) {
+  if (s.state === 'installed') {
+    const r = s.result || {};
+    setInstallStatus(t('apps.install.done', 'Installed {name} v{version}.', { name: r.package || '', version: r.version || '' }));
+    setTimeout(() => { if (installIdle()) setInstallStatus(''); }, 8000);
+  } else if (s.state === 'error' || s.state === 'interrupted') {
+    showErr(s.error || t('common.unknownError', 'unknown error'));
+    setInstallStatus(sentence(s.error));
+  }
+  loadApps();
+  loadCatalog(true);
+}
+
+async function pollInstall() {
+  clearTimeout(installTimer);
+  installTimer = null;
+  let s;
+  try {
+    const r = await fetch(api('/api/apps/install/status'), { cache: 'no-store' });
+    s = await r.json();
+    if (!r.ok || !s.ok) throw new Error(s.error || 'HTTP ' + r.status);
+  } catch (e) {
+    // The server may be restarting; keep asking while a job was ours.
+    if (installOwn) installTimer = setTimeout(pollInstall, 2000);
+    return;
+  }
+  const was = installSnap;
+  const wasIdle = installIdle();
+  installSnap = s;
+  if (typeof s.sideload === 'boolean') installSideload = s.sideload;
+  if (INSTALL_BUSY[s.state] || s.state === 'awaiting-confirm') installOwn = true;
+  renderInstall();
+  if (INSTALL_BUSY[s.state]) installTimer = setTimeout(pollInstall, 1000);
+  else if (s.state === 'awaiting-confirm') installTimer = setTimeout(pollInstall, 5000);   // the preview expires
+  const finished = s.state === 'installed' || s.state === 'error' || s.state === 'interrupted' || s.state === 'idle';
+  if (installOwn && finished && (!was || was.state !== s.state || was.jobId !== s.jobId)) {
+    installOwn = false;
+    if (s.state !== 'idle') installEnded(s);
+  }
+  if (wasIdle !== installIdle()) renderCatalog();
+}
+
+async function installPost(path, body) {
+  const r = await fetch(api(path), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.error || t('apps.install.failed', 'The install could not be started'));
+  return j;
+}
+
+function startInstall(appId) {
+  prepareInstallTarget('catalog');
+  // The server goes straight on to install unless the preview has a choice or a warning in it.
+  startJob('/api/apps/install/fetch', { id: appId, auto: true });
+}
+
+function startUrlInstall() {
+  const url = q('sl-url').value.trim();
+  if (!url) return;
+  prepareInstallTarget('url');
+  startJob('/api/apps/install/url', { url, sha256: q('sl-sha').value.trim() });
+}
+
+async function startJob(path, body) {
+  if (!installIdle() || uploading) return;
+  q('catalog-msg').textContent = '';
+  installOwn = true;
+  try {
+    const j = await installPost(path, body);
+    installSnap = j.install;
+    renderInstall();
+    renderCatalog();
+    pollInstall();
+  } catch (e) {
+    installOwn = false;
+    installFailed(e.message);
+  }
+}
+
+function installFailed(text) {
+  showErr(text);
+  q('catalog-msg').textContent = sentence(text);
+}
+
+// The browser sends the file as it is: application/octet-stream is the one
+// body type the server accepts for an upload, and XHR reports progress.
+function uploadIpk() {
+  const f = q('sl-file').files[0];
+  if (!f || !installIdle() || uploading) return;
+  prepareInstallTarget('file');
+  q('catalog-msg').textContent = '';
+  uploading = true;
+  renderSideload();
+  const fail = text => {
+    uploading = false;
+    renderSideload();
+    setInstallStatus('');
+    installFailed(text);
+  };
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', api('/api/apps/install/upload'));
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.upload.onprogress = ev => {
+    if (!ev.lengthComputable) return;
+    uploadStatus(ev.loaded, ev.total);
+  };
+  xhr.onerror = () => fail(t('apps.install.uploadFailed', 'The upload did not finish'));
+  xhr.onload = () => {
+    let j = {};
+    try { j = JSON.parse(xhr.responseText); } catch (e) {}
+    if (xhr.status !== 200 || !j.ok) return fail(j.error || t('apps.install.failed', 'The install could not be started'));
+    uploading = false;
+    installOwn = true;
+    installSnap = j.install;
+    q('sl-file').value = '';
+    renderInstall();
+    renderCatalog();
+    pollInstall();
+  };
+  uploadStatus(0, f.size);
+  xhr.send(f);
+}
+
+function uploadStatus(done, total) {
+  setInstallStatus(t('apps.install.uploading', 'Uploading… {done} of {total}', { done: fmtMb(done), total: fmtMb(total) }));
+}
+
+async function confirmInstall() {
+  const s = installSnap;
+  if (!s || s.state !== 'awaiting-confirm') return;
+  const pv = s.preview;
+  if (pv.storeInstalled && !q('inst-replace').checked) {
+    showErr(t('apps.install.store.needTick', 'Tick the box to replace the store version.'));
+    return;
+  }
+  const elevate = q('inst-root').checked;
+  // A package from a URL, a file or an added catalog has not been vetted by the
+  // Homebrew Channel, so root for its services is confirmed a second time,
+  // naming each one.
+  if (elevate && !pv.vetted &&
+      !confirm(t('apps.install.root.confirm', 'Run these services as root?\n\n{list}\n\nRoot gives a service full control of the TV. Only continue if the package comes from someone trusted.', { list: (pv.services || []).join('\n') }))) return;
+  q('inst-confirm').disabled = true;
+  q('inst-cancel').disabled = true;
+  if (q('install-modal')) q('install-modal').hidden = true;
+  try {
+    const j = await installPost('/api/apps/install/confirm', {
+      jobId: s.jobId, elevate, replaceStore: q('inst-replace').checked,
+      // The server asks for the services shown in the preview before it gives
+      // root to a package the Homebrew Channel has not vetted.
+      confirmRoot: elevate && !pv.vetted ? (pv.services || []) : undefined
+    });
+    installSnap = j.install;
+    renderInstall();
+    renderCatalog();
+    pollInstall();
+  } catch (e) {
+    showErr(e.message);
+    pollInstall();
+  }
+}
+
+async function cancelInstall() {
+  const s = installSnap;
+  if (!s) return;
+  try {
+    await installPost('/api/apps/install/cancel', { jobId: s.jobId });
+    installOwn = false;
+  } catch (e) { showErr(e.message); }
+  installSnap = null;
+  if (q('install-modal')) q('install-modal').hidden = true;
+  q('install-panel').hidden = true;
+  setInstallStatus('');
+  renderCatalog();
+  pollInstall();
+}
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const modal = q('install-modal');
+    if (modal && !modal.hidden) cancelInstall();
+  }
+});
+
 // The address without its scheme, as a reminder of which page a tile opens.
 function pageHost(url) {
   try { return new URL(url).host.replace(/^www\./, ''); } catch (e) { return url || ''; }
@@ -3888,7 +4397,6 @@ function renderAppsPanel() {
 
   if (tilesDisc) {
     tilesDisc.hidden = d.tileHidingAvailable === false;
-    tilesDisc.open = tileHidingEnabled;
   }
 
   if (btnOff && btnOn) {
@@ -4062,6 +4570,7 @@ async function confirmUninstall(appId, appTitle) {
         renderAppsPanel();
       }
       await loadApps();
+      await loadCatalog(true);
     } else {
       if (btn) {
         btn.disabled = false;
@@ -4189,7 +4698,7 @@ function showTab(name) {
   relayout(false);   // the panel just became measurable
   cfgPollStatus(name === 'mqtt');
   if (name === 'metrics') loadHdmiOnce();
-  if (name === 'apps') loadApps();
+  if (name === 'apps') { loadApps(); loadCatalog(false); pollInstall(); }
   if (name === 'server') checkOnOpen();
   if (name === 'server') loadTvApp();
   if (name === 'oledcare') loadOledCare();
@@ -4524,13 +5033,16 @@ async function loadScreensavers() {
   /* Where LG's screen saver is built differently from ours, the TV has to
      restart its app manager to move between them, and nothing answers until it
      is back. Say so before, and hold the controls while it happens. */
-  q('ss-note').textContent = !d.writable
+  const extNote = (d.external && d.external.active)
+    ? (t('ss.external.active', 'A third-party homebrew screen saver is currently active on the TV. Selecting a Glasshouse screen saver will replace it.') + ' ')
+    : '';
+  q('ss-note').textContent = extNote + (!d.writable
     ? t('ss.controlsOff', 'Controls are disabled in config.json, so the screen saver cannot be changed from here.')
     : ssSwitching ? SS_SWITCHING
     : d.held ? t('ss.held', 'Custom screen savers are turned off on this TV for now. On webOS 10 and later they can leave the picture, the sound and HDMI control off until the TV is unplugged. Switch to LG\'s screen saver to stop using this one now; otherwise it goes when the TV is next fully restarted.')
     : d.heldOverridden ? t('common.heldOverridden', 'Turned back on with allowOnWebos10 in config.json. On webOS 10 and later custom screen savers and tile hiding have left the picture, the sound and HDMI control off until the TV was unplugged (#366).')
     : (d.slowSwitch ? t('ss.slowSwitch', 'On this TV, switching to or from the LG default takes about a minute, and the screen goes dark while it does.') + ' ' : '')
-      + t('ss.firmwareNote', 'Note: if a firmware update is applied, the screen saver will be restored to the LG default.');
+      + t('ss.firmwareNote', 'Note: if a firmware update is applied, the screen saver will be restored to the LG default.'));
   ssWritable = d.writable;
   // The status poll sets it from here on; this just saves waiting for it.
   if (ssSwitching) refuseScreensaver(q('ss-toggle'), SS_SWITCHING);

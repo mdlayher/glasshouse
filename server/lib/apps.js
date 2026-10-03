@@ -281,14 +281,19 @@ var SAM_UNITS = 'sam.service $(systemctl list-dependencies --reverse --plain --n
 /*
  * Once sam is back, a unit that requires it and was still refused - its own
  * restart limit hit before the counters were cleared - is started again, so
- * the TV is never left without its inputs.
+ * the TV is never left without its inputs. On Upstart TVs (webOS 4), Upstart
+ * does not restart dependent jobs when sam restarts, so eim (the input manager)
+ * is restarted here to restore its connection to sam.
  */
 function startFailedDependents(cb) {
-  var cmd = 'command -v systemctl >/dev/null 2>&1 || exit 0; ' +
+  var cmd = 'if command -v systemctl >/dev/null 2>&1; then ' +
             'for u in ' + SAM_UNITS + '; do ' +
             'if systemctl is-failed --quiet "$u"; then ' +
             'echo "$u"; systemctl reset-failed "$u"; systemctl start --no-block "$u"; ' +
-            'fi; done';
+            'fi; done; ' +
+            'elif command -v initctl >/dev/null 2>&1; then ' +
+            'initctl restart eim >/dev/null 2>&1 && echo "eim" || true; ' +
+            'fi';
   execFile('/bin/sh', ['-c', cmd], { timeout: 6000 }, function (err, out) {
     var started = String(out || '').trim();
     if (started) console.log('apps: started again after sam restarted: ' + started.split(/\s+/).join(', '));
@@ -324,6 +329,29 @@ function waitForSam(cb) {
  */
 var samRestartRunning = false;
 var samRestartWaiting = [];
+var samRestartedThisRun = false;
+var FROM_HBC_FILE = '/var/lib/tvweb/.from-homebrew-channel';
+
+/*
+ * Once sam has been restarted, the home launcher stops taking in new launch
+ * points: on a B8 (webOS 4.4.3) an app installed afterwards was in
+ * listLaunchPoints but not on the ribbon until sam was restarted again. The
+ * boot hook restarts sam when tile hiding is on with apps hidden (except on a
+ * Homebrew Channel install), and the server does on each hide and unhide.
+ */
+function launcherNeedsRestart() {
+  if (samRestartedThisRun) return true;
+  if (fs.existsSync(FROM_HBC_FILE)) return false;
+  return isTileHidingEnabled() && Object.keys(readHiddenAppsList()).length > 0;
+}
+
+/** After an install or uninstall: restarts sam if the launcher would otherwise miss the change. cb(restarted). */
+function refreshLauncher(cb) {
+  cb = cb || function () {};
+  if (!launcherNeedsRestart() || screensavers.held()) return cb(false);
+  console.log('apps: restarting sam so the home screen updates');
+  restartSamShared(cb);
+}
 
 function restartSamShared(cb) {
   samRestartWaiting.push(cb);
@@ -368,13 +396,14 @@ function restartSam(cb) {
               'else ' +
               'pkill -9 -x sam >/dev/null 2>&1 || true; ' +
               'fi';
+    samRestartedThisRun = true;
     execFile('/bin/sh', ['-c', cmd], { timeout: 6000 }, function (err) {
       if (err) console.error('apps: restartSam error: ' + err.message);
       waitForSam(function () { startFailedDependents(function () { restoreApp(err); }); });
     });
 
     function restoreApp(err) {
-      if (savedAppId && savedAppId !== 'com.webos.app.home' && lunaFn) {
+      if (savedAppId && savedAppId !== 'com.webos.app.home' && savedAppId !== 'com.webos.app.screensaver' && lunaFn) {
         var attempts = 0;
         function tryRestore() {
           attempts++;
@@ -937,6 +966,14 @@ function uninstallApp(appId, cb) {
     return cb({ ok: false, error: 'Luna service not available' });
   }
 
+  // Close the app and any screensaver overlay before removing its files. The
+  // mount is left alone when it is ours: the app going may not be the one in use.
+  lunaFn('com.webos.applicationManager/closeByAppId', { id: appId }, function () {});
+  if (/screensaver/i.test(appId) && screensavers.detectExternal().active) {
+    lunaFn('com.webos.applicationManager/closeByAppId', { id: 'com.webos.app.screensaver' }, function () {});
+    screensavers.unmountScreensaver();
+  }
+
   var handleSuccess = function () {
     // Wait for the app removal to complete asynchronously in SAM / appInstallService
     var start = Date.now();
@@ -951,7 +988,9 @@ function uninstallApp(appId, cb) {
           }
         }
         if (!stillThere || (Date.now() - start) >= 3000) {
-          return cb({ ok: true, id: appId });
+          return refreshLauncher(function () {
+            cb({ ok: true, id: appId });
+          });
         }
         setTimeout(poll, 300);
       });
@@ -994,6 +1033,7 @@ module.exports = {
   isWebHost: isWebHost,
   restartSam: restartSam,
   restartSamShared: restartSamShared,
+  refreshLauncher: refreshLauncher,
   readHiddenAppsList: readHiddenAppsList,
   writeHiddenAppsList: writeHiddenAppsList,
   isTileHidingEnabled: isTileHidingEnabled,

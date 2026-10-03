@@ -2,6 +2,7 @@
 var fs = require('fs');
 var path = require('path');
 var os = require('os');
+var net = require('net');
 var url = require('url');
 var zlib = require('zlib');
 var crypto = require('crypto');
@@ -9,6 +10,7 @@ var http = require('http');
 var say = require('./say');
 var msg = say.msg;
 var ha = require('./ha');
+var fetchLib = require('./fetch');
 
 var HA_CATEGORIES = ha.HA_CATEGORIES;
 var HA_ENTITIES = ha.HA_ENTITIES;
@@ -52,6 +54,8 @@ var screensaversModule = null;
 var updaterModule = null;
 var tvAppFn = null;
 var restartSelfFn = null;
+var repoModule = null;
+var installerModule = null;
 var fromHbcFn = null;
 var tileHidingOffMsg = '';
 var assetPathFn = null;
@@ -92,6 +96,38 @@ function assetPath(rel) { return assetPathFn(rel); }
 function fromHomebrewChannel() { return fromHbcFn(); }
 function tvApp(action, cb) { return tvAppFn(action, cb); }
 function restartSelf() { return restartSelfFn(); }
+
+/*
+ * The restart paths below write the config and answer before restarting, so
+ * an install at work has to be refused before the write; restartSelf in
+ * tvweb.js refuses too, for the callers that do not come through here. A
+ * preview waiting for confirmation is not at work.
+ */
+/*
+ * Restarts after the answer has gone out. An install can start in the moment
+ * between the check above and the restart, which would then be refused and the
+ * saved settings never applied, so the restart waits for it instead.
+ */
+function restartSoon(ms, what) {
+  var told = false;
+  setTimeout(function again() {
+    if (installerModule && installerModule.isWorking()) {
+      if (!told) console.log(what + ': restart waits for the install to finish');
+      told = true;
+      return setTimeout(again, 2000);
+    }
+    if (!restartSelf()) console.error(what + ': could not restart - restart manually to apply');
+  }, ms);
+}
+
+function installBusyRefusal(res) {
+  if (!installerModule || !installerModule.isWorking()) return false;
+  send(res, 409, JSON.stringify({
+    ok: false,
+    error: msg('srv.install.busy.restart', 'an install is in progress; restart when it has finished')
+  }));
+  return true;
+}
 function doControl(action, value, cb) { return controlsModule.doControl(action, value, cb); }
 function luna(uri, payload, cb) { return lunaFn(uri, payload, cb); }
 function getMqttStatus() { return getMqttStatusFn(); }
@@ -357,12 +393,13 @@ function startHandoff(cb) {
         if (v.errors.length) {
           return send(res, 400, JSON.stringify({ ok: false, error: v.errors.join('; ') }));
         }
+        if (installBusyRefusal(res)) return;
         writeSettings(v.value, function (err) {
           if (err) return send(res, 500, JSON.stringify({ ok: false, error: msg('srv.saveSettingsFailed', 'could not save the settings') }));
           console.log('setup: Home Assistant broker set from a phone, restarting to connect');
           send(res, 200, JSON.stringify({ ok: true }));
           stopHandoff();   // the code is spent
-          setTimeout(function () { restartSelf(); }, 300);
+          restartSoon(300, 'setup');
         });
       });
       return;
@@ -491,28 +528,36 @@ function fromTV(req) {
   return ra === '127.0.0.1' || ra === '::1' || ra === '::ffff:127.0.0.1';
 }
 
-function readJsonBody(req, res, cb) {
-  /*
-   * CSRF guard. No CORS grant is sent, so another site cannot read the
-   * reply - but a POST with a "simple" content type (text/plain,
-   * form-urlencoded) is still *delivered* without a preflight, and the TV
-   * has acted on it by the time the response is discarded. Requiring
-   * application/json forces a preflight, which this server never approves,
-   * and rejecting cross-site Origins closes the gap for anything that does
-   * slip through.
-   */
+/*
+ * CSRF guard shared by every POST that changes something. No CORS grant is
+ * sent, so another site cannot read the reply - but a POST with a "simple"
+ * content type (text/plain, form-urlencoded, multipart/form-data) is still
+ * *delivered* without a preflight, and the TV has acted on it by the time the
+ * response is discarded. Requiring a type outside that list forces a
+ * preflight, which this server never approves, and rejecting cross-site
+ * Origins closes the gap for anything that does slip through. `exact` demands
+ * the type with no parameters. Sends the refusal and returns false.
+ */
+function postGuard(req, res, wantType, exact) {
   var ctype = String(req.headers['content-type'] || '').toLowerCase();
-  if (ctype.indexOf('application/json') !== 0) {
-    return send(res, 415, JSON.stringify({ ok: false, error: 'Content-Type must be application/json' }));
+  if (exact ? ctype !== wantType : ctype.indexOf(wantType) !== 0) {
+    send(res, 415, JSON.stringify({ ok: false, error: 'Content-Type must be ' + wantType }));
+    return false;
   }
   var origin = req.headers.origin;
   if (origin) {
     var hostHdr = String(req.headers.host || '');
     var oHost = String(origin).replace(/^https?:\/\//, '');
     if (oHost !== hostHdr) {
-      return send(res, 403, JSON.stringify({ ok: false, error: 'cross-origin request refused' }));
+      send(res, 403, JSON.stringify({ ok: false, error: 'cross-origin request refused' }));
+      return false;
     }
   }
+  return true;
+}
+
+function readJsonBody(req, res, cb) {
+  if (!postGuard(req, res, 'application/json', false)) return;
   var body = '';
   req.on('data', function (d) {
     body += d;
@@ -528,6 +573,213 @@ function readJsonBody(req, res, cb) {
     }
     cb(j);
   });
+}
+
+/*
+ * Installing a package is the most powerful thing the dashboard does, so the
+ * Host header is checked before anything else. A page reached through a
+ * rebinding name (attacker.example resolving to the TV's address) passes the
+ * Origin == Host check and looks like a request from the TV itself; only a
+ * name the owner listed in apps.hosts, an IP literal or localhost is served.
+ */
+function hostName(req) {
+  var h = String((req.headers && req.headers.host) || '').toLowerCase();
+  var m = /^\[([^\]]*)\](:\d*)?$/.exec(h);
+  if (m) return m[1];
+  var i = h.lastIndexOf(':');
+  if (i !== -1 && h.indexOf(':') === i) h = h.slice(0, i);
+  return h.replace(/\.$/, '');
+}
+
+function hostAllowed(req) {
+  var h = hostName(req);
+  if (!h) return false;
+  if (net.isIP(h) || h === 'localhost') return true;
+  var list = config.apps && config.apps.hosts;
+  if (Object.prototype.toString.call(list) !== '[object Array]') return false;
+  for (var i = 0; i < list.length; i++) {
+    if (typeof list[i] === 'string' && list[i].toLowerCase().replace(/\.$/, '') === h) return true;
+  }
+  return false;
+}
+
+function isInstallRoute(pathname) {
+  return pathname === '/api/apps/catalog' || pathname.indexOf('/api/apps/install/') === 0;
+}
+
+function installError(res, text, status) {
+  send(res, status || 400, JSON.stringify({ ok: false, error: text }));
+}
+
+function installReply(res) {
+  return function (err, snap) {
+    if (err) return installError(res, String(err));
+    send(res, 200, JSON.stringify({ ok: true, install: snap }));
+  };
+}
+
+/*
+ * URL and upload installs take a package from anywhere, so they are off unless
+ * the owner opted in: apps.sideload in config.json (file-only), a token (the
+ * owner has taken on access control), or a request from the TV itself. The
+ * answer says which, so the page can explain how to turn it on.
+ */
+function sideloadVia(req) {
+  if (config.apps && config.apps.sideload === true) return 'config';
+  if (config.token) return 'token';
+  if (fromTV(req)) return 'tv';
+  return null;
+}
+
+function sideloadRefused(res) {
+  installError(res, msg('srv.install.sideloadOff',
+    'installing from a URL or a file is off; set "apps": {"sideload": true} in config.json, set a token, or use the TV\'s web browser'), 403);
+}
+
+// Refused before the body is read, so the connection is closed rather than
+// left to carry up to 512 MB that nobody wants.
+function refuseUpload(req, res, text, status) {
+  installError(res, text, status);
+  if (typeof res.on === 'function') res.on('finish', function () { req.destroy(); });
+}
+
+function handleUpload(req, res) {
+  if (!postGuard(req, res, 'application/octet-stream', true)) return;
+  var cl = req.headers['content-length'];
+  if (req.headers['transfer-encoding'] || cl === undefined) {
+    return refuseUpload(req, res, msg('srv.install.upload.length', 'the upload must state its size in advance'), 411);
+  }
+  if (!/^\d{1,15}$/.test(String(cl)) || parseInt(cl, 10) <= 0) {
+    return refuseUpload(req, res, msg('srv.install.upload.empty', 'the upload is empty or its size is not valid'), 400);
+  }
+  var len = parseInt(cl, 10);
+  installerModule.prepareUpload(len, function (err, file, status) {
+    if (err) return refuseUpload(req, res, err, status || 400);
+    var ws = fs.createWriteStream(file, { flags: 'wx', mode: parseInt('600', 8) });
+    var got = 0, done = false;
+    var sizeText = msg('srv.install.upload.size', 'the upload does not match its stated size');
+    function discard() {
+      if (done) return false;
+      done = true;
+      // A stream destroyed before its file has opened creates the file
+      // afterwards, so it is removed again once the stream has closed.
+      ws.once('close', function () { fs.unlink(file, function () {}); });
+      try { ws.destroy(); } catch (e) {}
+      installerModule.releaseUpload(file);
+      return true;
+    }
+    function failWith(text, code) {
+      if (discard()) refuseUpload(req, res, text, code);
+    }
+    req.on('data', function (chunk) {
+      if (done) return;
+      installerModule.touchUpload();
+      got += chunk.length;
+      if (got > len) return failWith(sizeText, 400);
+      if (!ws.write(chunk) && typeof req.pause === 'function') {
+        req.pause();
+        ws.once('drain', function () { if (!done) req.resume(); });
+      }
+    });
+    req.on('end', function () {
+      if (done) return;
+      if (got !== len) return failWith(sizeText, 400);
+      ws.end();
+    });
+    ws.on('finish', function () {
+      if (done) return;
+      done = true;
+      installerModule.start({ source: 'file', path: file }, function (e2, snap) {
+        if (e2) installerModule.releaseUpload(file);
+        installReply(res)(e2, snap);
+      });
+    });
+    ws.on('error', function () {
+      failWith(msg('srv.install.upload.failed', 'the upload could not be saved'), 500);
+    });
+    // A dropped connection ends the stream without 'end'.
+    req.on('aborted', discard);
+    req.on('close', function () { if (got !== len) discard(); });
+  });
+}
+
+function handleInstallRoute(req, res, u, pathname) {
+  if (!config.allowControl) return installError(res, msg('srv.controlsOff', 'controls disabled in config'), 403);
+
+  if (pathname === '/api/apps/catalog' && req.method === 'GET') {
+    return repoModule.getCatalog(!!(u.query && u.query.force), function (r) {
+      send(res, 200, JSON.stringify(r));
+    });
+  }
+  if (pathname === '/api/apps/install/status' && req.method === 'GET') {
+    var st = installerModule.status();
+    st.ok = true;
+    st.writable = !!config.allowControl;
+    var via = sideloadVia(req);
+    st.sideload = via !== null;
+    st.sideloadVia = via;
+    return send(res, 200, JSON.stringify(st));
+  }
+  if (req.method !== 'POST') return send(res, 404, JSON.stringify({ ok: false, error: 'not found' }));
+
+  if (pathname === '/api/apps/install/fetch') {
+    return readJsonBody(req, res, function (body) {
+      if (typeof body.id !== 'string' || !body.id) return installError(res, msg('srv.install.idRequired', 'an app id is required'));
+      repoModule.findPackage(body.id, function (err, pkg) {
+        if (err) return installError(res, err.message);
+        installerModule.start({ source: 'catalog', pkg: pkg, auto: body.auto === true }, installReply(res));
+      });
+    });
+  }
+  if (pathname === '/api/apps/install/url') {
+    if (!sideloadVia(req)) return sideloadRefused(res);
+    return readJsonBody(req, res, function (body) {
+      var err = fetchLib.validateUrl(body.url);
+      if (err) return installError(res, err);
+      var sha = body.sha256;
+      if (sha !== undefined && sha !== null && sha !== '' && !/^[0-9a-f]{64}$/i.test(String(sha))) {
+        return installError(res, msg('srv.install.badHash', 'the sha256 hash must be 64 hexadecimal digits'));
+      }
+      installerModule.start({ source: 'url', url: body.url, sha256: sha || null }, installReply(res));
+    });
+  }
+  if (pathname === '/api/apps/install/upload') {
+    if (!sideloadVia(req)) return sideloadRefused(res);
+    return handleUpload(req, res);
+  }
+  if (pathname === '/api/apps/install/confirm') {
+    return readJsonBody(req, res, function (body) {
+      installerModule.confirm({
+        jobId: body.jobId, elevate: body.elevate === true, confirmRoot: body.confirmRoot,
+        replaceStore: body.replaceStore === true
+      }, installReply(res));
+    });
+  }
+  if (pathname === '/api/apps/install/cancel') {
+    return readJsonBody(req, res, function (body) {
+      installerModule.cancel(body.jobId, function (err) {
+        if (err) return installError(res, String(err));
+        send(res, 200, JSON.stringify({ ok: true }));
+      });
+    });
+  }
+  if (pathname === '/api/apps/install/sideload') {
+    return readJsonBody(req, res, function (body) {
+      var enable = body.enabled === true;
+      config.apps = config.apps || {};
+      config.apps.sideload = enable;
+      writeSettings({ apps: { sideload: enable } }, function (err) {
+        if (err) return installError(res, err.message);
+        if (enable) {
+          console.error('warning: apps.sideload enabled from dashboard; arbitrary IPK installations allowed');
+        } else {
+          console.log('apps: apps.sideload disabled');
+        }
+        send(res, 200, JSON.stringify({ ok: true, sideload: enable, sideloadVia: sideloadVia(req) }));
+      });
+    });
+  }
+  return send(res, 404, JSON.stringify({ ok: false, error: 'not found' }));
 }
 
 function handleRequest(req, res) {
@@ -588,6 +840,13 @@ function handleRequest(req, res) {
       ASSET_CACHE[file] = buf;
       respondWithBuf(buf);
     });
+  }
+
+  if (isInstallRoute(pathname) && !hostAllowed(req)) {
+    return send(res, 403, JSON.stringify({
+      ok: false,
+      error: msg('srv.install.hostRefused', 'this address is not allowed to install apps; add the name to apps.hosts in config.json, or use the TV\'s IP address')
+    }));
   }
 
   if (pathname.indexOf('/api/') === 0 && !authed(u.query, req)) {
@@ -651,6 +910,7 @@ function handleRequest(req, res) {
         return send(res, 403, JSON.stringify({ ok: false, error: msg('srv.controlsOff', 'controls disabled in config') }));
       }
       if (a.action === 'network') {
+        if (installBusyRefusal(res)) return;
         var open = !!a.open;
         if (open === networkOpen()) return send(res, 200, JSON.stringify({ ok: true, restarting: false }));
         return setNetworkAccess(open, function (err) {
@@ -661,7 +921,7 @@ function handleRequest(req, res) {
            * browser needs the result to know the save itself succeeded.
            */
           send(res, 200, JSON.stringify({ ok: true, restarting: true }));
-          setTimeout(function () { restartSelf(); }, 250);
+          restartSoon(250, 'setup');
         });
       }
       if (a.action === 'alwaysReady') {
@@ -778,6 +1038,8 @@ function handleRequest(req, res) {
   if (pathname === '/api/privacy') {
     return privacyModule.collectPrivacy(function (pv) { send(res, 200, JSON.stringify(pv)); });
   }
+
+  if (isInstallRoute(pathname)) return handleInstallRoute(req, res, u, pathname);
 
   if (pathname === '/api/apps' && req.method === 'GET') {
     return appsModule.getApps(function (d) {
@@ -998,15 +1260,14 @@ function handleRequest(req, res) {
       if (v.errors.length) {
         return send(res, 400, JSON.stringify({ ok: false, error: v.errors.join('; ') }));
       }
+      if (installBusyRefusal(res)) return;
       writeSettings(v.value, function (err) {
         if (err) {
           return send(res, 500, JSON.stringify({ ok: false, error: 'could not write ' + configFilePath + ': ' + err.message }));
         }
         console.log('settings: saved to ' + configFilePath + ', restarting to apply');
         send(res, 200, JSON.stringify({ ok: true, restarting: true }));
-        setTimeout(function () {
-          if (!restartSelf()) console.error('settings: no tvwebctl found - restart manually to apply');
-        }, 250);
+        restartSoon(250, 'settings');
       });
     });
     return;
@@ -1064,6 +1325,8 @@ function init(opts) {
   if (opts.updater) updaterModule = opts.updater;
   if (opts.tvApp) tvAppFn = opts.tvApp;
   if (opts.restartSelf) restartSelfFn = opts.restartSelf;
+  if (opts.repo) repoModule = opts.repo;
+  if (opts.installer) installerModule = opts.installer;
   if (opts.fromHomebrewChannel) fromHbcFn = opts.fromHomebrewChannel;
   if (opts.tileHidingOff) tileHidingOffMsg = opts.tileHidingOff;
   if (opts.assetPath) assetPathFn = opts.assetPath;
