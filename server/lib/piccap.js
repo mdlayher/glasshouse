@@ -20,6 +20,9 @@ var pollTimer = null;
 var pollIntervalMs = 30000;
 /** @type {function(boolean): void} */
 var onAvailableChange = function () {};
+// Whether Home Assistant's PicCap Capture entity is wanted at all.
+var wanted = function () { return true; };
+var isInstalled = function () { return installed(); };
 
 function current() {
   return { available: available, isRunning: isRunning };
@@ -111,6 +114,7 @@ function publishState(state, force) {
 }
 
 function refreshAndPublishState(forcePublish) {
+  if (!isInstalled() || !wanted()) return;
   getStatus(function (state) {
     publishState(state, forcePublish === true);
   }, true);
@@ -128,7 +132,11 @@ function attachMqtt(opts) {
   if (pollTimer) clearInterval(pollTimer);
   // Poll independently of telemetry, and only while MQTT can receive the state.
   pollTimer = setInterval(function () {
-    if (mqttClient && mqttClient.connected) refreshAndPublishState();
+    if (!mqttClient || !mqttClient.connected) return;
+    // Each check starts a luna-send: none where PicCap is not installed, or
+    // where its Home Assistant entity is switched off.
+    if (isInstalled() && wanted()) return refreshAndPublishState();
+    if (available) forget();
   }, pollIntervalMs);
 }
 
@@ -153,17 +161,37 @@ function handleMqttCommand(action, value, cb) {
   return true;
 }
 
+// PicCap uninstalled, or its entity switched off: no longer offered.
+function forget() {
+  available = false;
+  isRunning = null;
+  publishState(current(), true);
+  onAvailableChange(false);
+}
+
+// For the dashboard: null where PicCap is not installed, without asking it.
+function status(cb) {
+  if (!isInstalled()) return cb(null);
+  getStatus(function (state) {
+    cb(state.available ? { running: state.isRunning === true } : null);
+  });
+}
+
 function init(opts) {
   opts = opts || {};
   lunaFn = opts.luna;
   if (typeof opts.onAvailableChange === 'function') onAvailableChange = opts.onAvailableChange;
+  if (typeof opts.wanted === 'function') wanted = opts.wanted;
+  if (typeof opts.installed === 'function') isInstalled = opts.installed;
   var interval = parseInt(opts.pollIntervalMs, 10);
   pollIntervalMs = interval >= 1000 && interval <= 600000 ? interval : 30000;
   return {
     attachMqtt: attachMqtt,
     refreshAndPublishState: refreshAndPublishState,
     getState: getState,
-    handleMqttCommand: handleMqttCommand
+    handleMqttCommand: handleMqttCommand,
+    status: status,
+    setPower: setPower
   };
 }
 
@@ -172,8 +200,30 @@ function initNoop() {
     attachMqtt: function () {},
     refreshAndPublishState: function () {},
     getState: function () { return null; },
-    handleMqttCommand: function () { return false; }
+    handleMqttCommand: function () { return false; },
+    status: function (cb) { cb(null); },
+    setPower: function (on, cb) { cb({ ok: false, error: msg('srv.piccap.unavailable', 'PicCap is not available') }); }
   };
+}
+
+/*
+ * "piccap": {"enabled": ...} came from when PicCap was opt-in. It is offered
+ * wherever it is installed now, and Home Assistant's PicCap Capture entity is
+ * switched off like any other, so a saved false becomes exactly that and the
+ * key goes. Changes cfg in place; true when the file needs writing.
+ */
+function migrateConfig(cfg) {
+  if (!cfg || !cfg.piccap || typeof cfg.piccap !== 'object' || !('enabled' in cfg.piccap)) return false;
+  if (cfg.piccap.enabled === false) {
+    cfg.mqtt = cfg.mqtt || {};
+    cfg.mqtt.entities = cfg.mqtt.entities || {};
+    var off = Array.isArray(cfg.mqtt.entities.disabled) ? cfg.mqtt.entities.disabled : [];
+    if (off.indexOf('piccap') === -1) off.push('piccap');
+    cfg.mqtt.entities.disabled = off;
+  }
+  delete cfg.piccap.enabled;
+  if (!Object.keys(cfg.piccap).length) delete cfg.piccap;
+  return true;
 }
 
 /* Whether the app is on the TV: a look at its folder, without asking its service. */
@@ -181,4 +231,4 @@ function installed() {
   try { return fs.existsSync(APP_DIR); } catch (e) { return false; }
 }
 
-module.exports = { init: init, initNoop: initNoop, installed: installed, APP_DIR: APP_DIR };
+module.exports = { init: init, initNoop: initNoop, installed: installed, migrateConfig: migrateConfig, APP_DIR: APP_DIR };
