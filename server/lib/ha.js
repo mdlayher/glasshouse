@@ -239,6 +239,9 @@ for (var i = 0; i < HA_ENTITIES.length; i++) {
     ENTITY_CATEGORIES[_ent.id] = _ent.cat;
   }
 }
+// Not in the entity picker: the PicCap switch in the MQTT settings is its one
+// control, off by default where the picker's entries are on.
+ENTITY_CATEGORIES['switch.piccap'] = ENTITY_CATEGORIES.piccap = 'controls';
 
 function entityCategory(e) {
   if (!e) return 'diagnostics';
@@ -1165,6 +1168,22 @@ function buildEntities(opts) {
         }
       });
     }
+
+  // PicCap's screen capture, which feeds an ambient light. Only while PicCap
+  // answers: the server publishes its state, and nothing at all without it.
+  if (opts.piccap) {
+    entities.push({
+      type: 'switch', id: 'piccap',
+      payload: {
+        name: 'PicCap Capture',
+        command_topic: pfx + '/command/piccap/power',
+        state_topic: pfx + '/state/piccap/power',
+        payload_on: 'ON',
+        payload_off: 'OFF',
+        icon: 'mdi:television-ambient-light'
+      }
+    });
+  }
 
   entities.push({
     type: 'binary_sensor', id: 'power',

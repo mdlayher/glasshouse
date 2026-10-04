@@ -244,4 +244,19 @@ console.log('Running test-ha.js ...');
   console.log('  ✓ LG settings become entities only where the TV has them');
 })();
 
+// PicCap's switch, only while PicCap answers
+(function testPiccap() {
+  var on = ha.buildEntities({ pfx: 'test/tv', piccap: true }).filter(function (e) { return e.id === 'piccap'; });
+  assert.strictEqual(on.length, 1);
+  assert.strictEqual(on[0].type, 'switch');
+  assert.strictEqual(on[0].payload.command_topic, 'test/tv/command/piccap/power');
+  assert.strictEqual(on[0].payload.state_topic, 'test/tv/state/piccap/power');
+  assert.strictEqual(on[0].payload.payload_on, 'ON');
+  assert.ok(!ha.HA_ENTITIES.some(function (e) { return e.id === 'piccap'; }), 'not in the entity picker: the PicCap switch is its control');
+  var kept = ha.filterWithholds(on, { capabilities: { hasRemoteInfo: true, hasPnwash: true, hasCell: true, hasHdmiProc: true, userEntities: { diagnostics: false } } });
+  assert.strictEqual(kept.length, 1, 'filed under Controls, not Diagnostics');
+  assert.strictEqual(ha.buildEntities({ pfx: 'test/tv' }).filter(function (e) { return e.id === 'piccap'; }).length, 0);
+  console.log('  ✓ PicCap Capture is a switch only while PicCap answers');
+})();
+
 console.log('ALL test-ha.js assertions passed!\n');
