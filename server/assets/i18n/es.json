@@ -656,8 +656,8 @@
   "from": "Controls are disabled in config.json."
  },
  "common.heldOverridden": {
-  "text": "Reactivado con allowOnWebos10 en config.json. En webOS 10 y posteriores, los salvapantallas personalizados y el ocultado de aplicaciones han dejado la TV sin imagen, sin sonido y sin control HDMI hasta desenchufarla (#366).",
-  "from": "Turned back on with allowOnWebos10 in config.json. On webOS 10 and later custom screen savers and tile hiding have left the picture, the sound and HDMI control off until the TV was unplugged (#366)."
+  "text": "Reactivado con allowOnWebos10 en config.json. En webOS 10 y posteriores, los salvapantallas personalizados y el ocultado de aplicaciones han dejado la TV sin imagen, sin sonido y sin control HDMI hasta desenchufarla.",
+  "from": "Turned back on with allowOnWebos10 in config.json. On webOS 10 and later custom screen savers and tile hiding have left the picture, the sound and HDMI control off until the TV was unplugged."
  },
  "common.off": {
   "text": "Desactivado",
@@ -1962,6 +1962,26 @@
  "server.checkNow": {
   "text": "Comprobar ahora",
   "from": "Check now"
+ },
+ "server.experimental": {
+  "text": "Funciones experimentales",
+  "from": "Experimental features"
+ },
+ "server.experimental.screensaver": {
+  "text": "Salvapantallas personalizados (webOS 10+)",
+  "from": "Custom screen savers (webOS 10+)"
+ },
+ "server.experimental.screensaver.desc": {
+  "text": "Permite usar salvapantallas personalizados en webOS 10 y posteriores. Reemplazar el salvapantallas de Flutter requiere reiniciar el administrador de aplicaciones al iniciar, lo que puede silenciar la salida de vídeo o audio.",
+  "from": "Enables custom screen savers on webOS 10 and later. Replacing the Flutter screen saver requires restarting the application manager at boot, which can mute video or audio output."
+ },
+ "server.experimental.tileHiding": {
+  "text": "Ocultación de iconos de la pantalla de inicio",
+  "from": "Home screen tile hiding"
+ },
+ "server.experimental.tileHiding.desc": {
+  "text": "Permite ocultar iconos del sistema integrados en el iniciador de inicio. Reiniciar el administrador de aplicaciones durante el arranque puede causar bloqueos en el motor de pantalla en algunos televisores.",
+  "from": "Allows hiding built-in system tiles from the home launcher. Restarting the application manager at boot can cause display engine lockups on some TVs."
  },
  "server.install": {
   "text": "Instalar v{version}",
