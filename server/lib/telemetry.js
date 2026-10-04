@@ -368,22 +368,32 @@ function netBytes() {
   return best;
 }
 
-function getVideoSignal() {
-  for (var p = 0; p < 4; p++) {
+function getVideoSignal(targetPort) {
+  var portsToScan = Array.isArray(targetPort)
+    ? targetPort
+    : (typeof targetPort === 'number' && targetPort >= 0 && targetPort < 4)
+    ? [targetPort]
+    : [0, 1, 2, 3];
+
+  var anyConn = false;
+  for (var i = 0; i < portsToScan.length; i++) {
+    var p = portsToScan[i];
     var raw = readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
     if (!raw) continue;
     var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw);
     var w = null, h = null, hz = '';
     var wMatch = raw.match(/horizontal-active:\s*(\d+)/);
     var hMatch = raw.match(/vertical-active:\s*(\d+)/);
-    var hzMatch = raw.match(/pixel-clock-V:\s*(\d+)\s*Hz/);
-    if (wMatch && hMatch) {
+    var hzMatch = raw.match(/pixel-clock-V:\s*(\d+)(?:\s*Hz)?/);
+    if (wMatch && hMatch && parseInt(wMatch[1], 10) > 0 && parseInt(hMatch[1], 10) > 0) {
       w = wMatch[1];
       h = hMatch[1];
       if (hzMatch) hz = ' @ ' + hzMatch[1] + 'Hz';
     } else {
-      var sigM = raw.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
-      if (sigM && parseInt(sigM[1], 10) > 0) {
+      var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
+      var targetText = stablePart || raw;
+      var sigM = targetText.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
+      if (sigM && parseInt(sigM[1], 10) > 0 && parseInt(sigM[2], 10) > 0) {
         w = sigM[1];
         h = sigM[2];
         hz = ' @ ' + sigM[3] + 'Hz';
@@ -391,11 +401,11 @@ function getVideoSignal() {
       }
     }
     if (isConn) {
-      if (w && h) return w + 'x' + h + hz;
-      return 'Connected';
+      anyConn = true;
+      if (w && h && parseInt(w, 10) > 0 && parseInt(h, 10) > 0) return w + 'x' + h + hz;
     }
   }
-  return null;
+  return anyConn ? 'Connected' : null;
 }
 
 function readRemoteInfo() {
@@ -419,8 +429,15 @@ function readRemoteInfo() {
   return cachedRemote;
 }
 
-function getActiveHdmiDiagnostics() {
-  for (var p = 0; p < 4; p++) {
+function getActiveHdmiDiagnostics(targetPort) {
+  var portsToScan = Array.isArray(targetPort)
+    ? targetPort
+    : (typeof targetPort === 'number' && targetPort >= 0 && targetPort < 4)
+    ? [targetPort]
+    : [0, 1, 2, 3];
+
+  for (var i = 0; i < portsToScan.length; i++) {
+    var p = portsToScan[i];
     var raw = readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
     if (!raw) continue;
     var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw) || /is5Vconnected\[1\]/i.test(raw);
@@ -483,6 +500,23 @@ function getActiveHdmiDiagnostics() {
       qms: qmsMatch ? (qmsMatch[1] === '1') : null
     };
   }
+  return null;
+}
+
+function getHdmiSignal(hdmiNum) {
+  if (typeof hdmiNum !== 'number' || hdmiNum < 1 || hdmiNum > 4) return null;
+  // Motherboards route HDMI PHYs differently:
+  // e.g. B8 routes HDMI 2 to PHY port 2, while others route HDMI 1..4 to PHY 0..3.
+  var candidates = [hdmiNum - 1, hdmiNum];
+  for (var c = 0; c < candidates.length; c++) {
+    var p = candidates[c];
+    if (p >= 0 && p < 4) {
+      var sig = getVideoSignal(p);
+      if (sig) return { signal: sig, diag: getActiveHdmiDiagnostics(p) };
+    }
+  }
+  var anySig = getVideoSignal();
+  if (anySig) return { signal: anySig, diag: getActiveHdmiDiagnostics() };
   return null;
 }
 
@@ -679,7 +713,9 @@ function hdmiPorts() {
     var pclk = parseInt(field(/pixel-clock:\s*(\d+)/) || '0', 10);
 
     if (!hact || !vact) {
-      var sigM = raw.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
+      var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
+      var targetText = stablePart || raw;
+      var sigM = targetText.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
       if (sigM) {
         hact = parseInt(sigM[1], 10);
         vact = parseInt(sigM[2], 10);
@@ -1072,8 +1108,6 @@ function collectStats(cb) {
   }
   if (n) prevNet = n;
 
-  var hdmiDiag = getActiveHdmiDiagnostics();
-  noteHdmiSeen(hdmiDiag);
   var peInfo = getPictureEngineInfo();
   var uptimeSec = Math.floor(parseFloat(readTrimmed('/proc/uptime') || '0'));
 
@@ -1126,8 +1160,8 @@ function collectStats(cb) {
     netTotal: n ? { rx: n.rx, tx: n.tx, iface: n.iface } : null,
     mac: n ? macAddress(n.iface) : null,
     emmc: emmcInfo(),
-    signal: getVideoSignal(),
-    hdmi_diag: hdmiDiag,
+    signal: null,
+    hdmi_diag: null,
     picture_engine: peInfo,
     colorimetry: peInfo ? peInfo.colorimetry : null,
     power: {
@@ -1330,6 +1364,25 @@ function collectStats(cb) {
             out.app_name = inputNameMap[shortApp] || appTitles[app.appId] || shortApp;
             out.display_title = isInput ?
               (inputNameMap[shortApp] + ' (' + shortApp.toUpperCase() + ')') : out.app_name;
+
+            var hdmiMatch = String(app.appId).match(/^com\.webos\.app\.hdmi([1-4])$/i);
+            var isScreenOff = out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'));
+            if (hdmiMatch && !isScreenOff) {
+              var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10));
+              out.signal = sigObj ? sigObj.signal : null;
+              out.hdmi_diag = sigObj ? sigObj.diag : null;
+              if (out.hdmi_diag) noteHdmiSeen(out.hdmi_diag);
+            } else {
+              out.signal = null;
+              out.hdmi_diag = null;
+            }
+          } else if (app && app.appId === '') {
+            out.signal = null;
+            out.hdmi_diag = null;
+          }
+          if (out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'))) {
+            out.signal = null;
+            out.hdmi_diag = null;
           }
 
           lunaCachedFn('com.webos.service.settings/getSystemSettings',
@@ -1506,6 +1559,7 @@ module.exports = {
   getVideoSignal: getVideoSignal,
   readRemoteInfo: readRemoteInfo,
   getActiveHdmiDiagnostics: getActiveHdmiDiagnostics,
+  getHdmiSignal: getHdmiSignal,
   getPictureEngineInfo: getPictureEngineInfo,
   formatSoundOutput: formatSoundOutput,
   formatPicMode: formatPicMode,
