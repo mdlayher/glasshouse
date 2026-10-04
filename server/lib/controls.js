@@ -328,9 +328,38 @@ function doControl(action, value, cb) {
         luna('com.webos.service.settings/setSystemSettings',
              { category: 'sound', settings: { soundOutput: id } }, function (r) { next(!!(r && r.returnValue)); });
       };
-      return setOut(sOut, function (ok) {
-        if (ok || !sAlias) return cb({ ok: ok });
-        setOut(sAlias, function (ok2) { cb({ ok: ok2 }); });
+      /* The setting changes at once, but the audio service takes up to a
+         couple of seconds to move the sound over (about 1s on a C2, 2-3s on
+         a B8). Answering only once it has means the next read has the new
+         output and whether its volume and mute can be changed, and the
+         dashboard holds its volume controls until then. Where the routing
+         does not change (a B8 set to HDMI ARC with nothing answering stays
+         on optical) it gives up after 4s. */
+      var routing = function (next) {
+        luna('com.webos.service.audio/master/getVolume', {}, function (m) {
+          var vs = m && m.volumeStatus;
+          if (vs) return next([vs.soundOutput, vs.adjustVolume, vs.externalDeviceControl].join());
+          luna('com.webos.audio/getVolume', {}, function (o) { next(o ? [o.scenario, o.volume].join() : ''); });
+        });
+      };
+      var settled = function (before) {
+        var until = Date.now() + 4000;
+        return function (ok) {
+          if (!ok) return cb({ ok: false });
+          (function check() {
+            routing(function (now) {
+              if (now !== before || Date.now() >= until) return cb({ ok: true });
+              setTimeout(check, 400);
+            });
+          })();
+        };
+      };
+      return routing(function (before) {
+        var done = settled(before);
+        setOut(sOut, function (ok) {
+          if (ok || !sAlias) return done(ok);
+          setOut(sAlias, done);
+        });
       });
 
     case 'playback':

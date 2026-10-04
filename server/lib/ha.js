@@ -25,7 +25,13 @@ var PIC_MODE_MAP = {
   dolbyHdrCinemaHome: 'Dolby Vision Cinema Home',
   dolbyHdrStandard: 'Dolby Vision Standard',
   dolbyHdrGame: 'Dolby Vision Game',
+  dolbyHdrFilmMaker: 'Dolby Vision Filmmaker',
   hdrCinema: 'HDR Cinema',
+  hdrCinemaBright: 'HDR Cinema Bright',
+  hdrFilmMaker: 'HDR Filmmaker',
+  hdrPersonalized: 'HDR Personalized',
+  hdrVivid: 'HDR Vivid',
+  filmMaker: 'Filmmaker',
   hdrCinemaHome: 'HDR Cinema Home',
   hdrStandard: 'HDR Standard',
   hdrGame: 'HDR Game',
@@ -43,12 +49,33 @@ var PIC_MODE_MAP = {
   normal: 'Standard'
 };
 
+/*
+ * A mode missing from the map is spelled out from its id rather than shown as
+ * one word: dolbyHdrCinemaBright reads "Dolby Vision Cinema Bright".
+ */
+function picModeName(id) {
+  if (PIC_MODE_MAP[id]) return PIC_MODE_MAP[id];
+  return String(id)
+    .replace(/^dolbyHdr(?=[A-Z])/, 'Dolby Vision ')
+    .replace(/^hdr(?=[A-Z])/, 'HDR ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/^[a-z]/, function (c) { return c.toUpperCase(); });
+}
+
+function picModeNames(ids) {
+  var names = {};
+  for (var i = 0; i < ids.length; i++) names[ids[i]] = picModeName(ids[i]);
+  return names;
+}
+
 var SOUND_OUTPUT_MAP = {
   tv_speaker: 'TV Speaker',
   external_arc: 'HDMI ARC',
   optical: 'Optical',
   external_optical: 'Optical',
   ext_speaker_optical: 'Optical',
+  ext_speaker_builtin_lg_optical: 'Optical',
+  ext_speaker_arc: 'HDMI ARC',
   headphone: 'Headphone / AUX',
   bt_soundbar: 'Bluetooth',
   external_speaker: 'External Speaker',
@@ -80,6 +107,8 @@ var HA_ENTITIES = [
   { id: 'app', type: 'select', name: 'Application', cat: 'controls' },
   { id: 'active_app', type: 'sensor', name: 'Active App', cat: 'controls' },
   { id: 'play_state', type: 'sensor', name: 'Player State', cat: 'controls' },
+  { id: 'volume_up', type: 'button', name: 'Volume Up', cat: 'controls' },
+  { id: 'volume_down', type: 'button', name: 'Volume Down', cat: 'controls' },
   { id: 'remote_up', type: 'button', name: 'Remote Up', cat: 'controls' },
   { id: 'remote_down', type: 'button', name: 'Remote Down', cat: 'controls' },
   { id: 'remote_left', type: 'button', name: 'Remote Left', cat: 'controls' },
@@ -361,6 +390,18 @@ function buildEntities(opts) {
   var topic = topics(opts.pfx);
   var installedApps = opts.installedApps || [];
   var lastPicModes = opts.pictureModes || [];
+
+  // telemetry's volume_control: the level can be set, or only stepped (a
+  // receiver on HDMI ARC/eARC), or neither (optical). Stepping and mute are
+  // available in the first two.
+  var volumeLevelAvailability = [{
+    topic: topic.telemetry,
+    value_template: '{{ "online" if (value_json.volume_control | default("level")) == "level" else "offline" }}'
+  }];
+  var volumeStepAvailability = [{
+    topic: topic.telemetry,
+    value_template: '{{ "offline" if value_json.volume_control == "none" else "online" }}'
+  }];
 
   /** @type {any[]} */
   var entities = [
@@ -717,7 +758,9 @@ function buildEntities(opts) {
           value_template: '{{ \'ON\' if value_json.muted else \'OFF\' }}',
           payload_on: 'ON',
           payload_off: 'OFF',
-          icon: 'mdi:volume-mute'
+          icon: 'mdi:volume-mute',
+          // Refused with the volume ("Current Scenario doesn't support mute").
+          availability: volumeStepAvailability
         }
       },
       {
@@ -730,7 +773,8 @@ function buildEntities(opts) {
           min: 0,
           max: 100,
           step: 1,
-          icon: 'mdi:volume-high'
+          icon: 'mdi:volume-high',
+          availability: volumeLevelAvailability
         }
       },
       {
@@ -921,10 +965,11 @@ function buildEntities(opts) {
         /* The settable modes depend on the dynamic range of what is playing,
            so this is whatever the TV last said it would accept. Discovery is
            republished when that set changes - see publishTelemetry. */
-        }, namedSelect(lastPicModes.length
+        }, (function (ids) {
+          return namedSelect(ids, picModeNames(ids), '(value_json.picture.mode_raw if value_json.picture else "standard")');
+        })(lastPicModes.length
             ? lastPicModes.map(function (m) { return m.value; })
-            : ['expert1', 'expert2', 'cinema', 'game', 'standard', 'eco', 'sports'],
-          PIC_MODE_MAP, '(value_json.picture.mode_raw if value_json.picture else "standard")'))
+            : ['expert1', 'expert2', 'cinema', 'game', 'standard', 'eco', 'sports']))
       },
       {
         type: 'select', id: 'energy_saving',
@@ -1085,6 +1130,28 @@ function buildEntities(opts) {
           payload_on: 'ON',
           payload_off: 'OFF',
           icon: 'mdi:shield-check'
+        }
+      },
+      // A step at a time, as the remote's volume keys: a receiver on HDMI
+      // ARC/eARC that takes no set level still takes these.
+      {
+        type: 'button', id: 'volume_up',
+        payload: {
+          name: 'Volume Up',
+          command_topic: topic.command('volumeStep'),
+          payload_press: '1',
+          icon: 'mdi:volume-plus',
+          availability: volumeStepAvailability
+        }
+      },
+      {
+        type: 'button', id: 'volume_down',
+        payload: {
+          name: 'Volume Down',
+          command_topic: topic.command('volumeStep'),
+          payload_press: '-1',
+          icon: 'mdi:volume-minus',
+          availability: volumeStepAvailability
         }
       },
       // The remote's D-pad, Back and Home, as the dashboard's remote sends them.
@@ -1387,6 +1454,7 @@ module.exports = {
   INPUTS: INPUTS,
   SOUND_OUTPUT_MAP: SOUND_OUTPUT_MAP,
   PIC_MODE_MAP: PIC_MODE_MAP,
+  picModeName: picModeName,
   AWAKE_ONLY: AWAKE_ONLY,
   HA_CATEGORIES: HA_CATEGORIES,
   HA_ENTITIES: HA_ENTITIES,

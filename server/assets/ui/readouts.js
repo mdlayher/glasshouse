@@ -414,15 +414,29 @@ async function tick() {
     if (!volDragging) {
       const vLeased = getLease('volume', d.volume);
       const v = vLeased !== undefined ? vLeased : (typeof d.volume === 'number' ? d.volume : 0);
-      // No level: the sound device on the other end of the cable sets it.
-      const external = d.volume === null;
+      // The server says how the volume can be changed: set, stepped (a
+      // receiver on HDMI ARC/eARC takes only up and down), or not at all.
+      const ctl = d.volume_control || (d.volume === null ? 'none' : 'level');
+      const level = ctl === 'level';
+      const settling = Date.now() < volSettleUntil;
+      if (q('vol-steps')) {
+        q('vol-steps').hidden = ctl !== 'steps';
+        q('vol-steps').querySelectorAll('button').forEach(b => { b.disabled = settling; });
+      }
+      if (q('vol-wrap')) {
+        q('vol-wrap').hidden = ctl === 'steps';
+        q('vol-wrap').classList.toggle('off', ctl === 'none' || settling);
+        q('vol-wrap').title = ctl === 'none' ? t('ctl.volumeExternal', 'The volume is set on the sound device') : '';
+      }
       if (q('vol-slider')) {
         q('vol-slider').value = v;
-        q('vol-slider').disabled = external;
-        q('vol-slider').title = external ? t('ctl.volumeExternal', 'The volume is set on the sound device') : '';
+        q('vol-slider').disabled = !level || settling;
       }
-      if (q('vol-fill')) q('vol-fill').style.width = (external ? 0 : v) + '%';
-      q('vol').textContent = muted ? t('ctl.muted', 'MUTED') : external ? '—' : v;
+      // Mute is refused wherever the volume is ("Current Scenario doesn't
+      // support mute"), and passed on where up and down are.
+      if (q('mute')) q('mute').disabled = ctl === 'none' || settling;
+      if (q('vol-fill')) q('vol-fill').style.width = (level ? v : 0) + '%';
+      q('vol').textContent = muted ? t('ctl.muted', 'MUTED') : level ? v : '—';
       if (q('vol-wrap')) q('vol-wrap').classList.toggle('muted', muted);
     }
     q('mute').classList.toggle('on', muted);
@@ -544,9 +558,15 @@ async function tick() {
     }
 
     if (d.sound) {
-      const soLeased = getLease('soundOutput', d.sound.output_raw);
-      const curSo = soLeased !== undefined ? soLeased : (d.sound.output_raw || '');
+      // The TV reports optical as external_optical (B8, C2) and its speakers as
+      // internal on some firmware; the buttons carry the other id.
+      const soRaw = { external_optical: 'optical', internal: 'tv_speaker' }[d.sound.output_raw] || d.sound.output_raw || '';
+      const soLeased = getLease('soundOutput', soRaw);
+      const curSo = soLeased !== undefined ? soLeased : soRaw;
       if (q('soundout-lbl') && !soLeased) q('soundout-lbl').textContent = (d.sound.output || d.sound.output_raw || '').toUpperCase();
+      // Bluetooth only with an audio device connected: without one the TV
+      // opens its own pairing prompt and falls back to the speakers.
+      if (q('so_bt_soundbar')) q('so_bt_soundbar').hidden = d.sound.bt_audio === false && curSo !== 'bt_soundbar';
       const soBtns = q('soundouts') ? q('soundouts').querySelectorAll('button') : [];
       for (let b of soBtns) {
         const isCur = b.id.replace('so_', '') === curSo;

@@ -91,6 +91,7 @@ function applyOptimistic(action, value) {
   } else if (action === 'soundOutput') {
     const so = String(value);
     setLease('soundOutput', so);
+    holdVolumeControls();
     const soBtns = q('soundouts') ? q('soundouts').querySelectorAll('button') : [];
     for (let b of soBtns) {
       const matches = b.id.replace('so_', '') === so;
@@ -181,6 +182,7 @@ async function sendCommand(action, value) {
     showErr(e.message);
     setTimeout(tick, 0);
   } finally {
+    if (action === 'soundOutput') volSettleUntil = 0;
     setBusy(false);
   }
 }
@@ -272,6 +274,18 @@ function initBacklightSlider() {
 
 let volDragging = false;
 let volActive = false;
+// While a sound output change settles: the server answers once the TV has
+// moved the sound over, and until then the volume and mute may be refused.
+// The time limit only covers an answer that never comes.
+let volSettleUntil = 0;
+
+function holdVolumeControls() {
+  volSettleUntil = Date.now() + 10000;
+  if (q('vol-slider')) q('vol-slider').disabled = true;
+  if (q('vol-wrap')) q('vol-wrap').classList.add('off');
+  if (q('mute')) q('mute').disabled = true;
+  if (q('vol-steps')) q('vol-steps').querySelectorAll('button').forEach(b => { b.disabled = true; });
+}
 
 function setVolFromPointer(e) {
   const wrap = q('vol-wrap');
@@ -297,7 +311,7 @@ function initVolSlider() {
   if (!wrap || !slider) return;
 
   wrap.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || slider.disabled) return;
     volActive = true;
     volDragging = true;
     wrap.classList.add('dragging');
@@ -386,8 +400,8 @@ function toggleMute() {
   setLease('mute', muted);
   q('mute').classList.toggle('on', muted);
   if (q('vol-wrap')) q('vol-wrap').classList.toggle('muted', muted);
-  const curVol = q('vol-slider') ? q('vol-slider').value : '';
-  q('vol').textContent = muted ? t('ctl.muted', 'MUTED') : curVol;
+  const s = q('vol-slider');
+  q('vol').textContent = muted ? t('ctl.muted', 'MUTED') : (!s || s.disabled ? '—' : s.value);
   sendCommand('mute', muted);
 }
 async function sendToast() {
