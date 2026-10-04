@@ -1053,4 +1053,32 @@ function createMockRes(cb) {
   }
 })();
 
+// /api/oledcare says whether the TV has an OLED panel, so the TV app drops its
+// OLED Care tab on an LCD TV as the web dashboard does
+(function testOledCareAvailable() {
+  function oledCare(stats) {
+    var body = null;
+    routes.init({
+      config: { web: { enabled: false }, allowControl: true, token: '' },
+      oled: {
+        readOledProtections: function (cb) { cb(null); },
+        oledProtControllable: function () { return false; }
+      },
+      telemetry: { collectStats: function (cb) { cb(stats); } }
+    });
+    routes.handleRequest(createMockReq({
+      url: '/api/oledcare', method: 'GET', remoteAddress: '127.0.0.1',
+      headers: { host: '127.0.0.1:8080' }
+    }), createMockRes(function (r) { body = JSON.parse(r.body); }));
+    return body;
+  }
+  var oled = oledCare({ oled: { panel_hours: 4200 } });
+  assert.strictEqual(oled.available, true);
+  assert.strictEqual(oled.panelHours, 4200);
+  var lcd = oledCare({ oled: null });
+  assert.strictEqual(lcd.available, false);
+  assert.strictEqual(lcd.isOled, false);
+  console.log('  ✓ /api/oledcare is unavailable on a TV without an OLED panel');
+})();
+
 console.log('ALL test-routes.js assertions passed!');

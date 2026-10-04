@@ -1023,6 +1023,7 @@ function handleRequest(req, res) {
         send(res, 200, JSON.stringify({
           ok: true,
           isOled: !!(st && st.oled),
+          available: !!(st && st.oled),
           // Whether this TV has the service the service menu goes through.
           serviceControls: oledModule.oledProtControllable(),
           writable: config.allowControl,

@@ -86,4 +86,14 @@ vm.runInContext(scriptMatch[1], sandbox);
   console.log('  ✓ sysRows omits eMMC health when unavailable or unknown');
 })();
 
+// 2. OLED Care is dropped on a TV without an OLED panel, as Game and Screen
+// Saver are where the TV has neither
+(function testOledTabOptional() {
+  var oledTab = sandbox.TABS.filter(function (s) { return s.key === 'oled'; })[0];
+  assert.ok(oledTab, 'the OLED Care tab exists');
+  assert.strictEqual(oledTab.optional, true, 'and is dropped when /api/oledcare says it is unavailable');
+  assert.deepEqual(sandbox.oledRows({ ok: true, isOled: false }), [], 'no rows on an LCD TV');
+  console.log('  ✓ the OLED Care tab is optional, with no rows on a TV without an OLED panel');
+})();
+
 console.log('ALL test-dashboard-view.js assertions passed!\n');

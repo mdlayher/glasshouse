@@ -263,7 +263,7 @@ var TABS = [
   // Metrics keeps the key it had as System, which the installed app opens on.
   { key: 'system',  label: t('tab.metrics', 'Metrics'),      url: '/api/stats',       build: sysRows,  poll: 5000 },
   { key: 'apps',    label: t('tab.apps', 'Apps'),         url: '/api/apps',        build: appsRows },
-  { key: 'oled',    label: t('tab.oledCare', 'OLED Care'),    url: '/api/oledcare',    build: oledRows },
+  { key: 'oled',    label: t('tab.oledCare', 'OLED Care'),    url: '/api/oledcare',    build: oledRows, optional: true },
   { key: 'game',    label: t('tab.game', 'Game'),         url: '/api/game',        build: gameRows, optional: true },
   { key: 'saver',   label: t('tv.tab.screenSaver', 'Screen Saver'), url: '/api/screensaver', build: saverRows, optional: true },
   { key: 'privacy', label: t('tab.privacy', 'Privacy'),      url: '/api/privacy',     build: privacyRows },
@@ -522,7 +522,7 @@ function lgRow(g) {
 
 function oledRows(d) {
   if (!d || !d.ok) return [];
-  if (!d.isOled) return [{ label: t('tv.oled.thisIsNotAn', 'This is not an OLED panel'), value: '' }];
+  if (!d.isOled) return [];
   var canSet = d.writable && d.serviceControls;
   var r = [];
 
@@ -2142,8 +2142,9 @@ if (selMatch) {
 openTab(initTab, initialSel !== null);
 
 /* A section the TV may not have is dropped once its endpoint says so, as the
-   browser dashboard hides its tab: a B8 has no Game Optimizer, and a TV
-   holding custom screen savers back (#366) has none to offer. */
+   browser dashboard hides its tab: a B8 has no Game Optimizer, a TV holding
+   custom screen savers back (#366) has none to offer, and an LCD TV has no
+   OLED Care. */
 TABS.forEach(function (section) {
   if (!section.optional) return;
   fetch(section.url, { cache: 'no-store' })
