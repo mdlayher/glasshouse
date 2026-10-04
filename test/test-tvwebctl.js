@@ -72,10 +72,27 @@ function waitFor(what, test, ms, cb) {
 
 function after(ms, cb) { setTimeout(cb, ms); }
 
+// Watchdogs of this tvwebctl, as its own ps match sees them.
+var WATCH = fs.realpathSync(CTL) + ' watch';
+function watchdogs() {
+  return child.execSync('ps -eo pid,args', { encoding: 'utf8' }).split('\n').filter(function (l) {
+    return l.indexOf(WATCH) !== -1;
+  }).length;
+}
+
 mode('beat');
 ctl('start');
 waitFor('the server and its heartbeat', function () { return alive(serverPid()) && read(env.TVWEB_BEAT); }, 10000, function () {
   var first = serverPid();
+
+  // 0. A second start leaves the running server as the only one
+  ctl('start');
+  var copies = child.execSync('ps -eo args', { encoding: 'utf8' }).split('\n').filter(function (l) {
+    return l.trim().slice(-APP.length) === APP;
+  });
+  if (serverPid() !== first) return finish(1, 'a second start replaced the pid file');
+  if (copies.length !== 1) return finish(1, 'a second start left ' + copies.length + ' servers running');
+  console.log('  ✓ a second start leaves the running server as the only one');
 
   // 1. A server that keeps beating is left alone
   after(9000, function () {
@@ -112,7 +129,22 @@ waitFor('the server and its heartbeat', function () { return alive(serverPid()) 
               after(500, function () {
                 if (alive(leftover.pid)) return finish(1, 'the leftover copy is still running');
                 console.log('  ✓ a dead server\'s leftover copy is cleared before a new one starts');
-                finish(0);
+
+                // 5. A second watchdog, as two starts at one moment leave, is
+                // cleared by a restart, and a start beside one adds none
+                var extra = child.spawn('sh', [fs.realpathSync(CTL), 'watch'], { env: env, detached: true, stdio: 'ignore' });
+                extra.unref();
+                waitFor('the extra watchdog', function () { return watchdogs() === 2; }, 5000, function () {
+                  ctl('restart');
+                  after(1000, function () {
+                    if (alive(extra.pid)) return finish(1, 'a restart left the extra watchdog running');
+                    if (watchdogs() !== 1) return finish(1, 'a restart left ' + watchdogs() + ' watchdogs');
+                    ctl('start');
+                    if (watchdogs() !== 1) return finish(1, 'a start beside a watchdog left ' + watchdogs());
+                    console.log('  ✓ a restart clears an extra watchdog, and a start adds none');
+                    finish(0);
+                  });
+                });
               });
             });
           });
