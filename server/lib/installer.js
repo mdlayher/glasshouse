@@ -710,10 +710,13 @@ function fail(j, text) {
 }
 
 function snapshot() {
-  if (!job) return { state: 'idle', jobId: null, progress: null, preview: null, error: null, result: null };
+  if (!job) return { state: 'idle', jobId: null, source: null, appId: null, progress: null, preview: null, error: null, result: null };
   return {
     state: job.state,
     jobId: job.id,
+    // Which catalog row it belongs to, so the dashboard can show it there.
+    source: job.source,
+    appId: job.pkg ? job.pkg.id : null,
     progress: job.progress,
     preview: job.preview,
     error: job.error,
@@ -1149,11 +1152,19 @@ function elevateAll(services, cb) {
   })();
 }
 
+function appTitle(j) {
+  var first = j.info.apps[0];
+  if (first && first.title && first.title !== first.id) return first.title;
+  return (j.pkg && j.pkg.title) || j.info.package;
+}
+
 function finishJob(j, elevation) {
   if (!live(j)) return;
   clearStaging();
   j.result = {
     package: j.info.package,
+    // What the home screen calls it: the app's own title, else the catalog's.
+    title: appTitle(j),
     version: j.info.version,
     apps: j.info.apps.map(function (a) { return a.id; }),
     elevation: elevation

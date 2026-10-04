@@ -139,6 +139,26 @@
   "text": "Apps y lanzador de la pantalla de inicio",
   "from": "Apps & Home Screen Launcher"
  },
+ "apps.install.btn.checking": {
+  "text": "Comprobando…",
+  "from": "Checking…"
+ },
+ "apps.install.btn.downloading": {
+  "text": "Descargando",
+  "from": "Downloading"
+ },
+ "apps.install.btn.finishing": {
+  "text": "Terminando…",
+  "from": "Finishing…"
+ },
+ "apps.install.btn.review": {
+  "text": "Revisar…",
+  "from": "Review…"
+ },
+ "apps.install.installed": {
+  "text": "Instalada",
+  "from": "Installed"
+ },
  "apps.installed.app": {
   "text": "App instalada",
   "from": "Installed app"
@@ -375,6 +395,10 @@
   "text": "¿Desinstalar \"{name}\" de la TV? Esto borrará permanentemente la aplicación y sus datos guardados.",
   "from": "Uninstall \"{name}\" from the TV?\n\nThis will permanently delete the application and its stored data."
  },
+ "apps.uninstall.done": {
+  "text": "Se ha desinstalado {name}.",
+  "from": "Uninstalled {name}."
+ },
  "apps.uninstall.desc": {
   "text": "Descargas de la tienda y aplicaciones instaladas por el usuario. Pulsa Desinstalar para eliminar la aplicación de forma permanente y liberar espacio en la memoria flash eMMC interna.",
   "from": "Store downloads and user-installed applications. Click Uninstall to permanently remove the application and free up internal eMMC flash storage space."
@@ -382,6 +406,10 @@
  "apps.uninstall.failed": {
   "text": "No se pudo desinstalar {name}: {error}",
   "from": "Could not uninstall {name}: {error}"
+ },
+ "apps.uninstall.removed": {
+  "text": "Eliminada",
+  "from": "Removed"
  },
  "apps.uninstall.working": {
   "text": "Desinstalando…",
@@ -3498,10 +3526,6 @@
  "tv.apps.uninstall.press": {
   "text": "Pulsa OK para desinstalar la app",
   "from": "Press OK to uninstall app"
- },
- "tv.apps.uninstalled": {
-  "text": "App desinstalada",
-  "from": "App uninstalled"
  },
  "tv.apps.uninstalling": {
   "text": "Desinstalando {name}…",
