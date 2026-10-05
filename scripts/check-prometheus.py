@@ -60,7 +60,10 @@ def find_promtool():
             for member in tar.getmembers():
                 if member.name.endswith('/promtool') or member.name == 'promtool':
                     member.name = 'promtool'
-                    tar.extract(member, path=CACHE_DIR)
+                    if hasattr(tarfile, 'data_filter'):
+                        tar.extract(member, path=CACHE_DIR, filter='data')
+                    else:
+                        tar.extract(member, path=CACHE_DIR)
                     break
         cached.chmod(0o755)
         if tar_path.exists():
