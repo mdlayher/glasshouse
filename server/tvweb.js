@@ -29,6 +29,7 @@ var fetchLib = require('./lib/fetch');
 var repo = require('./lib/repo');
 var installer = require('./lib/installer');
 var privacy = require('./lib/privacy');
+var devtools = require('./lib/devtools');
 var oled = require('./lib/oled');
 var screensavers = require('./lib/screensavers');
 var appsModule = require('./lib/apps');
@@ -91,6 +92,11 @@ var CONFIG = {
   // mid-boot can lock up the display engine on some TVs, leaving the picture
   // black (#366). Off by default; set here or from the Server tab.
   allowTileHiding: false,
+
+  // The web app debugger (port 9998) is closed to the network unless this is
+  // set, for inspecting Homebrew apps with ares-inspect. File-only, like
+  // `token`: it widens who can run code on the TV.
+  allowNetworkDebugger: false,
 
   // PicCap is offered where it is installed; its Home Assistant entity is
   // switched off like any other.
@@ -554,9 +560,11 @@ function checkHomebrewChannelApp() {
     // Inline rather than a script, since the files it deletes include every
     // script there is. 20-services.sh holds down the services switched off in
     // the dashboard, and they come back once it goes.
+    var rule = devtools.RULE.join(' ');
     forgetHomeAssistant(function () {
       child_process.spawn('/bin/sh', ['-c',
         '/var/lib/tvweb/tvwebctl stop >/dev/null 2>&1; rm -rf /var/lib/tvweb /media/developer/temp/glasshouse-install; ' +
+        'PATH=/usr/sbin:/sbin:$PATH; iptables -D ' + rule + ' 2>/dev/null; ip6tables -D ' + rule + ' 2>/dev/null; ' +
         'cd /var/lib/webosbrew/init.d && rm -f 50-tvweb 20-services.sh 20-tvweb-services; ' +
         'rm -f /var/lib/webosbrew/tvweb-boot.log /var/lib/webosbrew/tvweb-boot.log.old'
       ], { detached: true, stdio: 'ignore' }).unref();
@@ -698,6 +706,10 @@ if (!CLI_MODE && !webEnabled && !mqttEnabled) {
 }
 
 privacy.checkBootAdBlock(CLI_MODE);
+if (!CLI_MODE) {
+  if (CONFIG.allowNetworkDebugger) devtools.leaveOpen();
+  else devtools.blockFromNetwork();
+}
 
 if (!CLI_MODE) servicesModule.startEnforcing();
 
