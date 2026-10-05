@@ -14,6 +14,7 @@ var toInt = require('./util').toInt;
 var path = require('path');
 var execFile = require('child_process').execFile;
 var ha = require('./ha');
+var timers = require('./timers');
 
 var SOUND_OUTPUT_MAP = ha.SOUND_OUTPUT_MAP;
 
@@ -51,6 +52,7 @@ var HARDWARE_INFO = {
 };
 
 var hasLogoLight = null;   // null = not yet determined
+var powerTimersSeen = null; // LG's On and Off Timers, once the TV's settings are read
 var hasLightSensor = false;
 var lightSensorFailures = 0;
 var lastLightSensorProbe = 0;
@@ -1264,9 +1266,12 @@ function collectStats(cb) {
     out.screensaverMode = screensaversModule ? screensaversModule.screensaverMode() : 'stock';
     out.screensaverLevel = screensaversModule ? screensaversModule.screensaverLevel() : 'dim';
 
+  // The whole category, for the sleep timer and LG's On and Off Timers.
   lunaCachedFn('com.webos.service.settings/getSystemSettings',
-       { category: 'time', keys: ['sleepTimer'] }, 30000, function (tm) {
+       { category: 'time' }, 30000, function (tm) {
     out.sleepTimer = (tm && tm.settings && tm.settings.sleepTimer) || 'off';
+    out.powerTimers = timers.fromSettings(tm && tm.returnValue !== false ? tm.settings : null);
+    if (tm && tm.returnValue !== false) powerTimersSeen = out.powerTimers || {};
 
   lunaCachedFn('com.webos.service.settings/getSystemSettings',
        { category: 'option', keys: ['standByLight', 'logoLight', 'powerOnLight', 'quickStartMode'] }, 60000, function (op) {
@@ -1572,6 +1577,8 @@ function getCapabilities(extra) {
     hasHdrStatus: fs.existsSync('/proc/lg/pe/hdr_status'),
     socArch: HARDWARE_INFO && HARDWARE_INFO.socArch,
     hasLogoLight: hasLogoLight,
+    hasOnTimer: powerTimersSeen ? !!powerTimersSeen.on : null,
+    hasOffTimer: powerTimersSeen ? !!powerTimersSeen.off : null,
     thermalPresent: THERMAL_PRESENT,
     emmcWearPresent: EMMC_WEAR_PRESENT,
     hasLightSensor: hasLightSensor,
@@ -1595,6 +1602,11 @@ function getCapabilitySignature() {
   var cap = [];
   for (var hs in hdmiSeen) cap.push(hs);
   if (hasMediaState) cap.push('play_state');
+  if (powerTimersSeen) {
+    cap.push('timers_read');
+    if (powerTimersSeen.on) cap.push('on_timer');
+    if (powerTimersSeen.off) cap.push('off_timer');
+  }
   return cap.sort().join(',');
 }
 
