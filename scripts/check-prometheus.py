@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 """
-Every metric exposition the server renders must be one Prometheus accepts.
-
-Prometheus fails scrapes or drops series when metrics or labels are malformed,
-unescaped, or violate naming conventions. This renders every stats fixture
-through server/lib/prometheus.js and runs the output through `promtool check metrics`.
-
-If promtool is not found in PATH, it downloads a standalone binary into
-~/.cache/glasshouse-prometheus/ (no root or package manager required).
+Prometheus rejects scrapes or drops series when metrics or labels are
+malformed. This renders each telemetry fixture through the server and
+validates the output with promtool.
 """
 import json
 import os

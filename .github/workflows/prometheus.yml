@@ -1,6 +1,6 @@
-# Prometheus fails scrapes or drops series for exposition text it cannot
-# parse or validate. This renders every telemetry fixture through the Prometheus
-# exposition formatter and validates it using promtool check metrics.
+# Prometheus rejects scrapes or drops series when metrics or labels are
+# malformed. This renders each telemetry fixture through the server and
+# validates the output with promtool.
 name: Prometheus
 
 on:
