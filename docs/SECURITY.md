@@ -6,7 +6,8 @@ use every enabled control. On a home LAN that is usually the point; understand
 it before exposing it more widely.
 
 - **Set a token.** Put `"token": "something-long"` in `config.json` and every
-  `/api/` request must carry `?k=something-long`. Open the dashboard once with
+  `/api/` request must carry `?k=something-long` or an
+  `Authorization: Bearer something-long` header. Open the dashboard once with
   the token in the URL; the browser remembers it and the page takes it out of
   the address bar, so it stays out of history and shared links. This gates the HTTP API only &mdash; **MQTT and the Home
   Assistant integration are unaffected**, since they use a separate channel.
@@ -84,11 +85,11 @@ it before exposing it more widely.
 
 ## Narrowing access
 
-| Setting                        | Browser on the network                  | App on the TV | MQTT  |
-| :----------------------------- | :-------------------------------------- | :------------ | :---- |
-| `"token": "your-secret-token"` | with `?k=your-secret-token`             | works         | works |
-| `"host": "127.0.0.1"`          | no — port 8080 is closed to the network | works         | works |
-| `"web": { "enabled": false }`  | no                                      | does not work | works |
+| Setting                        | Browser on the network                                                   | App on the TV | MQTT  |
+| :----------------------------- | :----------------------------------------------------------------------- | :------------ | :---- |
+| `"token": "your-secret-token"` | with `?k=your-secret-token` or `Authorization: Bearer your-secret-token` | works         | works |
+| `"host": "127.0.0.1"`          | no — port 8080 is closed to the network                                  | works         | works |
+| `"web": { "enabled": false }`  | no                                                                       | does not work | works |
 
 `"host": "127.0.0.1"` is the one to use to keep the on-TV app while closing the port to everything else.
 
