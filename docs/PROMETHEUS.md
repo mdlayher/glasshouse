@@ -27,6 +27,16 @@ scrape_configs:
 
 Each scrape runs the same stats collection as the dashboard, behind its 1.5 s cache, so 15 s is the recommended minimum scrape interval. At that rate it costs about the same as the MQTT bridge's 10 s publish.
 
+## Testing locally
+
+To spin up a local Prometheus instance against your TV without manual setup:
+
+```bash
+./scripts/run-prometheus.sh <tv-ip> [<tv-ip2> ...]
+```
+
+It downloads a standalone Prometheus binary into `~/.cache/glasshouse-prometheus/` if one is not in PATH, starts a server targeting your TV(s) at `http://localhost:9090`, and cleans up its temporary state when stopped.
+
 ## Metrics
 
 These names are stable: one is not renamed or removed, so dashboards and alerts built on them keep working. Labels carry only values that rarely change. Values are in base units: bytes, hertz, seconds, and ratios from 0 to 1 rather than percentages. A reading the TV does not give, such as the panel figures on an LCD or the remote's battery with no remote paired, has no sample rather than a 0.
