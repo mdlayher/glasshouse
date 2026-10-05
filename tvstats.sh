@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Poll LG webOS TV for SoC temp / CPU load.
 # Outputs JSON. Works over rooted telnet on port 23.
 # Usage: ./tvstats.sh <tv-ip>

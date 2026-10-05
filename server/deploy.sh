@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Install tvweb on the TV, or update it, and start it.
 #

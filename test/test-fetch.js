@@ -141,7 +141,7 @@ function retries(done) {
       assert.ok(err && err.offline);
       assert.strictEqual(calls().length, 1);
       console.log('  ✓ wget is not retried');
-      require('child_process').execFile('/bin/rm', ['-rf', dir], function () {});
+      require('child_process').execFile('rm', ['-rf', dir], function () {});
       done();
     });
   }
@@ -225,7 +225,7 @@ function retries(done) {
             // Only once it is gone: the module remembers this curl as the last
             // that worked, and with the hang file still there it sleeps past
             // the 15 s limit, failing the retries below as "timed out".
-            require('child_process').execFile('/bin/rm', ['-rf', dir], function () {
+            require('child_process').execFile('rm', ['-rf', dir], function () {
               retries(function () {
                 console.log('ALL test-fetch.js assertions passed!\n');
               });
