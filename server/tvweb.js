@@ -37,6 +37,7 @@ var servicesModule = require('./lib/services');
 var telemetry = require('./lib/telemetry');
 var controls = require('./lib/controls');
 var routes = require('./lib/routes');
+var prometheus = require('./lib/prometheus');
 var stateModule = require('./lib/state');
 var mqttStateModule = require('./lib/mqtt-state');
 var topics = require('./lib/topics');
@@ -663,6 +664,7 @@ routes.init({
   piccapStatus: piccap.status,
   repo: repo,
   installer: installer,
+  prometheus: prometheus,
   configFile: CONFIG_FILE,
   controls: controls,
   telemetry: telemetry,

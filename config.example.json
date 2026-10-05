@@ -32,6 +32,9 @@
       "disabled": []
     }
   },
+  "prometheus": {
+    "enabled": false
+  },
   "device": {
     "id": "lg_tv",
     "name": "LG webOS TV",

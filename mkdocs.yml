@@ -68,8 +68,10 @@ nav:
       - Translating the dashboards: STRINGS.md
 
 # Kept until the Homebrew Channel listing is live (webosbrew/apps-repo#261).
+# Prometheus is kept out until it serves more than glasshouse_info.
 not_in_nav: |
   /install-homebrew-channel.md
+  /PROMETHEUS.md
 
 extra_css:
   - stylesheets/extra.css
