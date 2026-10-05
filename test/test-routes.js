@@ -116,9 +116,28 @@ function createMockRes(cb) {
   var localReq = createMockReq({ remoteAddress: '127.0.0.1' });
   assert.strictEqual(routes.authed({}, localReq), true);
 
+  // Authorization: Bearer is an alternative to ?k=, scheme in any case
+  function withAuth(value) {
+    return createMockReq({ remoteAddress: '192.168.1.100', headers: { authorization: value } });
+  }
+  assert.strictEqual(routes.authed({}, withAuth('Bearer secret-token-123')), true);
+  assert.strictEqual(routes.authed({}, withAuth('bearer secret-token-123')), true);
+  assert.strictEqual(routes.authed({}, withAuth('Bearer wrong-token')), false);
+  assert.strictEqual(routes.authed({ k: 'secret-token-123' }, withAuth('Bearer wrong-token')), true);
+  assert.strictEqual(routes.authed({}, withAuth('Basic c2VjcmV0LXRva2VuLTEyMw==')), false);
+  assert.strictEqual(routes.authed({ k: 'secret-token-123' }, withAuth('Basic dXNlcjpwYXNz')), true);
+
+  // A prefix, an extension or a repeated ?k= of the token is not the token
+  assert.strictEqual(routes.authed({}, withAuth('Bearer secret-token-12')), false);
+  assert.strictEqual(routes.authed({}, withAuth('Bearer secret-token-1234')), false);
+  assert.strictEqual(routes.authed({ k: 'secret-token-12' }, remoteReq), false);
+  assert.strictEqual(routes.authed({ k: '' }, remoteReq), false);
+  assert.strictEqual(routes.authed({ k: ['secret-token-123', 'x'] }, remoteReq), false);
+
   // No token configured: all are allowed
   routes.init({ config: { token: '', web: { enabled: false } } });
   assert.strictEqual(routes.authed({}, remoteReq), true);
+  assert.strictEqual(routes.authed({}, withAuth('Bearer anything')), true);
 
   console.log('  ✓ authed enforces token checks for remote callers and bypasses for local');
 })();
@@ -412,6 +431,26 @@ function createMockRes(cb) {
     assert.strictEqual(res.statusCode, 401);
   });
   routes.handleRequest(reqUnauth, resUnauth);
+
+  // The Authorization header alone authenticates /api/ requests
+  routes.init({
+    telemetry: { collectStats: function (cb) { cb({ ok: true }); } },
+    piccapStatus: function (cb) { cb(null); },
+    getMqttStatus: function () { return {}; }
+  });
+  var bearer = { authorization: 'Bearer test-token' };
+  routes.handleRequest(
+    createMockReq({ url: '/api/stats', remoteAddress: '192.168.1.50', headers: bearer }),
+    createMockRes(function (res) { assert.strictEqual(res.statusCode, 200); }));
+  routes.handleRequest(
+    createMockReq({ url: '/api/settings', remoteAddress: '192.168.1.50', headers: bearer }),
+    createMockRes(function (res) {
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(JSON.parse(res.body).ok, true);
+    }));
+  routes.handleRequest(
+    createMockReq({ url: '/api/stats', remoteAddress: '192.168.1.50', headers: { authorization: 'Bearer wrong' } }),
+    createMockRes(function (res) { assert.strictEqual(res.statusCode, 401); }));
 
   // GET /api/screensaver returns catalogue
   var reqSs = createMockReq({ url: '/api/screensaver?k=test-token', remoteAddress: '192.168.1.50' });

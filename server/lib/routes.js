@@ -569,9 +569,25 @@ function send(res, code, body, type) {
   res.end(body);
 }
 
+// Compares a presented token with the configured one in time that depends
+// only on the configured token's length. node 0.12 has no
+// crypto.timingSafeEqual. charCodeAt past the end is NaN, which | and ^ read
+// as 0; the length check catches the difference.
+function tokenMatches(given) {
+  var want = config.token;
+  if (typeof given !== 'string') return false;
+  var diff = given.length ^ want.length;
+  for (var i = 0; i < want.length; i++) diff |= given.charCodeAt(i) ^ want.charCodeAt(i);
+  return diff === 0;
+}
+
 function authed(q, req) {
   if (!config.token) return true;
-  if (q && q.k === config.token) return true;
+  // RFC 7235 makes the scheme case-insensitive. Any other Authorization
+  // header is ignored, so it neither allows nor refuses a valid ?k=.
+  var bearer = /^Bearer\s+(\S+)$/i.exec((req && req.headers && req.headers.authorization) || '');
+  if (bearer && tokenMatches(bearer[1])) return true;
+  if (q && tokenMatches(q.k)) return true;
   // The on-TV dashboard app fetches from localhost and has no way to carry a
   // token (there is no login prompt on a TV remote).  A process on the TV
   // already has root, so the token adds nothing for local requests.
