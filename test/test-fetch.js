@@ -188,11 +188,12 @@ function retries(done) {
 (function testClients() {
   var dir = fs.mkdtempSync ? fs.mkdtempSync(path.join(os.tmpdir(), 'fetch-')) :
     (function () { var d = path.join(os.tmpdir(), 'fetch-' + process.pid); fs.mkdirSync(d); return d; })();
-  // The last argument is the URL, the one before it '--', and -o names the file.
+  // The last argument is the URL, the one before it '--', and -o names the file,
+  // or - for stdout, as curl reads it.
   var script = '#!/bin/sh\n' +
     'while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift;; esac; shift; done\n' +
     'echo "$out" > "' + dir + '/seen"\n' +
-    'printf "0123456789" > "$out"\n' +
+    'if [ "$out" = - ]; then printf "0123456789"; else printf "0123456789" > "$out"; fi\n' +
     'if [ -f "' + dir + '/hang" ]; then sleep 30; fi\n';
   fs.writeFileSync(path.join(dir, 'curl'), script);
   fs.chmodSync(path.join(dir, 'curl'), parseInt('755', 8));
