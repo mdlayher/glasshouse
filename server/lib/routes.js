@@ -77,6 +77,9 @@ var getMqttStatusFn = null;
 var piccapStatusFn = function (cb) { cb(null); };
 var appsChangedFn = function () {};
 var versionStr = '';
+// With the commit of a git build: what a person reads, and what tells one
+// build's assets from another's in an ETag.
+var displayVersionStr = '';
 
 // ---------------------------------------------------------------- first-run setup
 /*
@@ -471,7 +474,7 @@ function missingAssetsPage() {
     }).join(''),
     '</ul>',
     '<p>Deploying again restores it: <code>./server/deploy.sh &lt;tv-ip&gt;</code>.</p>',
-    '<p class="dim">tvweb ' + versionStr + '</p>',
+    '<p class="dim">tvweb ' + displayVersionStr + '</p>',
     '</body></html>'
   ].join('\n');
 }
@@ -893,7 +896,7 @@ function handleRequest(req, res) {
     var fresh = ext === '.html' || ext === '.json' || /(^|\/)i18n\.js$/.test(file);
     var cacheHdr = fresh ? 'no-cache' : 'public, max-age=86400';
     var respondWithBuf = function (buf) {
-      var etag = '"' + (versionStr || '1') + '-' + buf.length.toString(16) + '"';
+      var etag = '"' + (displayVersionStr || '1') + '-' + buf.length.toString(16) + '"';
       if (req.headers && req.headers['if-none-match'] === etag) {
         res.writeHead(304, { 'ETag': etag, 'Cache-Control': cacheHdr });
         return res.end();
@@ -930,6 +933,7 @@ function handleRequest(req, res) {
   if (pathname === '/api/caps') {
     var caps = {
       ok: true, allowControl: config.allowControl, allowPower: config.allowPower,
+      // Bare: the Homebrew Channel app's launch page compares it with its own.
       origin: lanOrigin(), version: versionStr,
       fromHomebrewChannel: fromHomebrewChannel(), setupNeeded: setupPending()
     };
@@ -1419,7 +1423,8 @@ function init(opts) {
   if (opts.luna) lunaFn = opts.luna;
   if (opts.getMqttStatus) getMqttStatusFn = opts.getMqttStatus;
   if (opts.appsChanged) appsChangedFn = opts.appsChanged;
-  if (opts.version) versionStr = opts.version;
+  if (opts.version) versionStr = displayVersionStr = opts.version;
+  if (opts.displayVersion) displayVersionStr = opts.displayVersion;
 
   return {
     handleRequest: handleRequest,
