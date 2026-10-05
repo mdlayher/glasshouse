@@ -68,6 +68,8 @@ var restartSelfFn = null;
 var repoModule = null;
 /** @type {typeof import('./installer')} */
 var installerModule = null;
+/** @type {typeof import('./prometheus')} */
+var prometheusModule = null;
 var fromHbcFn = null;
 var tileHidingOffMsg = '';
 var assetPathFn = null;
@@ -315,6 +317,10 @@ function lanOrigin() {
   return ip ? 'http://' + ip + ':' + config.port : null;
 }
 
+function prometheusEnabled() {
+  return !!(config.prometheus && config.prometheus.enabled === true);
+}
+
 function handoffPort() { return (config.port || 8080) + 1; }
 
 function stopHandoff() {
@@ -547,6 +553,7 @@ function updateSummary() {
   s.allowTileHiding = !!(appsModule && appsModule.tileHidingAllowed && appsModule.tileHidingAllowed());
   s.allowOnWebos10 = !!(screensaversModule && screensaversModule.allowedAnyway && screensaversModule.allowedAnyway());
   s.isWebos10 = !!(screensaversModule && screensaversModule.slowSwitch && screensaversModule.slowSwitch());
+  s.prometheusEnabled = prometheusEnabled();
   return s;
 }
 
@@ -1243,6 +1250,13 @@ function handleRequest(req, res) {
     });
   }
 
+  // While switched off the endpoint does not exist: it falls through to the 404.
+  if (pathname === '/api/prometheus/metrics' && prometheusEnabled()) {
+    return telemetryModule.collectStats(function (s) {
+      send(res, 200, prometheusModule.render(s, versionStr), 'text/plain; version=0.0.4; charset=utf-8');
+    });
+  }
+
   if (pathname === '/api/stats') {
     return telemetryModule.collectStats(function (s) {
       // PicCap's capture, where it is installed, for the Advanced tab.
@@ -1412,6 +1426,7 @@ function init(opts) {
   if (opts.piccapStatus) piccapStatusFn = opts.piccapStatus;
   if (opts.repo) repoModule = opts.repo;
   if (opts.installer) installerModule = opts.installer;
+  if (opts.prometheus) prometheusModule = opts.prometheus;
   if (opts.fromHomebrewChannel) fromHbcFn = opts.fromHomebrewChannel;
   if (opts.tileHidingOff) tileHidingOffMsg = opts.tileHidingOff;
   if (opts.assetPath) assetPathFn = opts.assetPath;

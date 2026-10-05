@@ -53,6 +53,7 @@ nav:
   - Home Assistant:
       - HOME-ASSISTANT.md
       - Entities: HOME-ASSISTANT-ENTITIES.md
+  - Prometheus: PROMETHEUS.md
   - Running it:
       - Updating and uninstalling: managing.md
       - Experimental features: experimental.md

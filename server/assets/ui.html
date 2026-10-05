@@ -927,6 +927,18 @@
       </div>
     </div>
 
+    <div class="pv-sec adv-sec" data-t="server.prometheus">Prometheus</div>
+    <div class="prot-table">
+      <div class="prot-row">
+        <div class="prot-main">
+          <div class="prot-title" data-t="server.prometheus.title">Metrics endpoint</div>
+          <div class="prot-desc" data-t="server.prometheus.desc">Answers Prometheus scrapes at /api/prometheus/metrics,
+            with the token if one is set. While off, the address does not answer.</div>
+        </div>
+        <div class="prot-status"><button type="button" class="pill idle" id="prom-enabled" onclick="togglePrometheus()">&mdash;</button></div>
+      </div>
+    </div>
+
     <div class="pv-sec adv-sec" data-t="server.experimental">Experimental features</div>
     <div class="prot-table">
       <div class="prot-row">
