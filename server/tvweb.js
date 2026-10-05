@@ -54,6 +54,9 @@ var luna = lunaTransport.call;
  * 404 rather than a wrong page.
  */
 var TVWEB_VERSION = '0.80.1';
+// What a person is shown: the same, plus the commit when deploy.sh installed it
+// from a git clone. Anything that compares versions uses TVWEB_VERSION.
+var TVWEB_DISPLAY_VERSION = updater.displayVersion(TVWEB_VERSION, __dirname);
 
 // ---------------------------------------------------------------- config
 /** @type {any} */
@@ -276,7 +279,7 @@ var CLI_MODE = null;
   }
 })();
 
-updater.init({ config: CONFIG, version: TVWEB_VERSION, installDir: __dirname });
+updater.init({ config: CONFIG, version: TVWEB_VERSION, displayVersion: TVWEB_DISPLAY_VERSION, installDir: __dirname });
 
 // ---------------------------------------------------------------- helpers
 var TOAST_SOURCE = 'com.webos.app.home';
@@ -371,7 +374,7 @@ telemetry.init({
   oled: oled,
   privacy: privacy,
   screensavers: screensavers,
-  tvwebVersion: TVWEB_VERSION,
+  tvwebVersion: TVWEB_DISPLAY_VERSION,
   mapPowerState: mapPowerState,
   isScreenSaver: isScreenSaver
 });
@@ -613,12 +616,14 @@ function restartSelf() {
 updater.init({
   config: CONFIG,
   version: TVWEB_VERSION,
+  displayVersion: TVWEB_DISPLAY_VERSION,
   installDir: __dirname,
   writeSettings: routes.writeSettings,
   viaHomebrewChannel: fromHomebrewChannel,
   installerBusy: installer.isWorking
 });
 
+// Bare in the user agent: a catalog has no use for the commit.
 fetchLib.init({ config: CONFIG, version: TVWEB_VERSION });
 repo.init({ config: CONFIG, luna: luna, fetch: fetchLib });
 installer.init({
@@ -670,7 +675,8 @@ routes.init({
   luna: luna,
   getMqttStatus: function () { return MQTT_STATUS; },
   appsChanged: appsChanged,
-  version: TVWEB_VERSION
+  version: TVWEB_VERSION,
+  displayVersion: TVWEB_DISPLAY_VERSION
 });
 
 if (WEB_ENABLED && !CLI_MODE) routes.loadUI();   // otherwise nothing will serve it
@@ -874,6 +880,7 @@ function setupHomeAssistant() {
     if (!mqttClient.connected) return;
     var upd = updater.UPDATE;
     mqttClient.publish(mqttTopics.update, JSON.stringify({
+      // Bare: Home Assistant compares it with latest_version.
       installed_version: TVWEB_VERSION,
       latest_version: upd.latest || null,
       title: 'Server',
@@ -1320,7 +1327,7 @@ if (!CLI_MODE) {
 if (CLI_MODE === 'check') {
   updater.checkForUpdate(true, function (err, summary) {
     if (err) { console.error(err.message); process.exit(1); }
-    console.log('installed v' + TVWEB_VERSION + ', latest v' + summary.latest +
+    console.log('installed v' + TVWEB_DISPLAY_VERSION + ', latest v' + summary.latest +
                 (summary.available ? ' - update available' : ' - up to date'));
     process.exit(0);
   });
