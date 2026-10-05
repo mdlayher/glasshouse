@@ -11,6 +11,33 @@
   }
 }
 
+/* A distinct pointer beside the active page in the navigation menu.
+   Material's default only tints the link text, which is too subtle against
+   the monochrome background. Exclude section toggle labels ([for^="__nav"])
+   so only the page link receives the pointer. */
+.md-nav--primary .md-nav__link--active:not([for^="__nav"]) {
+  font-weight: 700;
+}
+.md-nav--primary .md-nav__link--active:not([for^="__nav"])::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  border-left: 5px solid currentColor;
+  margin-top: 0.38em;
+  margin-right: 0.2rem;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+[dir="rtl"] .md-nav--primary .md-nav__link--active:not([for^="__nav"])::before {
+  border-left: none;
+  border-right: 5px solid currentColor;
+  margin-right: 0;
+  margin-left: 0.2rem;
+}
+
 /* The dashboard's own black and white: #000 with white in the dark theme,
    #f5f5f5 with black in the light one (server/assets/ui/ui.css), in place of
    Material's navy and indigo. */
