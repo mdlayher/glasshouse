@@ -2099,18 +2099,6 @@
   "text": "No hay nada nuevo que instalar.",
   "from": "Nothing newer to install."
  },
- "server.prometheus": {
-  "text": "Prometheus",
-  "from": "Prometheus"
- },
- "server.prometheus.desc": {
-  "text": "Responde a las consultas de Prometheus en /api/prometheus/metrics, con el token si hay uno configurado. Desactivado, la dirección no responde.",
-  "from": "Answers Prometheus scrapes at /api/prometheus/metrics, with the token if one is set. While off, the address does not answer."
- },
- "server.prometheus.title": {
-  "text": "Endpoint de métricas",
-  "from": "Metrics endpoint"
- },
  "server.rollback": {
   "text": "Revertir a v{version}",
   "from": "Roll back to v{version}"

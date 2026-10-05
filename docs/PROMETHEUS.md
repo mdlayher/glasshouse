@@ -4,9 +4,7 @@ The server can answer Prometheus scrapes at `/api/prometheus/metrics`, in the te
 
 ## Switching it on
 
-On the dashboard's **Server** tab (`/?tab=server`), switch **Metrics endpoint** to **On**. It applies at once, without a restart.
-
-In `config.json`:
+Set it in `/var/lib/tvweb/config.json` on the TV and restart the server:
 
 ```json
 "prometheus": { "enabled": true }

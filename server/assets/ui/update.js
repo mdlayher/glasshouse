@@ -76,15 +76,6 @@ function renderUpdate(d) {
     });
   }
 
-  if (typeof d.prometheusEnabled === 'boolean') {
-    updateToggle('prom-enabled', {
-      cls: d.prometheusEnabled ? 'good' : 'idle',
-      label: d.prometheusEnabled ? t('common.on', 'On') : t('common.off', 'Off'),
-      on: d.prometheusEnabled,
-      disabled: !d.writable
-    });
-  }
-
   const ssRow = q('exp-screensaver-row');
   if (ssRow) {
     ssRow.hidden = !d.isWebos10;
@@ -321,13 +312,6 @@ async function toggleExpTileHiding() {
   const b = q('exp-tilehiding');
   b.disabled = true;
   const r = await sendCommand('setTileHidingAllowed', !b.dataset.on);
-  if (r && r.ok) renderUpdate(r); else loadUpdate();
-}
-
-async function togglePrometheus() {
-  const b = q('prom-enabled');
-  b.disabled = true;
-  const r = await sendCommand('setPrometheusEnabled', !b.dataset.on);
   if (r && r.ok) renderUpdate(r); else loadUpdate();
 }
 
