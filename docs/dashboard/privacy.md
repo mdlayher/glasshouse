@@ -17,6 +17,8 @@ Two tiers are available:
 * **ads & telemetry** blocks LG's ad, diagnostics and customer-data hosts and the Alphonso screen recognition servers, and leaves LG's service platform reachable.
 * **everything** adds the hosts that carry LG's platform services, so on that tier the app store, software updates and LG Channels may stop working.
 
+On the **everything** tier, after a power cut the TV is left to set its clock from LG's time servers before they are blocked.
+
 If an app or one of LG's services stops working while the blocker is on, switch it off to check whether it is the cause.
 
 What ACR collects and what LG Ad Solutions does with it is set out in [What LG's ACR does](../ACR.md).
