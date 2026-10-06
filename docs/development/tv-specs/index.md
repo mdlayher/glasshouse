@@ -8,9 +8,9 @@ Hardware architectures, system-on-chip (SoC) platforms, and low-level specificat
 
 Hardware specifications directly determine runtime compatibility and performance limits across webOS releases:
 
-- **CPU architecture and binary toolchains**: Older platforms (webOS 3.x–4.x) run 32-bit ARMv7 (`armv7l`) userspace binaries, whereas webOS 5.x and newer run 64-bit ARMv8 (`aarch64`). Native daemons, precompiled utilities, and C/C++ tools must target the corresponding architecture.
-- **Node.js execution environment**: The onboard Node.js runtime varies dramatically by webOS version. webOS 3.x and 4.x run Node v0.12 (V8 3.x, ES5 only, requiring callbacks and lacking native `Promise`, `async`/`await`, or modern `Buffer` APIs). webOS 5+ runs Node v12+, and webOS 22+ runs Node v16 or newer with modern ECMAScript support.
-- **Chromium WebAppMgr rendering**: The WebAppMgr web engine runs Chromium 38 on webOS 3.x and 4.x, which lacks CSS Grid, modern Flexbox behavior, and ES6 syntax. webOS 22 and newer ship Chromium 108+, supporting modern CSS, ECMAScript, and Web APIs.
+- **CPU architecture and binary toolchains**: Older platforms (webOS 3.x–4.x) run a 32-bit ARMv7 (`armv7l`) kernel and userspace. webOS 5.x and newer run a 64-bit (`aarch64`) kernel, but the userspace stays 32-bit ARM: on a CX (webOS 5.6) and a C5 (webOS 25), `/bin/sh`, `node` and `WebAppMgr` are all 32-bit ELF binaries. Native daemons, precompiled utilities, and C/C++ tools must target 32-bit ARM on every generation checked so far.
+- **Node.js execution environment**: The onboard Node.js runtime varies dramatically by webOS version. webOS 3.x and 4.x run Node v0.12 (V8 3.x, ES5 only, requiring callbacks and lacking native `Promise`, `async`/`await`, or modern `Buffer` APIs). webOS 4.5 and 5 run Node v8.12 (CX on webOS 5.6: v8.12.0), and webOS 22+ runs Node v16 or newer with modern ECMAScript support (C5 on webOS 25: v16.20.2).
+- **Chromium WebAppMgr rendering**: The WebAppMgr web engine runs Chromium 38 on webOS 3.x and 4.x, which lacks CSS Grid, modern Flexbox behavior, and ES6 syntax, and Chromium 68 on webOS 4.5 and 5. webOS 22 and newer ship Chromium 108+ (webOS 25: Chromium 120), supporting modern CSS, ECMAScript, and Web APIs.
 - **Memory constraints**: Most LG TVs have between 1.5 GB and 3.0 GB of total RAM shared between the system compositor, video decoding pipeline, broadcast middleware, and background services. Most models allocate a 600 MB zram compressed swap device (`/dev/zram0`). Memory leaks or high allocation spikes quickly trigger kernel OOM kills.
 - **Hardware diagnostic paths**: Hardware sensors and control interfaces vary by SoC board family (`m16`, `lg1312`, `o20`, `o22`, `o24`). Thermal monitoring paths (`/proc/lg/temp` vs sysfs thermal zones), eMMC wear indicators (`/sys/block/mmcblk0/device/life_time`), and HDMI physical interface diagnostics differ across kernel versions and SoC vendors.
 
@@ -28,13 +28,14 @@ The table below summarizes hardware specifications across key LG TV generations 
 | **C8** (2018) | webOS 4.0–4.4 | Alpha 9 Gen 1 (LG1312) | 4× Cortex-A53 @ 1.0 GHz (ARMv7) | Mali-G51 MP4 | 2.5 GB | 8 GB | Linux 4.4 | Node 0.12 / Chr 38 | 4× HDMI 2.0 |
 | **LM57 / UP80** (2019–21 LCD) | webOS 4.5–6.5 | MediaTek / Realtek | 4× Cortex-A53 @ 1.1 GHz (ARMv7/v8) | Mali-G31 / G52 | 1.5–2.0 GB | 8 GB | Linux 4.9 / 4.19 | Node 8–12 / Chr 68–87 | 2–3× HDMI 2.0 |
 | **C9** (2019) | webOS 4.5–4.10 | Alpha 9 Gen 2 (LG1312+) | 4× Cortex-A73 @ 1.2 GHz (ARMv7/v8) | Mali-G52 MP4 | 3.0 GB | 8 GB | Linux 4.14 | Node 8.12 / Chr 68 | 4× HDMI 2.1 (48 Gbps) |
-| **CX / GX** (2020) | webOS 5.0–5.6 | Alpha 9 Gen 3 (O20) | 4× Cortex-A73 @ 1.2 GHz (ARMv8) | Mali-G52 MP4 | 3.0 GB | 8 GB | Linux 4.19 | Node 12.14 / Chr 79 | 4× HDMI 2.1 (40 Gbps) |
+| **CX / GX** (2020) | webOS 5.0–5.6 | Alpha 9 Gen 3 (LG1212 / O20) | 4× Cortex-A55 (ARMv8.2-A; no cpufreq exposed) | Mali-G51 MP3 | 2.6 GB | 8 GB | Linux 4.4 | Node 8.12 / Chr 68 | 4× HDMI 2.1 (40 Gbps) |
 | **C1 / G1** (2021) | webOS 6.0–6.5 | Alpha 9 Gen 4 (O20 / K7LP) | 4× Cortex-A73 @ 1.2 GHz (ARMv8) | Mali-G52 MP4 | 3.0 GB | 8 GB | Linux 5.4 | Node 12.x / Chr 87 | 4× HDMI 2.1 (40 Gbps) |
 | **[C2](c2.md)** / **G2** (2022) | webOS 22 (7.x / 9.x) | Alpha 9 Gen 5 (LG1213 / O22) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.0–3.0 GB | 8 GB | Linux 5.4 | Node 16.19 / Chr 108 | 4× HDMI 2.1 (48 Gbps) |
 | **C3 / G3** (2023) | webOS 23 (8.x / 25) | Alpha 9 Gen 6 (LG1213+ / O22) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 3.0 GB | 8 GB | Linux 5.4 / 5.15 | Node 18.x / Chr 108+ | 4× HDMI 2.1 (48 Gbps) |
 | **B4 / C4** (2024) | webOS 24 (9.x / 25) | Alpha 8 / Alpha 9 Gen 7 (O24) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G57 / G52 | 3.0 GB | 8 GB | Linux 5.15 | Node 18.x / Chr 114+ | 4× HDMI 2.1 (144 Hz) |
 | **G4 / M4** (2024) | webOS 24 (9.x / 25) | Alpha 11 (O24Pro) | 4× Cortex-A78 @ 1.6 GHz (ARMv8.2-A) | Mali-G57 MC4 | 4.0 GB | 16 GB | Linux 5.15 / 6.1 | Node 20.x / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
-| **C5 / G5** (2025) | webOS 25 / 26 | Alpha 9 Gen 8 / Alpha 11 Gen 2 | Quad-core ARMv8.2-A (ARMv8) | Mali-G57 / Immortalis | 3.0–4.0 GB | 8–16 GB | Linux 6.1+ | Node 20+ / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
+| **C5** (2025) | webOS 25 | Alpha 9 Gen 8 (LG1213 / O22A3) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.0 GB | 16 GB | Linux 5.4 | Node 16.20 / Chr 120 | 4× HDMI 2.1 (144 Hz) |
+| **G5** (2025) | webOS 25 / 26 | Alpha 11 Gen 2 | Quad-core ARMv8.2-A (ARMv8) | Mali-G57 / Immortalis | 4.0 GB | 16 GB | Linux 6.1+ | Node 20+ / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
 
 ---
 
