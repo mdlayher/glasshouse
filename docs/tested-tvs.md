@@ -1,6 +1,6 @@
 # Tested TVs
 
-Confirmed on 35 TVs across 25 series so far (webOS 3.4 through 26). Other rooted models should work.
+Confirmed on 38 TVs across 25 series so far (webOS 3.4 through 26). Other rooted models should work.
 
 Sizes and regional variants of one series run the same software, so the table below has one row per series. Years are LG's model years; many TVs have since been updated to a later webOS.
 
@@ -16,7 +16,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | C8            | 2018 | OLED  | 4.4               | 1       |
 | LM57          | 2019 | LCD   | 4.5               | 1       |
 | C9            | 2019 | OLED  | 4.9 – 4.10        | 3       |
-| CX            | 2020 | OLED  | 5.5 – 5.6         | 2       |
+| CX            | 2020 | OLED  | 5.5 – 5.6         | 4       |
 | C1            | 2021 | OLED  | 6.x               | 2       |
 | UP80          | 2021 | LCD   | 6.5               | 1       |
 | UP81          | 2021 | LCD   | 6.5               | 1       |
@@ -31,7 +31,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | C4            | 2024 | OLED  | 24 – 25           | 4       |
 | G4            | 2024 | OLED  | 24 – 25           | 2       |
 | UT81          | 2024 | LCD   | 25                | 1       |
-| C5            | 2025 | OLED  | 25                | 2       |
+| C5            | 2025 | OLED  | 25                | 3       |
 | G5            | 2025 | OLED  | 26                | 1       |
 
 <details markdown="1">
@@ -51,6 +51,8 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED65C9PLA | 4.10.2       | —        | OLED  | Working fine                                                   |
 | OLED77CX6LA | 5.5.0        | 04.50.90 | OLED  | OLED Care, telemetry and MQTT bridge confirmed                 |
 | OLED77CXAUA | 5.6.0        | 04.60.65 | OLED  | Rooted with faultmanager; SSH install; dashboard and telemetry |
+| OLED48CXPUB | 5.6.2        | 04.64.00 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
+| OLED65CXPUA | 5.6.2        | 04.64.00 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
 | OLED55C17LB | 6.x          | —        | OLED  | HDMI 2.1 diagnostics and remote battery reporting              |
 | OLED55C1PUB | 6.x (6.3+)   | 03.53.45 | OLED  | SSH install and MQTT bridge confirmed                          |
 | 50UP81006LR | 6.5.0        | 03.51.16 | LCD   | Installed over telnet; in-app update confirmed                 |
@@ -71,6 +73,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED77C4PSA | 25 (10.3.1)  | 33.31.68 | OLED  | Rooted with Dangbro; resolution reported stuck at 1920x1081    |
 | OLED48C55LA | 25 (10.3.1)  | 33.31.68 | OLED  | Installed over telnet; in-app update to 0.37.2 confirmed       |
 | OLED77C57LA | 25 (10.3.1)  | 33.31.68 | OLED  | MQTT, privacy, screen saver and web dashboard confirmed        |
+| OLED48C5PUA | 25 (10.3.1)  | 33.31.69 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
 | 42LX3Q6LA   | —            | 33.31.68 | OLED  | Flex; model number has no OLED prefix                          |
 | OLED65G36LA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; privacy and app installs confirmed        |
 | OLED83G5WUA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; runs with internet access blocked         |
