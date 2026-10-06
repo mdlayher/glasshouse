@@ -296,7 +296,12 @@ function refreshOledStats(picSettings, pState, cb) {
     var jbCycles = jbCountRaw ? parseInt(jbCountRaw, 10) : null;
     var failCount = failAlertCountRaw ? parseInt(failAlertCountRaw, 10) : null;
     var hasTpcMonitoring = tpcOffExists || (socTpcRaw !== null) || fs.existsSync('/mnt/lg/cmn_data/pnwash/autoOffRsInterval');
-    var asblStatus = hasTpcMonitoring ? ((tpcOffExists || socTpcRaw === '0') ? 'Disabled' : 'Active') : null;
+    // tpcOff is the setting's marker, as gsrOff is GSR's. socTpcStatus is not
+    // the setting but the dimming state: eplmanager writes 1 and then 0 about
+    // 25 ms later on each 300 s check (tpcFppCheckInterval), so it reads 0
+    // between checks; a C4 read 0 throughout 25 minutes of use with
+    // getTemporalPeakControl reporting enable: true.
+    var asblStatus = hasTpcMonitoring ? (tpcOffExists ? 'Disabled' : 'Active') : null;
     var gsrStatus = hasTpcMonitoring ? (gsrOffExists ? 'Disabled' : 'Active') : null;
 
     var pnStateRaw = readTrimmed('/mnt/lg/cmn_data/pnwash/state');
