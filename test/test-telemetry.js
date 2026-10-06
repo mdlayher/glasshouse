@@ -283,6 +283,24 @@ console.log('Running test-telemetry.js ...');
   console.log('  ✓ the VIC\'s size is used where the measured one is a line off it');
 })();
 
+// 6a1c. A C4's streamer asleep on its input: PHY Lock[0] and 5V present, with
+// its last 2160p 60 timing left in the stable section.
+(function testSleepingSource() {
+  mockEnv.files['/proc/lg/hdmi20/port2/status'] =
+    fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port3-asleep.status'), 'utf8');
+  var p = telemetry.hdmiPorts()[2];
+  assert.strictEqual(p.connected, false, 'no lock, no source sending');
+  assert.strictEqual(p.resolution, null, 'the leftover timing is not reported');
+  assert.strictEqual(p.pixelClockMhz, null);
+  assert.strictEqual(telemetry.getVideoSignal(2), null);
+  // The same receiver locked reads as before.
+  mockEnv.files['/proc/lg/hdmi20/port2/status'] =
+    fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port3-2160p.status'), 'utf8');
+  assert.strictEqual(telemetry.hdmiPorts()[2].connected, true);
+  delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
+  console.log('  ✓ a sleeping source\'s leftover timing is not a signal');
+})();
+
 // 6a2. isFreeSync is a mode: G-SYNC over HDMI reads 2, and is VRR
 (function testVrrMode() {
   function vrrWith(mode) {
