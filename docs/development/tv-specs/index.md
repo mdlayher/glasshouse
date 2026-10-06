@@ -28,13 +28,13 @@ The table below summarizes hardware specifications across key LG TV generations 
 | **C8** (2018) | webOS 4.0–4.4 | Alpha 9 Gen 1 (LG1312) | 4× Cortex-A53 @ 1.0 GHz (ARMv7) | Mali-G51 MP4 | 2.5 GB | 8 GB | Linux 4.4 | Node 0.12 / Chr 38 | 4× HDMI 2.0 |
 | **LM57 / UP80** (2019–21 LCD) | webOS 4.5–6.5 | MediaTek / Realtek | 4× Cortex-A53 @ 1.1 GHz (ARMv7/v8) | Mali-G31 / G52 | 1.5–2.0 GB | 8 GB | Linux 4.9 / 4.19 | Node 8–12 / Chr 68–87 | 2–3× HDMI 2.0 |
 | **C9** (2019) | webOS 4.5–4.10 | Alpha 9 Gen 2 (LG1312+) | 4× Cortex-A73 @ 1.2 GHz (ARMv7/v8) | Mali-G52 MP4 | 3.0 GB | 8 GB | Linux 4.14 | Node 8.12 / Chr 68 | 4× HDMI 2.1 (48 Gbps) |
-| **[CX](cx.md)** / **GX** (2020) | webOS 5.0–5.6 | Alpha 9 Gen 3 (LG1212 / O20) | 4× Cortex-A55 (ARMv8.2-A; no cpufreq exposed) | Mali-G51 MP3 | 2.6 GB | 8 GB | Linux 4.4 | Node 8.12 / Chr 68 | 4× HDMI 2.1 (40 Gbps) |
+| **[CX](cx.md)** / **GX** (2020) | webOS 5.0–5.6 | Alpha 9 Gen 3 (LG1212 / O20) | 4× Cortex-A55 (ARMv8.2-A; no cpufreq exposed) | Mali-G51 MP3 | 3.0 GB (2.6 GB to Linux) | 8 GB | Linux 4.4 | Node 8.12 / Chr 68 | 4× HDMI 2.1 (40 Gbps) |
 | **C1 / G1** (2021) | webOS 6.0–6.5 | Alpha 9 Gen 4 (O20 / K7LP) | 4× Cortex-A73 @ 1.2 GHz (ARMv8) | Mali-G52 MP4 | 3.0 GB | 8 GB | Linux 5.4 | Node 12.x / Chr 87 | 4× HDMI 2.1 (40 Gbps) |
 | **[C2](c2.md)** / **G2** (2022) | webOS 22 (7.x / 9.x) | Alpha 9 Gen 5 (LG1213 / O22) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.0–3.0 GB | 8 GB | Linux 5.4 | Node 16.19 / Chr 108 | 4× HDMI 2.1 (48 Gbps) |
 | **C3 / G3** (2023) | webOS 23 (8.x / 25) | Alpha 9 Gen 6 (LG1213+ / O22) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 3.0 GB | 8 GB | Linux 5.4 / 5.15 | Node 18.x / Chr 108+ | 4× HDMI 2.1 (48 Gbps) |
 | **B4 / C4** (2024) | webOS 24 (9.x / 25) | Alpha 8 / Alpha 9 Gen 7 (O24) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G57 / G52 | 3.0 GB | 8 GB | Linux 5.15 | Node 18.x / Chr 114+ | 4× HDMI 2.1 (144 Hz) |
 | **G4 / M4** (2024) | webOS 24 (9.x / 25) | Alpha 11 (O24Pro) | 4× Cortex-A78 @ 1.6 GHz (ARMv8.2-A) | Mali-G57 MC4 | 4.0 GB | 16 GB | Linux 5.15 / 6.1 | Node 20.x / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
-| **[C5](c5.md)** (2025) | webOS 25 | Alpha 9 Gen 8 (LG1213 / O22A3) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.0 GB | 16 GB | Linux 5.4 | Node 16.20 / Chr 120 | 4× HDMI 2.1 (144 Hz) |
+| **[C5](c5.md)** (2025) | webOS 25 | Alpha 9 Gen 8 (LG1213 / O22A3) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.5 GB (2.0 GB to Linux) | 16 GB | Linux 5.4 | Node 16.20 / Chr 120 | 4× HDMI 2.1 (144 Hz) |
 | **G5** (2025) | webOS 25 / 26 | Alpha 11 Gen 2 | Quad-core ARMv8.2-A (ARMv8) | Mali-G57 / Immortalis | 4.0 GB | 16 GB | Linux 6.1+ | Node 20+ / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
 
 ---

@@ -1,6 +1,6 @@
 # LG OLED48CXPUB (2020 — webOS 5)
 
-Hardware profile and low-level diagnostic data gathered from root shell access on an LG OLED48CXPUB running webOS 5.6.2.
+Hardware profile and low-level diagnostic data gathered from root shell access on an LG OLED48CXPUB running webOS 5.6.2. An OLED65CXPUA on the same firmware reports the identical SoC, CPU, GPU, kernel, memory map, eMMC part and runtimes.
 
 ---
 
@@ -23,7 +23,7 @@ Hardware profile and low-level diagnostic data gathered from root shell access o
 
 | Detail | Value |
 |---|---|
-| **Architecture** | ARMv8.2-A — Cortex-A55 (CPU part `0xd05`, variant `0x2`) |
+| **Architecture** | ARMv8.2-A — Cortex-A55 (CPU part `0xd05`, variant `0x2`; the `atomics` feature flag rules out the Cortex-A73 LG's marketing names for this SoC) |
 | **Cores** | 4, all online |
 | **Frequency scaling** | Not exposed: no `cpufreq` directory under `/sys/devices/system/cpu/cpu0/` |
 | **BogoMIPS** | 100.00 per core |
@@ -53,7 +53,8 @@ Hardware profile and low-level diagnostic data gathered from root shell access o
 
 | Detail | Value |
 |---|---|
-| **Total RAM** | 2,618 MB (`MemTotal` 2,680,936 kB); 856 MB + 360 MB reserved as HMA by the cmdline |
+| **Physical RAM** | 3.0 GB: the HMA carve-outs on the cmdline (`hma=856M@0x47800000;360M@0xa9800000`) end at the 3 GB mark |
+| **Available to Linux** | 2,618 MB (`MemTotal` 2,680,936 kB) |
 | **Swap** | 600 MB zram (`/dev/zram0`) |
 
 ---
