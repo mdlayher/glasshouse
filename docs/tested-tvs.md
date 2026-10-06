@@ -1,8 +1,41 @@
 # Tested TVs
 
-Confirmed across 35 models so far (webOS 3.4 through 26). Other rooted models should work.
+Confirmed on 35 TVs across 25 series so far (webOS 3.4 through 26). Other rooted models should work.
+
+Sizes and regional variants of one series run the same software, so the table below has one row per series. Years are LG's model years; many TVs have since been updated to a later webOS.
 
 The Luna service names and `/proc/lg` paths this relies on may differ across webOS versions and panel types.
+
+| Series        | Year | Panel | webOS seen        | Reports | Notes                                                       |
+| :------------ | :--- | :---- | :---------------- | :------ | :---------------------------------------------------------- |
+| UH6030        | 2016 | LCD   | 3.4               | 1       |                                                             |
+| UH610V        | 2016 | LCD   | 3.4               | 1       | No SoC temp, eMMC wear, or OLED metrics by hardware design  |
+| UH635V        | 2016 | LCD   | 3.x               | 1       | No eMMC wear                                                |
+| B7            | 2017 | OLED  | 3.9               | 1       | No SoC temperature or eMMC wear readings                    |
+| B8            | 2018 | OLED  | 4.4               | 1       | Misses a few metrics found on newer versions                |
+| C8            | 2018 | OLED  | 4.4               | 1       | No `getAdid` on this firmware                               |
+| LM57          | 2019 | LCD   | 4.5               | 1       |                                                             |
+| C9            | 2019 | OLED  | 4.9 – 4.10        | 3       |                                                             |
+| CX            | 2020 | OLED  | 5.5 – 5.6         | 2       |                                                             |
+| C1            | 2021 | OLED  | 6.x               | 2       |                                                             |
+| UP80          | 2021 | LCD   | 6.5               | 1       |                                                             |
+| UP81          | 2021 | LCD   | 6.5               | 1       |                                                             |
+| C2            | 2022 | OLED  | 9.2 (22)          | 1       |                                                             |
+| G2            | 2022 | OLED  | 7.4 (22)          | 1       |                                                             |
+| QNED82        | 2022 | LCD   | 7.6               | 1       |                                                             |
+| LX3           | 2022 | OLED  | —                 | 1       | Flex; model number has no OLED prefix                       |
+| CS            | 2022 | OLED  | 25                | 1       |                                                             |
+| C3            | 2023 | OLED  | 25                | 2       |                                                             |
+| G3            | 2023 | OLED  | 26                | 1       |                                                             |
+| B4            | 2024 | OLED  | 24                | 1       |                                                             |
+| C4            | 2024 | OLED  | 24 – 25           | 4       | One report of resolution stuck at 1920x1081                 |
+| G4            | 2024 | OLED  | 24 – 25           | 2       |                                                             |
+| UT81          | 2024 | LCD   | 25                | 1       | Partial: blocking works; some settings reported not to apply |
+| C5            | 2025 | OLED  | 25                | 2       |                                                             |
+| G5            | 2025 | OLED  | 26                | 1       |                                                             |
+
+<details markdown="1">
+<summary>All reports</summary>
 
 | Model       | webOS        | Firmware | Panel | Notes                                                          |
 | :---------- | :----------- | :------- | :---- | :------------------------------------------------------------- |
@@ -42,6 +75,6 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED65G36LA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; privacy and app installs confirmed        |
 | OLED83G5WUA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; runs with internet access blocked         |
 
-
+</details>
 
 **Tested on another model?** Please [open an issue](https://github.com/rorygallagher2024/lg-webos-dashboard/issues/new) with the TV model, webOS version, and the contents of `/var/lib/tvweb/tvweb.log` — whether everything worked or something broke — and we will add a row.
