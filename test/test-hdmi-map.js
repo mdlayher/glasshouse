@@ -129,6 +129,9 @@ c4.hdmiReceiverMap(checked(function (map) {
           assert.strictEqual(r.inputs[3].signal.port, 0);
           assert.strictEqual(r.inputs[3].signal.refreshHz, 120);
           console.log('  ✓ /api/hdmi pairs every input with its receiver, with two sources live');
+          assert.strictEqual(r.inputs[0].signal.pixelClockMhz, 148.5, 'TMDS: Pixel Clk[0000148500]');
+          assert.strictEqual(r.inputs[3].signal.pixelClockMhz, 1188, 'FRL: 4400 x 2250 x 120');
+          console.log('  ✓ the pixel clock is the Pixel Clk field on TMDS and from the totals on FRL');
 
           noMap();
         }));

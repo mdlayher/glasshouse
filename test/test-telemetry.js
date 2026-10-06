@@ -3,6 +3,8 @@
  */
 
 var assert = require('assert');
+var fs = require('fs');
+var path = require('path');
 var mockEnv = require('./mocks/mock-env').createMockEnv();
 mockEnv.install();
 
@@ -209,6 +211,7 @@ console.log('Running test-telemetry.js ...');
   assert.strictEqual(p0.connected, true);
   assert.strictEqual(p0.resolution, '3840x2160');
   assert.strictEqual(p0.refreshHz, 60);
+  assert.strictEqual(p0.pixelClockMhz, 594, 'pixel-clock: is in kHz');
 
   // Port 1: HDMI 2.1 format (Sig: format)
   var p1 = ports[1];
@@ -240,6 +243,18 @@ console.log('Running test-telemetry.js ...');
 
   delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
   console.log('  ✓ Stable Sync Info preferred over raw sync jitter and target port respected');
+})();
+
+// 6a1. A PC at 1080p 60 in deep colour over TMDS: the total width counts
+// characters, so the clock is the Pixel Clk field.
+(function testDeepColourClock() {
+  ['8', '10', '12'].forEach(function (depth) {
+    mockEnv.files['/proc/lg/hdmi20/port2/status'] =
+      fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port0-1080p-' + depth + 'bit.status'), 'utf8');
+    assert.strictEqual(telemetry.hdmiPorts()[2].pixelClockMhz, 148.5, depth + '-bit TMDS');
+  });
+  delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
+  console.log('  ✓ the pixel clock on a deep-colour TMDS link is the receiver\'s Pixel Clk');
 })();
 
 // 6a2. isFreeSync is a mode: G-SYNC over HDMI reads 2, and is VRR
