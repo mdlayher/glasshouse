@@ -490,9 +490,13 @@ function parseTiming(raw) {
       }
     }
   }
-  var hasTiming = width > 0 && height > 0;
+  // The newer driver keeps a source's last timing in its stable section after
+  // the source sleeps, with PHY Lock[0] and 5V still present, so where it
+  // reports the lock, the lock alone says a source is sending.
+  var lock = raw.match(/PHY\s+Lock\[(\d)\]/i);
+  var hasTiming = width > 0 && height > 0 && (!lock || lock[1] === '1');
   return {
-    connected: /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw) || hasTiming,
+    connected: lock ? lock[1] === '1' : (/connected:\s*on/i.test(raw) || hasTiming),
     width: hasTiming ? width : null,
     height: hasTiming ? height : null,
     refreshHz: hasTiming && refresh ? refresh : null,
