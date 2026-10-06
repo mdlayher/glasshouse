@@ -14,13 +14,14 @@
  */
 import QtQuick 2.4
 import Eos.Window 0.1
-import QtQuick.Window 2.2
 
 WebOSWindow {
     id: win
 
-    width: Screen.width > 0 ? Screen.width : 1920
-    height: Screen.height > 0 ? Screen.height : 1080
+    // Sized for the compositor's 1920x1080 layout rather than from Screen,
+    // which can report smaller: a 43LM5760PTC drew the window in a corner.
+    width: 1920
+    height: 1080
 
     windowType: "_WEBOS_WINDOW_TYPE_SCREENSAVER"
     appId: "com.webos.app.screensaver"
