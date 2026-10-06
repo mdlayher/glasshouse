@@ -6,33 +6,33 @@ Sizes and regional variants of one series run the same software, so the table be
 
 The Luna service names and `/proc/lg` paths this relies on may differ across webOS versions and panel types.
 
-| Series        | Year | Panel | webOS seen        | Reports | Notes                                                       |
-| :------------ | :--- | :---- | :---------------- | :------ | :---------------------------------------------------------- |
-| UH6030        | 2016 | LCD   | 3.4               | 1       |                                                             |
-| UH610V        | 2016 | LCD   | 3.4               | 1       | No SoC temp, eMMC wear, or OLED metrics by hardware design  |
-| UH635V        | 2016 | LCD   | 3.x               | 1       | No eMMC wear                                                |
-| B7            | 2017 | OLED  | 3.9               | 1       | No SoC temperature or eMMC wear readings                    |
-| B8            | 2018 | OLED  | 4.4               | 1       | Misses a few metrics found on newer versions                |
-| C8            | 2018 | OLED  | 4.4               | 1       | No `getAdid` on this firmware                               |
-| LM57          | 2019 | LCD   | 4.5               | 1       |                                                             |
-| C9            | 2019 | OLED  | 4.9 – 4.10        | 3       |                                                             |
-| CX            | 2020 | OLED  | 5.5 – 5.6         | 2       |                                                             |
-| C1            | 2021 | OLED  | 6.x               | 2       |                                                             |
-| UP80          | 2021 | LCD   | 6.5               | 1       |                                                             |
-| UP81          | 2021 | LCD   | 6.5               | 1       |                                                             |
-| C2            | 2022 | OLED  | 9.2 (22)          | 1       |                                                             |
-| G2            | 2022 | OLED  | 7.4 (22)          | 1       |                                                             |
-| QNED82        | 2022 | LCD   | 7.6               | 1       |                                                             |
-| LX3           | 2022 | OLED  | —                 | 1       | Flex; model number has no OLED prefix                       |
-| CS            | 2022 | OLED  | 25                | 1       |                                                             |
-| C3            | 2023 | OLED  | 25                | 2       |                                                             |
-| G3            | 2023 | OLED  | 26                | 1       |                                                             |
-| B4            | 2024 | OLED  | 24                | 1       |                                                             |
-| C4            | 2024 | OLED  | 24 – 25           | 4       | One report of resolution stuck at 1920x1081                 |
-| G4            | 2024 | OLED  | 24 – 25           | 2       |                                                             |
-| UT81          | 2024 | LCD   | 25                | 1       | Partial: blocking works; some settings reported not to apply |
-| C5            | 2025 | OLED  | 25                | 2       |                                                             |
-| G5            | 2025 | OLED  | 26                | 1       |                                                             |
+| Series        | Year | Panel | webOS seen        | Reports |
+| :------------ | :--- | :---- | :---------------- | :------ |
+| UH6030        | 2016 | LCD   | 3.4               | 1       |
+| UH610V        | 2016 | LCD   | 3.4               | 1       |
+| UH635V        | 2016 | LCD   | 3.x               | 1       |
+| B7            | 2017 | OLED  | 3.9               | 1       |
+| B8            | 2018 | OLED  | 4.4               | 1       |
+| C8            | 2018 | OLED  | 4.4               | 1       |
+| LM57          | 2019 | LCD   | 4.5               | 1       |
+| C9            | 2019 | OLED  | 4.9 – 4.10        | 3       |
+| CX            | 2020 | OLED  | 5.5 – 5.6         | 2       |
+| C1            | 2021 | OLED  | 6.x               | 2       |
+| UP80          | 2021 | LCD   | 6.5               | 1       |
+| UP81          | 2021 | LCD   | 6.5               | 1       |
+| C2            | 2022 | OLED  | 9.2 (22)          | 1       |
+| G2            | 2022 | OLED  | 7.4 (22)          | 1       |
+| QNED82        | 2022 | LCD   | 7.6               | 1       |
+| LX3           | 2022 | OLED  | —                 | 1       |
+| CS            | 2022 | OLED  | 25                | 1       |
+| C3            | 2023 | OLED  | 25                | 2       |
+| G3            | 2023 | OLED  | 26                | 1       |
+| B4            | 2024 | OLED  | 24                | 1       |
+| C4            | 2024 | OLED  | 24 – 25           | 4       |
+| G4            | 2024 | OLED  | 24 – 25           | 2       |
+| UT81          | 2024 | LCD   | 25                | 1       |
+| C5            | 2025 | OLED  | 25                | 2       |
+| G5            | 2025 | OLED  | 26                | 1       |
 
 <details markdown="1">
 <summary>All reports</summary>
