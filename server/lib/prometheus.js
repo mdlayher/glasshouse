@@ -110,6 +110,39 @@ function mapped(table, v) {
   return table.hasOwnProperty(v) ? table[v] : snakeCase(v);
 }
 
+// The receiver's names for the chroma format and the HDCP version in use.
+var HDMI_CHROMA = { R444: 'rgb_444', Y444: 'ycbcr_444', Y422: 'ycbcr_422', Y420: 'ycbcr_420' };
+var HDMI_HDCP = { HDCP23: '2_3', HDCP22: '2_2', HDCP14: '1_4', HDCP0: 'none' };
+
+/*
+ * The PHY mode as a label and the link's rate. FRL runs at its lane rate on
+ * every lane, "FRL 12G 4L" being 48 Gbps. TMDS's "3G" and "6G" are ceilings
+ * rather than rates: the rate is the character clock, ten bits a character,
+ * on the three data channels. A mode named neither way is other, with no rate.
+ */
+function hdmiPhyMode(link) {
+  var mode = String(link.phy_mode || '');
+  var frl = mode.match(/^FRL\s+(\d+)G\s+(\d+)L\b/i);
+  if (frl) {
+    var gbps = parseInt(frl[1], 10) * parseInt(frl[2], 10);
+    return { label: 'frl_' + gbps, bitsPerSecond: gbps * 1e9 };
+  }
+  var tmds = mode.match(/^(?:TMDS\s*)?([36])G$/i);
+  if (tmds) {
+    var clock = positive(link.tmds_clock_khz);
+    return { label: 'tmds_' + tmds[1] + 'g', bitsPerSecond: clock === null ? null : clock * 1000 * 10 * 3 };
+  }
+  return { label: 'other', bitsPerSecond: null };
+}
+
+function hdmiLinks(s) {
+  return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
+}
+
+function hdmiInput(link) {
+  return { input: 'hdmi' + link.input };
+}
+
 function dynamicRange(s) {
   var raw = path(s, ['picture', 'dynamicRange_raw']);
   if (typeof raw !== 'string' || !raw) return null;
@@ -423,6 +456,43 @@ var FAMILIES = [
       var hz = positive(path(s, ['source_frame_rate', 'hz']));
       var type = path(s, ['source_frame_rate', 'vrr_type']);
       return hz === null ? [] : [[{ vrr_type: typeof type === 'string' && type ? snakeCase(type) : 'off' }, hz]];
+    }
+  },
+  {
+    name: 'glasshouse_hdmi_link_info', type: 'gauge',
+    help: 'Always 1 for each HDMI input with a link, labelled with the input, its PHY mode (frl_48 to frl_9, tmds_6g, or tmds_3g), its chroma format, and its HDCP version.',
+    samples: function (s) {
+      return hdmiLinks(s).map(function (link) {
+        var labels = hdmiInput(link);
+        labels.phy_mode = hdmiPhyMode(link).label;
+        labels.chroma = link.chroma ? mapped(HDMI_CHROMA, link.chroma) : '';
+        labels.hdcp = link.hdcp ? mapped(HDMI_HDCP, link.hdcp) : '';
+        return [labels, 1];
+      });
+    }
+  },
+  {
+    name: 'glasshouse_hdmi_link_bits_per_second', type: 'gauge',
+    help: 'Rate of each HDMI input\'s link in bits per second: the lane rate times the lanes on FRL, and ten bits a character on each of three channels on TMDS.',
+    samples: function (s) {
+      var out = [];
+      hdmiLinks(s).forEach(function (link) {
+        var rate = hdmiPhyMode(link).bitsPerSecond;
+        if (rate !== null) out.push([hdmiInput(link), rate]);
+      });
+      return out;
+    }
+  },
+  {
+    name: 'glasshouse_hdmi_qms', type: 'gauge',
+    help: '1 while Quick Media Switching is active on the HDMI input\'s link, 0 otherwise.',
+    samples: function (s) {
+      var out = [];
+      hdmiLinks(s).forEach(function (link) {
+        var v = bool(link.qms);
+        if (v !== null) out.push([hdmiInput(link), v]);
+      });
+      return out;
     }
   }
 ];

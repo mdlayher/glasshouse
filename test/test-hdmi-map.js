@@ -120,6 +120,34 @@ c4.hdmiReceiverMap(checked(function (map) {
         assert.strictEqual(configdCalls, 1, 'the map is asked for once');
         console.log('  ✓ an input\'s signal comes from the receiver the input map gives it');
 
+        // Every input with a link, whichever is on screen; HDMI 2 and 3 have none.
+        assert.deepEqual(s3.hdmi_links, [
+          { input: 1, receiver: 3, phy_mode: '3G', chroma: 'Y422', hdcp: 'HDCP23', tmds_clock_khz: 148500, qms: false },
+          { input: 4, receiver: 0, phy_mode: 'FRL 12G 4L(R6)', chroma: 'R444', hdcp: 'HDCP0', tmds_clock_khz: null, qms: false }
+        ]);
+        var lines = require('../server/lib/prometheus').render(s3, '').split('\n').filter(function (l) {
+          return /^glasshouse_hdmi_/.test(l);
+        });
+        assert.deepEqual(lines, [
+          'glasshouse_hdmi_link_info{input="hdmi1",phy_mode="tmds_3g",chroma="ycbcr_422",hdcp="2_3"} 1',
+          'glasshouse_hdmi_link_info{input="hdmi4",phy_mode="frl_48",chroma="rgb_444",hdcp="none"} 1',
+          'glasshouse_hdmi_link_bits_per_second{input="hdmi1"} 4455000000',
+          'glasshouse_hdmi_link_bits_per_second{input="hdmi4"} 48000000000',
+          'glasshouse_hdmi_qms{input="hdmi1"} 0',
+          'glasshouse_hdmi_qms{input="hdmi4"} 0'
+        ]);
+        console.log('  ✓ every input with a link is in the stats and the metrics, by its input number');
+        // A PC at 1080p 60 over TMDS: the rate follows the colour depth.
+        [['8', 4455000000], ['10', 5568600000], ['12', 6682500000]].forEach(function (d) {
+          var deep = fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port0-1080p-' + d[0] + 'bit.status'), 'utf8');
+          var rendered = require('../server/lib/prometheus').render({ hdmi_links: c4.hdmiLinks([deep, null, null, null], { 4: 0 }) }, '');
+          assert.ok(rendered.indexOf('glasshouse_hdmi_link_bits_per_second{input="hdmi4"} ' + d[1] + '\n') !== -1, d[0] + '-bit:\n' + rendered);
+          assert.ok(rendered.indexOf('phy_mode="tmds_3g"') !== -1);
+        });
+        // The HDMI 2.0 driver's receivers, as a B8's, have no link lines.
+        assert.deepEqual(c4.hdmiLinks(['horizontal-active: 3840\nvertical-active: 2160\nconnected: on\n', null, null, null],
+          { 1: 0, 2: 1, 3: 2, 4: 3 }), []);
+
         c4.hdmiInputs(checked(function (r) {
           assert.strictEqual(r.pairedUnambiguously, true);
           assert.strictEqual(r.inputs[0].signal.port, 3);
@@ -147,6 +175,7 @@ function noMap() {
   statsOn(old, 'com.webos.app.hdmi2', function (s2) {
     assert.strictEqual(s2.signal, null, 'receivers 1 and 2 are idle, and the PC on 0 is not HDMI 2');
     assert.strictEqual(s2.hdmi_diag, null);
+    assert.strictEqual(s2.hdmi_links, null, 'no map, no telling which input a link is');
     statsOn(old, 'com.webos.app.hdmi1', function (s1) {
       assert.strictEqual(s1.signal, '3840x2160 @ 120Hz', 'HDMI 1 guessed on receiver 0');
       assert.strictEqual(configdCalls, 1, 'an answer without a map is remembered too');

@@ -77,7 +77,10 @@ function sampleLines(text) {
     'glasshouse_signal_width_pixels',
     'glasshouse_signal_height_pixels',
     'glasshouse_signal_refresh_hertz',
-    'glasshouse_signal_frame_rate_hertz'
+    'glasshouse_signal_frame_rate_hertz',
+    'glasshouse_hdmi_link_info',
+    'glasshouse_hdmi_link_bits_per_second',
+    'glasshouse_hdmi_qms'
   ]);
 
   var renderings = {
@@ -386,6 +389,26 @@ function sampleLines(text) {
   // The 50 telemetry shows where the TV gave no backlight is not reported,
   // and an LCD has no Pixel Refresher status.
   assert.strictEqual(sampleLines(prometheus.render({ oled: null, picture: { backlight: 50, backlight_raw: null } }, '')).length, 1);
+  // HDMI links, by input: FRL at its lane rate, TMDS at its character clock,
+  // and a mode named neither way as other, with no rate.
+  var links = sampleLines(prometheus.render({ hdmi_links: [
+    { input: 4, receiver: 0, phy_mode: 'FRL 12G 4L(R6)', chroma: 'R444', hdcp: 'HDCP0', tmds_clock_khz: null, qms: true },
+    { input: 1, receiver: 3, phy_mode: '6G', chroma: 'Y422', hdcp: 'HDCP23', tmds_clock_khz: 594000, qms: false },
+    { input: 2, receiver: 2, phy_mode: 'FRL CTS', chroma: 'Y420', hdcp: 'HDCP2X', tmds_clock_khz: null, qms: null }
+  ] }, ''));
+  assert.deepEqual(links.filter(function (l) { return /^glasshouse_hdmi_/.test(l); }), [
+    'glasshouse_hdmi_link_info{input="hdmi4",phy_mode="frl_48",chroma="rgb_444",hdcp="none"} 1',
+    'glasshouse_hdmi_link_info{input="hdmi1",phy_mode="tmds_6g",chroma="ycbcr_422",hdcp="2_3"} 1',
+    'glasshouse_hdmi_link_info{input="hdmi2",phy_mode="other",chroma="ycbcr_420",hdcp="hdcp2_x"} 1',
+    'glasshouse_hdmi_link_bits_per_second{input="hdmi4"} 48000000000',
+    'glasshouse_hdmi_link_bits_per_second{input="hdmi1"} 17820000000',
+    'glasshouse_hdmi_qms{input="hdmi4"} 1',
+    'glasshouse_hdmi_qms{input="hdmi1"} 0'
+  ]);
+  // No links, as on a TV without the input map or the HDMI 2.1 receiver
+  // lines: no HDMI samples.
+  assert.strictEqual(sampleLines(prometheus.render({ hdmi_links: null }, '')).length, 1);
+  assert.strictEqual(sampleLines(prometheus.render({ hdmi_links: [] }, '')).length, 1);
   // eMMC state unknown: no samples rather than three zeros.
   assert.strictEqual(sampleLines(prometheus.render({ emmc: { eol: 'unknown' } }, '')).length, 1);
   console.log('  ✓ values are in base units, and unknown readings are left out');
