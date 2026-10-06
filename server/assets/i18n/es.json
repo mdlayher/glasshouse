@@ -2123,6 +2123,14 @@
   "text": "No hay nada nuevo que instalar.",
   "from": "Nothing newer to install."
  },
+ "server.prometheus.desc": {
+  "text": "Responde a las consultas de Prometheus en /api/prometheus/metrics. Requiere el token de la API, si hay uno configurado. Consúltalo cada 15 segundos o con menos frecuencia. Mientras está desactivado, la dirección no existe.",
+  "from": "Answers Prometheus scrapes at /api/prometheus/metrics. Requires the API token, if one is set. Scrape it every 15 seconds or less often. While off, the address does not exist."
+ },
+ "server.prometheus.title": {
+  "text": "Punto de acceso de métricas",
+  "from": "Metrics endpoint"
+ },
  "server.rollback": {
   "text": "Revertir a v{version}",
   "from": "Roll back to v{version}"
