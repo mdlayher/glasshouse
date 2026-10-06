@@ -68,7 +68,7 @@ With Glasshouse, capture can remain stopped until needed—for instance, turning
 
 ### 1. Prerequisites
 
-1. A rooted LG webOS TV with the **Homebrew Channel** installed (see [Installing](../install.md)).
+1. A rooted LG webOS TV with the **Homebrew Channel** installed (see [Installing](install.md)).
 2. An ambient lighting server running [Hyperion](https://hyperion-project.org/) or [HyperHDR](https://github.com/awawa-dev/HyperHDR) on your local network (e.g. on a Raspberry Pi, home server, or mini PC), connected to your LED strip controller (e.g. [WLED](https://kno-wled.eu/)).
 
 ### 2. Install PicCap on the TV

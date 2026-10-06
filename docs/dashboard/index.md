@@ -4,7 +4,6 @@ Each of these has a tab of its own in the dashboard, and a deep link to it. OLED
 
 * [Control](control.md): the remote, inputs, volume, playback, picture presets and screen blanking
 * [Advanced Controls](advanced.md): power and standby, sound routing, HDMI, auto device detection and front lights
-* [Ambient light (PicCap)](piccap.md): on-screen video capture for Hyperion and Ambilight backlights
 * [Metrics](metrics.md): temperatures, load, memory, network and HDMI
 * [Apps](apps.md): install, uninstall, background services and the home screen
 * [Privacy](privacy.md): screen recognition, ad tracking, data agreements and the blocker
