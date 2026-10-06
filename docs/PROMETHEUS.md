@@ -58,6 +58,8 @@ The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Tempor
 
 The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate. `glasshouse_signal_frame_rate_hertz` is the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. Its `vrr_type` label is the kind of VRR, such as `gsync`, or `off`.
 
+The HDMI link families describe every input with a source linked to it, whichever input is on screen, and have no sample for an input without one. `input` is `hdmi1` to `hdmi4`, as the TV numbers its inputs. `phy_mode` is `frl_48`, `frl_40`, `frl_32`, `frl_24`, `frl_18`, `frl_9`, `tmds_6g`, or `tmds_3g`, and `other` for a mode outside these, which has no rate; `chroma` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`; and `hdcp` is `2_3`, `2_2`, `1_4`, or `none`. A chroma format or HDCP version outside these keeps its own name in snake case.
+
 `version` is the Glasshouse version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `glasshouse_oled_panel_usage_seconds_total - glasshouse_oled_last_compensation_usage_seconds`, the uptime is `time() - glasshouse_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(glasshouse_cpu_seconds_total{mode="idle"}[5m]))`.
 
 | Metric                                            | Type    | Labels                                  | Value                                                       |
@@ -105,3 +107,6 @@ The signal gauges describe the HDMI source on screen and have no sample otherwis
 | `glasshouse_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
 | `glasshouse_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
 | `glasshouse_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |
+| `glasshouse_hdmi_link_info`                       | gauge   | `input`, `phy_mode`, `chroma`, `hdcp`   | 1                                                           |
+| `glasshouse_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |
+| `glasshouse_hdmi_qms`                             | gauge   | `input`                                 | 1 while Quick Media Switching is active on the link         |

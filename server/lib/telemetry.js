@@ -560,71 +560,120 @@ function getActiveHdmiDiagnostics(targetPort) {
     : [0, 1, 2, 3];
 
   for (var i = 0; i < portsToScan.length; i++) {
-    var p = portsToScan[i];
-    var raw = readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
-    if (!raw) continue;
-    var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw) || /is5Vconnected\[1\]/i.test(raw);
-    if (!isConn) continue;
-
-    var phyMatch = raw.match(/PHY Mode\[([^\]]+)\]/i);
-    var fmtMatch = raw.match(/Video Format\[([^\]]+)\]/i);
-    var hdcpMatch = raw.match(/Current HDCP Auth Version => (HDCP\w+)/i);
-    var allmMatch = raw.match(/isAllm\[(\d+)\]/i);
-    var vrrMatch = raw.match(/isFreeSync\[(\d+)\]/i);
-    var vrrMinMax = raw.match(/VRR Min\[(\d+)\]\/Max\[(\d+)\]/i);
-    var qmsMatch = raw.match(/QMSMode\[(\d+)\]/i);
-
-    var phyMode = null;
-    if (phyMatch) {
-      var rawPhy = phyMatch[1].trim();
-      if (/FRL 12G 4L/i.test(rawPhy)) phyMode = 'FRL 48 Gbps';
-      else if (/FRL 10G 4L/i.test(rawPhy)) phyMode = 'FRL 40 Gbps';
-      else if (/FRL 8G 4L/i.test(rawPhy)) phyMode = 'FRL 32 Gbps';
-      else if (/FRL 6G 4L/i.test(rawPhy)) phyMode = 'FRL 24 Gbps';
-      else if (/FRL 6G 3L/i.test(rawPhy)) phyMode = 'FRL 18 Gbps';
-      else if (/FRL 3G 3L/i.test(rawPhy)) phyMode = 'FRL 9 Gbps';
-      else if (/3G/i.test(rawPhy)) phyMode = 'TMDS (3G)';
-      else if (/6G/i.test(rawPhy)) phyMode = 'TMDS (6G)';
-      else phyMode = rawPhy;
-    }
-
-    var format = null;
-    if (fmtMatch) {
-      var rawFmt = fmtMatch[1].trim();
-      if (rawFmt === 'R444') format = 'RGB 4:4:4';
-      else if (rawFmt === 'Y444') format = 'YCbCr 4:4:4';
-      else if (rawFmt === 'Y422') format = 'YCbCr 4:2:2';
-      else if (rawFmt === 'Y420') format = 'YCbCr 4:2:0';
-      else format = rawFmt;
-    }
-
-    var hdcp = null;
-    if (hdcpMatch) {
-      var rawHdcp = hdcpMatch[1].trim();
-      if (rawHdcp === 'HDCP23') hdcp = 'HDCP 2.3';
-      else if (rawHdcp === 'HDCP22') hdcp = 'HDCP 2.2';
-      else if (rawHdcp === 'HDCP14') hdcp = 'HDCP 1.4';
-      else if (rawHdcp === 'HDCP0') hdcp = 'None';
-      else hdcp = rawHdcp;
-    }
-
-    // isFreeSync is the VRR mode rather than a flag: 1 for FreeSync, 2 for
-    // HDMI Forum VRR, which G-SYNC uses over HDMI (a PC at 4K120 on a C4,
-    // webOS 24, #475). Any mode but 0 is VRR.
-    var isVrr = (vrrMatch && vrrMatch[1] !== '0') ||
-                (vrrMinMax && (parseInt(vrrMinMax[1], 10) > 0 || parseInt(vrrMinMax[2], 10) > 0));
-
-    return {
-      port: p,
-      phy_mode: phyMode,
-      chroma: format,
-      hdcp: hdcp,
-      allm: allmMatch ? (allmMatch[1] === '1') : null,
-      vrr: (vrrMatch || vrrMinMax) ? !!isVrr : null,
-      qms: qmsMatch ? (qmsMatch[1] === '1') : null
-    };
+    var diag = hdmiDiagnostics(readTrimmed('/proc/lg/hdmi20/port' + portsToScan[i] + '/status'), portsToScan[i]);
+    if (diag) return diag;
   }
   return null;
+}
+
+/*
+ * The HDMI 2.1 link lines of one receiver's status file, as the driver writes
+ * them: phy_mode such as "FRL 12G 4L(R6)" or "6G", chroma such as "R444",
+ * hdcp such as "HDCP23", and on TMDS the character clock in kHz. A receiver of
+ * the HDMI 2.0 driver has none of them.
+ */
+function hdmiLinkFields(raw) {
+  var stable = raw.split(/\[Stable Sync Info\]/i)[1] || raw;
+  function field(text, re) { var m = text.match(re); return m ? m[1].trim() : null; }
+  var qms = field(raw, /QMSMode\[(\d+)\]/i);
+  var phyMode = field(raw, /PHY Mode\[([^\]]+)\]/i);
+  return {
+    phy_mode: phyMode,
+    chroma: field(stable, /Video Format\[([^\]]+)\]/i),
+    hdcp: field(raw, /Current HDCP Auth Version => (HDCP\w+)/i),
+    // On FRL the field is no TMDS clock: 50000 on a 48 Gbps link.
+    tmds_clock_khz: /^FRL/i.test(phyMode || '') ? null : toInt(field(stable, /TMDS Clk\[0*(\d+)\]/i), null),
+    qms: qms === null ? null : qms === '1'
+  };
+}
+
+// The on-screen input's diagnostics, as the dashboard and Home Assistant show them.
+function hdmiDiagnostics(raw, port) {
+  if (!raw) return null;
+  var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw) || /is5Vconnected\[1\]/i.test(raw);
+  if (!isConn) return null;
+
+  var link = hdmiLinkFields(raw);
+  var allmMatch = raw.match(/isAllm\[(\d+)\]/i);
+  var vrrMatch = raw.match(/isFreeSync\[(\d+)\]/i);
+  var vrrMinMax = raw.match(/VRR Min\[(\d+)\]\/Max\[(\d+)\]/i);
+
+  var phyMode = null;
+  if (link.phy_mode) {
+    var rawPhy = link.phy_mode;
+    if (/FRL 12G 4L/i.test(rawPhy)) phyMode = 'FRL 48 Gbps';
+    else if (/FRL 10G 4L/i.test(rawPhy)) phyMode = 'FRL 40 Gbps';
+    else if (/FRL 8G 4L/i.test(rawPhy)) phyMode = 'FRL 32 Gbps';
+    else if (/FRL 6G 4L/i.test(rawPhy)) phyMode = 'FRL 24 Gbps';
+    else if (/FRL 6G 3L/i.test(rawPhy)) phyMode = 'FRL 18 Gbps';
+    else if (/FRL 3G 3L/i.test(rawPhy)) phyMode = 'FRL 9 Gbps';
+    else if (/3G/i.test(rawPhy)) phyMode = 'TMDS (3G)';
+    else if (/6G/i.test(rawPhy)) phyMode = 'TMDS (6G)';
+    else phyMode = rawPhy;
+  }
+
+  var format = null;
+  if (link.chroma) {
+    var rawFmt = link.chroma;
+    if (rawFmt === 'R444') format = 'RGB 4:4:4';
+    else if (rawFmt === 'Y444') format = 'YCbCr 4:4:4';
+    else if (rawFmt === 'Y422') format = 'YCbCr 4:2:2';
+    else if (rawFmt === 'Y420') format = 'YCbCr 4:2:0';
+    else format = rawFmt;
+  }
+
+  var hdcp = null;
+  if (link.hdcp) {
+    var rawHdcp = link.hdcp;
+    if (rawHdcp === 'HDCP23') hdcp = 'HDCP 2.3';
+    else if (rawHdcp === 'HDCP22') hdcp = 'HDCP 2.2';
+    else if (rawHdcp === 'HDCP14') hdcp = 'HDCP 1.4';
+    else if (rawHdcp === 'HDCP0') hdcp = 'None';
+    else hdcp = rawHdcp;
+  }
+
+  // isFreeSync is the VRR mode rather than a flag: 1 for FreeSync, 2 for
+  // HDMI Forum VRR, which G-SYNC uses over HDMI (a PC at 4K120 on a C4,
+  // webOS 24, #475). Any mode but 0 is VRR.
+  var isVrr = (vrrMatch && vrrMatch[1] !== '0') ||
+              (vrrMinMax && (parseInt(vrrMinMax[1], 10) > 0 || parseInt(vrrMinMax[2], 10) > 0));
+
+  return {
+    port: port,
+    phy_mode: phyMode,
+    chroma: format,
+    hdcp: hdcp,
+    allm: allmMatch ? (allmMatch[1] === '1') : null,
+    vrr: (vrrMatch || vrrMinMax) ? !!isVrr : null,
+    qms: link.qms
+  };
+}
+
+// Every receiver's status file, read once for a collection, by receiver.
+function readHdmiStatus() {
+  var status = [];
+  for (var p = 0; p < 4; p++) status.push(readTrimmed('/proc/lg/hdmi20/port' + p + '/status'));
+  return status;
+}
+
+/*
+ * The link on every HDMI input whose receiver has locked to a source, by the
+ * input map: the cable and the handshake are there whichever input is on
+ * screen. Without a map there is no telling which input a receiver is.
+ */
+function hdmiLinks(status, map) {
+  if (!map) return null;
+  var links = [];
+  for (var n = 1; n <= 4; n++) {
+    var raw = typeof map[n] === 'number' ? status[map[n]] : null;
+    if (!raw || !/PHY\s+Lock\[1\]/i.test(raw)) continue;
+    var link = hdmiLinkFields(raw);
+    if (!link.phy_mode) continue;
+    link.input = n;
+    link.receiver = map[n];
+    links.push(link);
+  }
+  return links;
 }
 
 /*
@@ -671,15 +720,17 @@ function parseInputMap(table) {
  * receiver's link belongs to another input. Without a map from the TV, input
  * n is looked for on receiver n - 1, then n, as a B8 has HDMI 2.
  */
-function getHdmiSignal(hdmiNum, map) {
+function getHdmiSignal(hdmiNum, map, status) {
   if (typeof hdmiNum !== 'number' || hdmiNum < 1 || hdmiNum > 4) return null;
   var candidates = map ? [map[hdmiNum]] : [hdmiNum - 1, hdmiNum];
   for (var c = 0; c < candidates.length; c++) {
     var p = candidates[c];
-    if (typeof p === 'number' && p >= 0 && p < 4) {
-      var t = readVideoTiming(p);
-      if (t) return hdmiSignal(t, getActiveHdmiDiagnostics(p));
-    }
+    if (typeof p !== 'number' || p < 0 || p >= 4) continue;
+    var raw = status ? status[p] : readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
+    if (!raw) continue;
+    var t = parseTiming(raw);
+    if (!t.connected) continue;
+    return hdmiSignal({ width: t.width, height: t.height, refresh_hz: t.refreshHz }, hdmiDiagnostics(raw, p));
   }
   return null;
 }
@@ -1381,6 +1432,7 @@ function collectStats(cb) {
     signal_timing: null,
     hdmi_diag: null,
     source_frame_rate: null,
+    hdmi_links: null,
     picture_engine: peInfo,
     colorimetry: peInfo ? peInfo.colorimetry : null,
     inputs: inputNameMap
@@ -1409,6 +1461,8 @@ function collectStats(cb) {
   }
 
   hdmiReceiverMap(function (receiverMap) {
+    var hdmiStatus = readHdmiStatus();
+    out.hdmi_links = hdmiLinks(hdmiStatus, receiverMap);
   alwaysReadyShowing(function (showing) {
   lunaFn('com.webos.service.tvpower/power/getPowerState', {}, function (pw) {
     var rawPower = pw ? (pw.state || pw.processing) : null;
@@ -1593,7 +1647,7 @@ function collectStats(cb) {
             var isScreenOff = out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'));
             if (hdmiMatch && !isScreenOff) {
               inputShown = true;
-              var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10), receiverMap);
+              var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10), receiverMap, hdmiStatus);
               out.signal = sigObj ? sigObj.signal : null;
               out.signal_timing = sigObj ? sigObj.timing : null;
               out.hdmi_diag = sigObj ? sigObj.diag : null;
@@ -1820,6 +1874,8 @@ module.exports = {
   getActiveHdmiDiagnostics: getActiveHdmiDiagnostics,
   getHdmiSignal: getHdmiSignal,
   hdmiReceiverMap: hdmiReceiverMap,
+  hdmiLinks: hdmiLinks,
+  readHdmiStatus: readHdmiStatus,
   getPictureEngineInfo: getPictureEngineInfo,
   formatSoundOutput: formatSoundOutput,
   volumeControl: volumeControl,
