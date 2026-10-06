@@ -1,71 +1,189 @@
 /*
- * The live frame rate of a game, as LG's Game Optimizer shows it.
+ * The frame rate an HDMI source presents, as LG's Game Optimizer shows it.
  *
- * utp.extinputs/bind returns the pipeline of the input on screen, and
- * getVRRInfo on that pipeline reports the frame rate once a second. The rate is
- * the game's own while the source is using VRR; otherwise it is the signal's
- * fixed rate (a console at 120 Hz with VRR off reads 120), and 0 with nothing
- * on the input.
+ * getVRRInfo on the pipeline of the input on screen gives the rate and the VRR
+ * type. The rate is the game's own while the source is using VRR; otherwise it
+ * is the signal's fixed rate (a console at 120 Hz with VRR off reads 120), and
+ * 0 with nothing on the input.
  *
- * Both subscriptions are held only while a dashboard is asking, and dropped
- * IDLE_MS after the last request, so nothing is bound to the input otherwise.
+ * The pipeline exists only while some client holds a utp.extinputs/bind
+ * subscription, whose replies carry it as broadcastId; once the bind closes,
+ * getVRRInfo on the same id answers errorCode -106, "No resource". The bind
+ * replies once on connect and then only when the input changes.
+ *
+ * Two readers share one bind. The Game tab's counter (frameRate) streams
+ * getVRRInfo once a second while it is asked, and drops the stream IDLE_MS
+ * after the last request. The stats (read) make getVRRInfo a one-shot call
+ * through the shared luna cache, so a Prometheus scrape never starts the
+ * stream, and take the stream's reading instead while it runs. The bind is
+ * held while the stream runs or the stats last saw an HDMI input on screen,
+ * so nothing is bound to the input otherwise.
  *
  * Strict ES5 for node 0.12 on webOS 4.
  */
 var luna = require('./luna');
 
 var IDLE_MS = 15000;
+var READ_TTL_MS = 2000;
+// The bind's first reply, after a luna-send has started; a read waits this
+// long for it rather than coming back empty after every switch to an input.
+var BIND_WAIT_MS = 1500;
 
+var lunaCachedFn = null;
 var bindSub = null;
 var vrrSub = null;
 var pipeline = null;
+var supported = true;
+var inputShown = false;
 var idleTimer = null;
-var latest = { frameRate: 0, vrrType: 'off', port: null };
+var latest = noReading();
+var waiting = [];
+var waitTimer = null;
 
-function watchPipeline(id) {
+function init(opts) {
+  lunaCachedFn = opts.lunaCached;
+}
+
+function noReading() {
+  return { frameRate: 0, vrrType: 'off', port: null };
+}
+
+function isInputApp(appId) {
+  return /^com\.webos\.app\.hdmi[1-4]$/i.test(String(appId || ''));
+}
+
+// A reading counts only while its input is the app on screen: the input's
+// pipeline keeps running, and reporting, behind an app.
+function onScreen(r, appId) {
+  if (!r || !r.port || 'com.webos.app.' + String(r.port).toLowerCase() !== String(appId).toLowerCase()) return null;
+  return { frameRate: r.frameRate, vrrType: r.vrrType, port: r.port };
+}
+
+function fromReply(r) {
+  var info = r && r.returnValue !== false && r.vrrInfo;
+  if (!info) return null;
+  return {
+    frameRate: typeof info.frameRate === 'number' ? info.frameRate : 0,
+    vrrType: info.vrrType || 'off',
+    port: r.port || null
+  };
+}
+
+function flushWaiting() {
+  clearTimeout(waitTimer);
+  waitTimer = null;
+  var list = waiting;
+  waiting = [];
+  for (var i = 0; i < list.length; i++) list[i]();
+}
+
+function watchPipeline() {
   if (vrrSub) vrrSub.stop();
-  pipeline = id;
-  latest = { frameRate: 0, vrrType: 'off', port: null };
+  latest = noReading();
   vrrSub = new luna.Subscription('com.webos.service.utp.extinputs/getVRRInfo',
-    { subscribe: true, pipelineId: id, mode: 'GameOptimizer', interval: 1000 }, null, {
+    { subscribe: true, pipelineId: pipeline, mode: 'GameOptimizer', interval: 1000 }, null, {
       message: function (r) {
-        if (!r || !r.vrrInfo) return;
-        latest = {
-          frameRate: typeof r.vrrInfo.frameRate === 'number' ? r.vrrInfo.frameRate : 0,
-          vrrType: r.vrrInfo.vrrType || 'off',
-          port: r.port || null
-        };
+        var reading = fromReply(r);
+        if (reading) latest = reading;
       }
     });
   vrrSub.start();
 }
 
-function start() {
-  bindSub = new luna.Subscription('com.webos.service.utp.extinputs/bind', { subscribe: true }, null, {
-    message: function (r) {
-      // A new pipeline each time the input changes; none while nothing is bound.
-      if (r && r.broadcastId && r.broadcastId !== pipeline) watchPipeline(r.broadcastId);
+function bindMessage(r) {
+  if (r && r.broadcastId) {
+    // A new pipeline each time the input changes.
+    if (r.broadcastId !== pipeline) {
+      pipeline = r.broadcastId;
+      if (vrrSub) watchPipeline();
     }
-  });
-  bindSub.start();
+    if (idleTimer && !vrrSub) watchPipeline();
+  } else if (r && r.returnValue === false && /unknown (method|service)/i.test(String(r.errorText || ''))) {
+    // A TV without the service is not asked again: each retry starts a
+    // luna-send, which is what can freeze node 0.12 (see luna.js).
+    supported = false;
+    stopStream();
+  }
+  flushWaiting();
 }
 
-function stop() {
-  if (vrrSub) vrrSub.stop();
-  if (bindSub) bindSub.stop();
-  vrrSub = bindSub = pipeline = null;
-  latest = { frameRate: 0, vrrType: 'off', port: null };
+function holdBind() {
+  var wanted = supported && (!!idleTimer || inputShown);
+  if (wanted && !bindSub) {
+    bindSub = new luna.Subscription('com.webos.service.utp.extinputs/bind', { subscribe: true }, null, {
+      message: bindMessage,
+      close: function () { pipeline = null; }
+    });
+    bindSub.start();
+  } else if (!wanted && bindSub) {
+    bindSub.stop();
+    bindSub = pipeline = null;
+    flushWaiting();
+  }
 }
 
-// The latest reading; starts watching if nothing was, and keeps it going.
-function frameRate() {
-  if (!bindSub) start();
+function stopStream() {
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(stop, IDLE_MS);
+  idleTimer = null;
+  if (vrrSub) vrrSub.stop();
+  vrrSub = null;
+  latest = noReading();
+  holdBind();
+}
+
+// The Game tab's reading; starts the stream if it was not running, and keeps
+// it going.
+function frameRate() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(stopStream, IDLE_MS);
+  holdBind();
+  if (!vrrSub && pipeline) watchPipeline();
   return { frameRate: latest.frameRate, vrrType: latest.vrrType, port: latest.port };
 }
 
+/*
+ * The stats' reading for the app on screen, cb({ frameRate, vrrType, port }),
+ * or cb(null) when it is not an HDMI input or the TV gives none. An appId
+ * other than an input's drops the bind, unless the stream holds it.
+ */
+function read(appId, cb) {
+  inputShown = isInputApp(appId);
+  holdBind();
+  if (!inputShown || !supported || !lunaCachedFn) return cb(null);
+  if (!pipeline && !vrrSub) {
+    waiting.push(function () { readPipeline(appId, cb); });
+    if (!waitTimer) waitTimer = setTimeout(flushWaiting, BIND_WAIT_MS);
+    return;
+  }
+  readPipeline(appId, cb);
+}
+
+function readPipeline(appId, cb) {
+  // The stream already asks once a second.
+  if (vrrSub) return cb(onScreen(latest, appId));
+  if (!pipeline) return cb(null);
+  lunaCachedFn('com.webos.service.utp.extinputs/getVRRInfo',
+    { pipelineId: pipeline, mode: 'GameOptimizer' }, READ_TTL_MS, function (r) {
+      cb(onScreen(fromReply(r), appId));
+    });
+}
+
+// Leaving an input drops the bind without waiting for the next stats read.
+function appChanged(appId) {
+  if (isInputApp(appId)) return;
+  inputShown = false;
+  holdBind();
+}
+
+function stop() {
+  inputShown = false;
+  stopStream();
+}
+
 module.exports = {
+  init: init,
   frameRate: frameRate,
+  read: read,
+  appChanged: appChanged,
   stop: stop
 };

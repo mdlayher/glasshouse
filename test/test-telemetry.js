@@ -28,8 +28,18 @@ var screensaversMock = {
   screensaverLevel: function () { return 'dim'; }
 };
 
+// The frame rate game.js reads for the app on screen.
+var gameAsked = [];
+var gameMock = {
+  read: function (appId, cb) {
+    gameAsked.push(appId);
+    cb(appId ? { frameRate: 119, vrrType: 'gsync', port: 'HDMI2' } : null);
+  }
+};
+
 telemetry.init({
   luna: mockEnv.mockLuna,
+  game: gameMock,
   lunaCached: mockEnv.mockLunaCached,
   config: { port: 8080, allowControl: true },
   oled: oledMock,
@@ -468,6 +478,8 @@ telemetry.refreshInstalledApps(function (apps) {
         assert.ok(Array.isArray(stats.apps) && stats.apps.length === 2);
         assert.strictEqual(stats.signal, '3840x2160 @ 120Hz', 'stats signal matches active HDMI 2 input');
         assert.ok(stats.hdmi_diag && stats.hdmi_diag.port === 1, 'stats hdmi_diag matches active port 1');
+        assert.deepEqual(stats.source_frame_rate, { hz: 119, vrr_type: 'gsync', port: 'HDMI2' });
+        assert.deepEqual(gameAsked, ['com.webos.app.hdmi2']);
         assert.deepEqual(stats.picture_engine, { colorimetry: 'BT.709', hdr_mode: 'sdr' });
         assert.strictEqual(stats.colorimetry, 'BT.709');
         // The mock's picture settings have no dimension: shown as SDR, but not
@@ -484,6 +496,8 @@ telemetry.refreshInstalledApps(function (apps) {
         telemetry.collectStats(function (internalStats) {
           assert.strictEqual(internalStats.signal, null, 'internal app yields null signal');
           assert.strictEqual(internalStats.hdmi_diag, null, 'internal app yields null hdmi_diag');
+          assert.strictEqual(internalStats.source_frame_rate, null, 'internal app yields no frame rate');
+          assert.strictEqual(gameAsked[gameAsked.length - 1], '', 'off an input, game.js is told so');
 
           // Switching to HDMI 1 (port 0)
           mockEnv.luna['com.webos.applicationManager/getForegroundAppInfo'] = { returnValue: true, appId: 'com.webos.app.hdmi1' };

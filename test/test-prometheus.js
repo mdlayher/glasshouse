@@ -70,9 +70,11 @@ function sampleLines(text) {
     'glasshouse_oled_protection_enabled',
     'glasshouse_signal_info',
     'glasshouse_signal_low_latency',
+    'glasshouse_signal_vrr',
     'glasshouse_signal_width_pixels',
     'glasshouse_signal_height_pixels',
-    'glasshouse_signal_refresh_hertz'
+    'glasshouse_signal_refresh_hertz',
+    'glasshouse_signal_frame_rate_hertz'
   ]);
 
   var renderings = {
@@ -144,7 +146,8 @@ function sampleLines(text) {
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 0',
     'glasshouse_oled_failure_alerts_total 0',
-    'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1'
+    'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1',
+    'glasshouse_signal_vrr 0'
   ]);
 
   // The same C4 in standby, from a server with the precise readings.
@@ -281,10 +284,34 @@ function sampleLines(text) {
     'glasshouse_oled_protection_enabled{protection="gsr"} 1',
     'glasshouse_signal_info{dynamic_range="hdr",picture_mode="standard"} 1',
     'glasshouse_signal_low_latency 0',
+    'glasshouse_signal_vrr 0',
     'glasshouse_signal_width_pixels 3840',
     'glasshouse_signal_height_pixels 2160',
     'glasshouse_signal_refresh_hertz 60'
   ]);
+
+  // A G4 on HDMI 2 with VRR on.
+  var g4 = sampleLines(prometheus.render(require('./fixtures/stats-g4-webos9.json'), '0.80.1'));
+  assert.ok(g4.indexOf('glasshouse_signal_vrr 1') !== -1);
+
+  // The source's frame rate, which telemetry gives only for an HDMI input on
+  // screen: the CX HDR capture on HDMI 4 with a reading added, against the
+  // C4 in standby, on no app, which has none.
+  var cxHdrStats = JSON.parse(JSON.stringify(require('./fixtures/stats-cx-webos5-hdr.json')));
+  cxHdrStats.source_frame_rate = { hz: 119, vrr_type: 'gsync', port: 'HDMI4' };
+  var withRate = sampleLines(prometheus.render(cxHdrStats, '0.80.1'));
+  assert.strictEqual(withRate[withRate.length - 1], 'glasshouse_signal_frame_rate_hertz{vrr_type="gsync"} 119');
+  assert.strictEqual(standby.filter(function (l) { return /^glasshouse_signal_(vrr|frame_rate)/.test(l); }).length, 0);
+  // The type in snake case, off without VRR, and no sample for 0, which is
+  // nothing on the input.
+  [
+    [{ hz: 59.94, vrr_type: 'freeSync', port: 'HDMI1' }, 'glasshouse_signal_frame_rate_hertz{vrr_type="free_sync"} 59.94'],
+    [{ hz: 120, vrr_type: 'off', port: 'HDMI1' }, 'glasshouse_signal_frame_rate_hertz{vrr_type="off"} 120'],
+    [{ hz: 0, vrr_type: 'off', port: 'HDMI1' }, undefined]
+  ].forEach(function (c) {
+    var lines = sampleLines(prometheus.render({ source_frame_rate: c[0] }, ''));
+    assert.strictEqual(lines[1], c[1], JSON.stringify(c[0]));
+  });
 
   // Readings no fixture has.
   var more = sampleLines(prometheus.render({

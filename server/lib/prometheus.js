@@ -375,6 +375,11 @@ var FAMILIES = [
     }
   },
   {
+    name: 'glasshouse_signal_vrr', type: 'gauge',
+    help: '1 while the HDMI source is using variable refresh rate (VRR, FreeSync, or HDMI Forum VRR), 0 otherwise.',
+    samples: function (s) { return one(bool(path(s, ['hdmi_diag', 'vrr']))); }
+  },
+  {
     name: 'glasshouse_signal_width_pixels', type: 'gauge',
     help: 'Width of the HDMI source\'s picture in pixels.',
     samples: function (s) { return one(positive(path(s, ['signal_timing', 'width']))); }
@@ -388,6 +393,15 @@ var FAMILIES = [
     name: 'glasshouse_signal_refresh_hertz', type: 'gauge',
     help: 'Refresh rate of the HDMI signal in hertz, as the source sends it rather than the content\'s frame rate.',
     samples: function (s) { return one(positive(path(s, ['signal_timing', 'refresh_hz']))); }
+  },
+  {
+    name: 'glasshouse_signal_frame_rate_hertz', type: 'gauge',
+    help: 'Frame rate in hertz: the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. vrr_type is the kind of VRR, such as gsync, or off.',
+    samples: function (s) {
+      var hz = positive(path(s, ['source_frame_rate', 'hz']));
+      var type = path(s, ['source_frame_rate', 'vrr_type']);
+      return hz === null ? [] : [[{ vrr_type: typeof type === 'string' && type ? snakeCase(type) : 'off' }, hz]];
+    }
   }
 ];
 
