@@ -1100,7 +1100,6 @@ function createMockRes(cb) {
     routes.init({
       config: { web: { enabled: false }, allowControl: true, token: '' },
       oled: {
-        readOledProtections: function (cb) { cb(null); },
         oledProtControllable: function () { return false; }
       },
       telemetry: { collectStats: function (cb) { cb(stats); } }
@@ -1111,9 +1110,17 @@ function createMockRes(cb) {
     }), createMockRes(function (r) { body = JSON.parse(r.body); }));
     return body;
   }
-  var oled = oledCare({ oled: { panel_hours: 4200 } });
+  var oled = oledCare({ oled: { panel_hours: 4200, gsr_enabled: true, tpc_enabled: false, gsr_stress_count: 3 } });
   assert.strictEqual(oled.available, true);
   assert.strictEqual(oled.panelHours, 4200);
+  // The protections as the stats have them, with the precedence oled.js applies.
+  assert.strictEqual(oled.gsr, true);
+  assert.strictEqual(oled.tpc, false);
+  assert.strictEqual(oled.gsrStressCount, 3);
+  var unreported = oledCare({ oled: { panel_hours: 4200, gsr_enabled: null } });
+  assert.strictEqual(unreported.gsr, null);
+  assert.strictEqual(unreported.tpc, null);
+  assert.strictEqual(unreported.gsrStressCount, null);
   var lcd = oledCare({ oled: null });
   assert.strictEqual(lcd.available, false);
   assert.strictEqual(lcd.isOled, false);

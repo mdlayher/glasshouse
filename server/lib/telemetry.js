@@ -431,7 +431,9 @@ function netBytes() {
   return best;
 }
 
-function getVideoSignal(targetPort) {
+// The first connected port's timing, as numbers; width and height are null
+// where a port is connected but the receiver gives no timing yet.
+function readVideoTiming(targetPort) {
   var portsToScan = Array.isArray(targetPort)
     ? targetPort
     : (typeof targetPort === 'number' && targetPort >= 0 && targetPort < 4)
@@ -444,14 +446,14 @@ function getVideoSignal(targetPort) {
     var raw = readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
     if (!raw) continue;
     var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw);
-    var w = null, h = null, hz = '';
+    var w = null, h = null, hz = null;
     var wMatch = raw.match(/horizontal-active:\s*(\d+)/);
     var hMatch = raw.match(/vertical-active:\s*(\d+)/);
     var hzMatch = raw.match(/pixel-clock-V:\s*(\d+)(?:\s*Hz)?/);
     if (wMatch && hMatch && parseInt(wMatch[1], 10) > 0 && parseInt(hMatch[1], 10) > 0) {
       w = wMatch[1];
       h = hMatch[1];
-      if (hzMatch) hz = ' @ ' + hzMatch[1] + 'Hz';
+      if (hzMatch) hz = hzMatch[1];
     } else {
       var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
       var targetText = stablePart || raw;
@@ -459,16 +461,28 @@ function getVideoSignal(targetPort) {
       if (sigM && parseInt(sigM[1], 10) > 0 && parseInt(sigM[2], 10) > 0) {
         w = sigM[1];
         h = sigM[2];
-        hz = ' @ ' + sigM[3] + 'Hz';
+        hz = sigM[3];
         isConn = true;
       }
     }
     if (isConn) {
       anyConn = true;
-      if (w && h && parseInt(w, 10) > 0 && parseInt(h, 10) > 0) return w + 'x' + h + hz;
+      if (w && h && parseInt(w, 10) > 0 && parseInt(h, 10) > 0) {
+        return { width: parseInt(w, 10), height: parseInt(h, 10), refresh_hz: hz === null ? null : parseInt(hz, 10) };
+      }
     }
   }
-  return anyConn ? 'Connected' : null;
+  return anyConn ? { width: null, height: null, refresh_hz: null } : null;
+}
+
+function formatSignal(timing) {
+  if (!timing) return null;
+  if (timing.width === null) return 'Connected';
+  return timing.width + 'x' + timing.height + (timing.refresh_hz === null ? '' : ' @ ' + timing.refresh_hz + 'Hz');
+}
+
+function getVideoSignal(targetPort) {
+  return formatSignal(readVideoTiming(targetPort));
 }
 
 function readRemoteInfo() {
@@ -575,13 +589,17 @@ function getHdmiSignal(hdmiNum) {
   for (var c = 0; c < candidates.length; c++) {
     var p = candidates[c];
     if (p >= 0 && p < 4) {
-      var sig = getVideoSignal(p);
-      if (sig) return { signal: sig, diag: getActiveHdmiDiagnostics(p) };
+      var t = readVideoTiming(p);
+      if (t) return hdmiSignal(t, getActiveHdmiDiagnostics(p));
     }
   }
-  var anySig = getVideoSignal();
-  if (anySig) return { signal: anySig, diag: getActiveHdmiDiagnostics() };
+  var anyTiming = readVideoTiming();
+  if (anyTiming) return hdmiSignal(anyTiming, getActiveHdmiDiagnostics());
   return null;
+}
+
+function hdmiSignal(timing, diag) {
+  return { signal: formatSignal(timing), timing: timing.width === null ? null : timing, diag: diag };
 }
 
 function getPictureEngineInfo() {
@@ -1287,6 +1305,7 @@ function collectStats(cb) {
     mac: n ? macAddress(n.iface) : null,
     emmc: emmcInfo(),
     signal: null,
+    signal_timing: null,
     hdmi_diag: null,
     picture_engine: peInfo,
     colorimetry: peInfo ? peInfo.colorimetry : null,
@@ -1499,18 +1518,22 @@ function collectStats(cb) {
             if (hdmiMatch && !isScreenOff) {
               var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10));
               out.signal = sigObj ? sigObj.signal : null;
+              out.signal_timing = sigObj ? sigObj.timing : null;
               out.hdmi_diag = sigObj ? sigObj.diag : null;
               if (out.hdmi_diag) noteHdmiSeen(out.hdmi_diag);
             } else {
               out.signal = null;
+              out.signal_timing = null;
               out.hdmi_diag = null;
             }
           } else if (app && app.appId === '') {
             out.signal = null;
+            out.signal_timing = null;
             out.hdmi_diag = null;
           }
           if (out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'))) {
             out.signal = null;
+            out.signal_timing = null;
             out.hdmi_diag = null;
           }
 
@@ -1518,9 +1541,12 @@ function collectStats(cb) {
             { category: 'picture', keys: ['backlight', 'pictureMode', 'energySaving', 'screenShift', 'logoLuminanceAdjust'] },
             10000, function (pic) {
               if (pic && pic.settings) {
-                var rawDr = (pic.dimension && pic.dimension.dynamicRange) ? pic.dimension.dynamicRange : 'sdr';
+                var rawDr = (pic.dimension && pic.dimension.dynamicRange) ? pic.dimension.dynamicRange : null;
                 out.picture = {
                   dynamicRange: formatDynamicRange(rawDr),
+                  // As the TV gave it, null where it gave none, which the
+                  // display string above shows as SDR.
+                  dynamicRange_raw: rawDr,
                   mode: formatPicMode(pic.settings.pictureMode),
                   mode_raw: pic.settings.pictureMode || 'standard',
                   backlight: toInt(pic.settings.backlight, 50),

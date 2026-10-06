@@ -65,6 +65,17 @@ function memoryRead(s) {
 // The JEDEC eMMC PRE_EOL_INFO states, as telemetry names them.
 var EMMC_EOL_STATES = ['Normal', 'Warning', 'Urgent'];
 
+/*
+ * The picture settings in use, as the TV names them. They change only with the
+ * content's dynamic range or the viewer's choice of mode, and every tested TV
+ * gives both, B8 to C4. The HDMI link details are left out: they come and go
+ * with every input switch, app and standby, each time starting a new series.
+ */
+var SIGNAL_LABELS = [
+  ['dynamic_range', ['picture', 'dynamicRange_raw']],
+  ['picture_mode', ['picture', 'mode_raw']]
+];
+
 var FAMILIES = [
   {
     name: 'glasshouse_info', type: 'gauge',
@@ -283,6 +294,51 @@ var FAMILIES = [
     name: 'glasshouse_oled_failure_alerts_total', type: 'counter',
     help: 'Panel maintenance failure alerts the TV has recorded.',
     samples: function (s) { return one(num(path(s, ['oled', 'failure_alerts']))); }
+  },
+  {
+    name: 'glasshouse_oled_gsr_stress_events_total', type: 'counter',
+    help: 'Stress events Global Stress Reduction has counted on the panel, as the TV\'s panel service reports them.',
+    samples: function (s) { return one(num(path(s, ['oled', 'gsr_stress_count']))); }
+  },
+  {
+    name: 'glasshouse_oled_protection_enabled', type: 'gauge',
+    help: '1 when the panel protection is on, 0 when off: asbl is the Automatic Static Brightness Limiter, gsr Global Stress Reduction.',
+    samples: function (s) {
+      var out = [];
+      [['asbl', 'tpc_enabled'], ['gsr', 'gsr_enabled']].forEach(function (p) {
+        var v = bool(path(s, ['oled', p[1]]));
+        if (v !== null) out.push([{ protection: p[0] }, v]);
+      });
+      return out;
+    }
+  },
+  {
+    name: 'glasshouse_signal_info', type: 'gauge',
+    help: 'Always 1, labelled with the dynamic range and the picture mode the picture settings are using.',
+    samples: function (s) {
+      var labels = {}, any = false;
+      SIGNAL_LABELS.forEach(function (l) {
+        var v = path(s, l[1]);
+        labels[l[0]] = typeof v === 'string' ? v : '';
+        if (labels[l[0]]) any = true;
+      });
+      return any ? [[labels, 1]] : [];
+    }
+  },
+  {
+    name: 'glasshouse_signal_width_pixels', type: 'gauge',
+    help: 'Width of the HDMI source\'s picture in pixels.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'width']))); }
+  },
+  {
+    name: 'glasshouse_signal_height_pixels', type: 'gauge',
+    help: 'Height of the HDMI source\'s picture in pixels.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'height']))); }
+  },
+  {
+    name: 'glasshouse_signal_refresh_hertz', type: 'gauge',
+    help: 'Refresh rate of the HDMI signal in hertz, as the source sends it rather than the content\'s frame rate.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'refresh_hz']))); }
   }
 ];
 

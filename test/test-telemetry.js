@@ -249,6 +249,21 @@ console.log('Running test-telemetry.js ...');
   console.log('  ✓ any VRR mode but off reads as VRR, G-SYNC included');
 })();
 
+// 6a. The signal's timing as numbers, beside the string made from them, and
+// none for a port connected before the receiver has a timing
+(function testSignalTiming() {
+  var r = telemetry.getHdmiSignal(2);
+  assert.strictEqual(r.signal, '3840x2160 @ 120Hz');
+  assert.deepEqual(r.timing, { width: 3840, height: 2160, refresh_hz: 120 });
+  var orig = mockEnv.files['/proc/lg/hdmi20/port0/status'];
+  mockEnv.files['/proc/lg/hdmi20/port0/status'] = 'connected: on\n';
+  var bare = telemetry.getHdmiSignal(1);
+  mockEnv.files['/proc/lg/hdmi20/port0/status'] = orig;
+  assert.strictEqual(bare.signal, 'Connected');
+  assert.strictEqual(bare.timing, null);
+  console.log('  ✓ the signal\'s timing is kept as numbers beside its string');
+})();
+
 // 6b. An HDMI input is active only while it is on screen
 (function testHdmiActive() {
   var fg = 'com.webos.applicationManager/getForegroundAppInfo';
@@ -455,6 +470,10 @@ telemetry.refreshInstalledApps(function (apps) {
         assert.ok(stats.hdmi_diag && stats.hdmi_diag.port === 1, 'stats hdmi_diag matches active port 1');
         assert.deepEqual(stats.picture_engine, { colorimetry: 'BT.709', hdr_mode: 'sdr' });
         assert.strictEqual(stats.colorimetry, 'BT.709');
+        // The mock's picture settings have no dimension: shown as SDR, but not
+        // reported as the TV's own value.
+        assert.strictEqual(stats.picture.dynamicRange, 'SDR');
+        assert.strictEqual(stats.picture.dynamicRange_raw, null);
 
         console.log('  ✓ collectStats aggregates full telemetry payload including apps');
 
