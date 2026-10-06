@@ -836,6 +836,20 @@ function doControl(action, value, cb) {
         cb(getUpdateSummary());
       });
 
+    // routes.js reads this same config object on every request, so the
+    // endpoint starts or stops answering without a restart.
+    case 'setPrometheusEnabled':
+      var promOn = (value === true || value === 'on' || value === 'true');
+      if (!writeSettingsFn) return cb({ ok: false, error: 'no writeSettings handler configured' });
+      return writeSettingsFn({ prometheus: { enabled: promOn } }, function (err) {
+        if (err) return cb({ ok: false, error: 'could not save setting: ' + err.message });
+        if (config) {
+          config.prometheus = config.prometheus || {};
+          config.prometheus.enabled = promOn;
+        }
+        cb(getUpdateSummary());
+      });
+
     default:
       return cb({ ok: false, error: 'unknown action' });
   }

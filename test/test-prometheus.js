@@ -1,7 +1,10 @@
 // Strict ES5 - node v0.12.2 on webOS 4 (LG OLED B8) has no ES6 support.
 var assert = require('assert');
 var events = require('events');
+var fs = require('fs');
+var os = require('os');
 var path = require('path');
+var controls = require('../server/lib/controls');
 var prometheus = require('../server/lib/prometheus');
 var routes = require('../server/lib/routes');
 
@@ -356,4 +359,68 @@ function sampleLines(text) {
 
   assert.strictEqual(checks, 6, 'every callback ran');
   console.log('  ✓ the route is absent while off, and token-gated while on');
+})();
+
+// 5. The Server tab switch: saved to config.json, live without a restart
+(function testSwitch() {
+  function get(url, cb) {
+    var res = {
+      writeHead: function (code) { res.statusCode = code; },
+      end: function () { cb(res); }
+    };
+    routes.handleRequest(createMockReq(url, {}), res);
+  }
+
+  var cfgPath = path.join(os.tmpdir(), 'tvweb-prometheus-' + process.pid + '.json');
+  fs.writeFileSync(cfgPath, JSON.stringify({ port: 8080, prometheus: { other: 1 } }), 'utf8');
+
+  // controls.js and routes.js are handed the same object, as in tvweb.js.
+  var config = { web: { enabled: false }, token: '', allowControl: true };
+  var stats = require('./fixtures/stats-g4-webos9.json');
+  var checks = 0;
+  routes.init({
+    config: config,
+    configFile: cfgPath,
+    version: '0.80.1',
+    prometheus: prometheus,
+    telemetry: { collectStats: function (cb) { cb(stats); } },
+    updater: { updateSummary: function () { return { ok: true, writable: true }; } },
+    privacy: { tvUpdatesBlocked: function () { return false; } }
+  });
+  controls.init({
+    config: config,
+    writeSettings: routes.writeSettings,
+    updateSummary: routes.updateSummary
+  });
+
+  assert.strictEqual(routes.updateSummary().prometheusEnabled, false);
+  get('/api/prometheus/metrics', function (r) { checks++; assert.strictEqual(r.statusCode, 404); });
+
+  controls.doControl('setPrometheusEnabled', true, function (r) {
+    checks++;
+    assert.strictEqual(r.ok, true);
+    assert.strictEqual(r.prometheusEnabled, true);
+    var saved = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    assert.deepEqual(saved, { port: 8080, prometheus: { other: 1, enabled: true } });
+  });
+  get('/api/prometheus/metrics', function (r) { checks++; assert.strictEqual(r.statusCode, 200); });
+
+  controls.doControl('setPrometheusEnabled', false, function (r) {
+    checks++;
+    assert.strictEqual(r.prometheusEnabled, false);
+    assert.strictEqual(JSON.parse(fs.readFileSync(cfgPath, 'utf8')).prometheus.enabled, false);
+  });
+  get('/api/prometheus/metrics', function (r) { checks++; assert.strictEqual(r.statusCode, 404); });
+
+  // With controls off in config.json the switch is refused.
+  config.allowControl = false;
+  controls.doControl('setPrometheusEnabled', true, function (r) {
+    checks++;
+    assert.strictEqual(r.ok, false);
+    assert.strictEqual(config.prometheus.enabled, false);
+  });
+
+  try { fs.unlinkSync(cfgPath); } catch (e) {}
+  assert.strictEqual(checks, 6, 'every callback ran');
+  console.log('  ✓ the Server tab switch saves the setting and takes effect at once');
 })();

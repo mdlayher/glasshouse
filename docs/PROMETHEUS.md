@@ -4,7 +4,9 @@ The server can answer Prometheus scrapes at `/api/prometheus/metrics`, in the te
 
 ## Switching it on
 
-Set it in `/var/lib/tvweb/config.json` on the TV and restart the server:
+The **Prometheus** switch on the [Server tab](dashboard/server.md) turns it on and off, at once and without a restart. It is read-only where controls are turned off in `config.json`.
+
+The same setting can be configured in `/var/lib/tvweb/config.json` on the TV, followed by a restart of the server:
 
 ```json
 "prometheus": { "enabled": true }
