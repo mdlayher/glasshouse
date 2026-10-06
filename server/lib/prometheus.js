@@ -117,6 +117,13 @@ function dynamicRange(s) {
   return { range: mapped(DYNAMIC_RANGES, lowLatency ? raw.slice(0, -4) : raw), lowLatency: lowLatency };
 }
 
+// 1 when the Pixel Refresher is in the given state, 0 when in another, and
+// null without a panel service status, as on an LCD.
+function refresherStatus(s, state) {
+  var st = path(s, ['oled', 'refresher_status']);
+  return typeof st === 'string' ? (st === state ? 1 : 0) : null;
+}
+
 var FAMILIES = [
   {
     name: 'glasshouse_info', type: 'gauge',
@@ -332,6 +339,16 @@ var FAMILIES = [
     samples: function (s) { return one(num(path(s, ['oled', 'refresher_cycles']))); }
   },
   {
+    name: 'glasshouse_oled_refresher_running', type: 'gauge',
+    help: '1 while a Pixel Refresher run is in progress, 0 otherwise.',
+    samples: function (s) { return one(refresherStatus(s, 'Running')); }
+  },
+  {
+    name: 'glasshouse_oled_refresher_scheduled', type: 'gauge',
+    help: '1 while a Pixel Refresher run is queued for the next standby, 0 otherwise.',
+    samples: function (s) { return one(refresherStatus(s, 'Scheduled')); }
+  },
+  {
     name: 'glasshouse_oled_failure_alerts_total', type: 'counter',
     help: 'Panel maintenance failure alerts the TV has recorded.',
     samples: function (s) { return one(num(path(s, ['oled', 'failure_alerts']))); }
@@ -352,6 +369,11 @@ var FAMILIES = [
       });
       return out;
     }
+  },
+  {
+    name: 'glasshouse_picture_backlight_ratio', type: 'gauge',
+    help: 'Backlight setting of the current picture mode from 0 to 1, which on an OLED is OLED light, the pixel brightness.',
+    samples: function (s) { return one(percent(path(s, ['picture', 'backlight_raw']))); }
   },
   {
     name: 'glasshouse_signal_info', type: 'gauge',

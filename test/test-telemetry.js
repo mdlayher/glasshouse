@@ -486,6 +486,9 @@ telemetry.refreshInstalledApps(function (apps) {
         // reported as the TV's own value.
         assert.strictEqual(stats.picture.dynamicRange, 'SDR');
         assert.strictEqual(stats.picture.dynamicRange_raw, null);
+        // Nor a backlight: the dashboards' 50, and null as read.
+        assert.strictEqual(stats.picture.backlight, 50);
+        assert.strictEqual(stats.picture.backlight_raw, null);
 
         console.log('  ✓ collectStats aggregates full telemetry payload including apps');
 
@@ -523,15 +526,19 @@ telemetry.refreshInstalledApps(function (apps) {
               // 11. LG's Always Ready display reads as switched off, not "Active"
               var settings = mockEnv.luna['com.webos.service.settings/getSystemSettings'].settings;
               settings.lifeOnScreenMode = 'allEnabled';
+              settings.backlight = '57';
               mockEnv.luna['com.webos.service.tvpower/power2/getPowerState'] =
                 { returnValue: true, state: 'ACTIVE', 'sub state': 'always on display' };
               telemetry.clearCache();
               telemetry.collectStats(function (first) {
                 assert.strictEqual(first.alwaysReadyScreen, true);
+                assert.strictEqual(first.picture.backlight, 57);
+                assert.strictEqual(first.picture.backlight_raw, 57);
                 telemetry.clearCache();
                 telemetry.collectStats(function (second) {
                   assert.strictEqual(second.powerState.raw, 'Always Ready');
                   delete settings.lifeOnScreenMode;
+                  delete settings.backlight;
                   console.log('  ✓ the Always Ready display is reported as its own power state');
 
                   // 12. A clock stepped back does not keep serving the last stats
