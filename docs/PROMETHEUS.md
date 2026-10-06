@@ -56,7 +56,7 @@ The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Tempor
 
 `glasshouse_signal_info` labels the picture settings in use: `dynamic_range` is `sdr`, `hdr`, `dolby_vision` or `technicolor`, and `picture_mode` is the mode within it: `personalized`, `vivid`, `standard`, `eco`, `cinema`, `cinema_bright`, `sports`, `game`, `photo`, `filmmaker`, `expert_bright`, `expert_dark` or `hdr_effect`. A value the TV adds later keeps its own name in snake case.
 
-The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate.
+The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate. `glasshouse_signal_frame_rate_hertz` is the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. Its `vrr_type` label is the kind of VRR, such as `gsync`, or `off`.
 
 `version` is the Glasshouse version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `glasshouse_oled_panel_usage_seconds_total - glasshouse_oled_last_compensation_usage_seconds`, the uptime is `time() - glasshouse_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(glasshouse_cpu_seconds_total{mode="idle"}[5m]))`.
 
@@ -97,6 +97,8 @@ The signal gauges describe the HDMI source on screen and have no sample otherwis
 | `glasshouse_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
 | `glasshouse_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
 | `glasshouse_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
+| `glasshouse_signal_vrr`                           | gauge   |                                         | 1 while the HDMI source uses VRR                            |
 | `glasshouse_signal_width_pixels`                  | gauge   |                                         | Width of the HDMI source's picture                          |
 | `glasshouse_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
 | `glasshouse_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
+| `glasshouse_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |

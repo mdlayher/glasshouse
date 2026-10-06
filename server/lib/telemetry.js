@@ -35,6 +35,8 @@ var oledModule = null;
 var privacyModule = null;
 /** @type {typeof import('./screensavers')} */
 var screensaversModule = null;
+/** @type {typeof import('./game')} */
+var gameModule = null;
 var alwaysReadyScreenOn = false;
 var tvwebVersionStr = '0.0.0';
 var mapPowerStateFn = null;
@@ -148,6 +150,7 @@ function init(opts) {
   oledModule = opts.oled;
   privacyModule = opts.privacy;
   screensaversModule = opts.screensavers;
+  gameModule = opts.game;
   tvwebVersionStr = opts.tvwebVersion || '0.0.0';
   mapPowerStateFn = opts.mapPowerState;
   isScreenSaverFn = opts.isScreenSaver;
@@ -1307,6 +1310,7 @@ function collectStats(cb) {
     signal: null,
     signal_timing: null,
     hdmi_diag: null,
+    source_frame_rate: null,
     picture_engine: peInfo,
     colorimetry: peInfo ? peInfo.colorimetry : null,
     inputs: inputNameMap
@@ -1502,6 +1506,7 @@ function collectStats(cb) {
         }
 
         lunaCachedFn('com.webos.applicationManager/getForegroundAppInfo', {}, 4000, function (app) {
+          var inputShown = false;
           if (app && app.appId) {
             var shortApp = String(app.appId).replace('com.webos.app.', '');
             out.app = shortApp;
@@ -1516,6 +1521,7 @@ function collectStats(cb) {
             var hdmiMatch = String(app.appId).match(/^com\.webos\.app\.hdmi([1-4])$/i);
             var isScreenOff = out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'));
             if (hdmiMatch && !isScreenOff) {
+              inputShown = true;
               var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10));
               out.signal = sigObj ? sigObj.signal : null;
               out.signal_timing = sigObj ? sigObj.timing : null;
@@ -1537,6 +1543,8 @@ function collectStats(cb) {
             out.hdmi_diag = null;
           }
 
+          sourceFrameRate(app, inputShown, function (fr) {
+          out.source_frame_rate = fr;
           lunaCachedFn('com.webos.service.settings/getSystemSettings',
             { category: 'picture', keys: ['backlight', 'pictureMode', 'energySaving', 'screenShift', 'logoLuminanceAdjust'] },
             10000, function (pic) {
@@ -1594,6 +1602,7 @@ function collectStats(cb) {
               });
             }
           );
+          });
         });
         });
       }
@@ -1612,6 +1621,17 @@ function collectStats(cb) {
   });
   });
   });
+  });
+}
+
+/*
+ * The frame rate of the HDMI source on screen, from game.js. Off an input, or
+ * with the screen off, its bind is dropped; a failed foreground read leaves it.
+ */
+function sourceFrameRate(app, inputShown, cb) {
+  if (!gameModule || !app || typeof app.appId !== 'string') return cb(null);
+  gameModule.read(inputShown ? app.appId : '', function (r) {
+    cb(r ? { hz: r.frameRate, vrr_type: r.vrrType, port: r.port } : null);
   });
 }
 

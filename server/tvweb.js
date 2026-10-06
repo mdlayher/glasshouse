@@ -308,11 +308,12 @@ function clearLunaCache(match) { lunaCacheObj.forget(match); }
 /*
  * The cached reads each live subscription makes stale, by substring of the
  * cache key. A source change also moves the picture settings' dimension and
- * the picture modes on offer, which follow the dynamic range of what is on.
+ * the picture modes on offer, which follow the dynamic range of what is on,
+ * and the source's frame rate, whose pipeline id can come back the same.
  */
 var LIVE_STALE = {
   audio: ['com.webos.audio/', 'com.webos.service.audio/', '"category":"sound"'],
-  application: ['getForegroundAppInfo', '"category":"picture"'],
+  application: ['getForegroundAppInfo', '"category":"picture"', 'getVRRInfo'],
   picture: ['"category":"picture"']
 };
 
@@ -363,6 +364,7 @@ function mapPowerState(raw) {
 }
 
 lgSettings.init({ luna: luna, lunaCached: lunaCached, clearLunaCache: clearLunaCache });
+game.init({ lunaCached: lunaCached });
 privacy.init({ luna: luna, lunaCached: lunaCached, config: CONFIG, lgSettings: lgSettings });
 oled.init({ luna: luna, config: CONFIG });
 appsModule.init({ luna: luna, config: CONFIG });
@@ -383,6 +385,7 @@ telemetry.init({
   oled: oled,
   privacy: privacy,
   screensavers: screensavers,
+  game: game,
   tvwebVersion: TVWEB_DISPLAY_VERSION,
   mapPowerState: mapPowerState,
   isScreenSaver: isScreenSaver
@@ -396,7 +399,11 @@ var liveState = stateModule.init({
     telemetry.expireStats();
     clearLunaCache(LIVE_STALE[group]);
   },
-  onTvChange: function (ev) { tvChanged(ev); }
+  onTvChange: function (ev) {
+    // Leaving an input drops game.js's bind, without waiting for someone to ask.
+    if (ev.group === 'application' && ev.key === 'app_id') game.appChanged(ev.value);
+    tvChanged(ev);
+  }
 });
 // Set once MQTT is up: publishes a change the TV reports without waiting.
 /** @type {function(Object): void} */
