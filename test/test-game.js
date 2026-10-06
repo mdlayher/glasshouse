@@ -132,6 +132,44 @@ function readNow(appId) {
   console.log('  ✓ the bind is held only while an input is on screen');
 })();
 
+// 3b. An input change disconnects the old pipeline and announces no new one:
+// the bind is dropped, and the next reader binds afresh
+(function testInputSwitch() {
+  cache.forget();
+  readNow(HDMI4);
+  var first = running(BIND)[0];
+  replies.p4 = { returnValue: true, port: 'HDMI4', vrrInfo: { frameRate: 119, vrrType: 'gsync' } };
+  first.handlers.message({ returnValue: true, broadcastId: 'p4' });
+  assert.strictEqual(readNow(HDMI4).frameRate, 119);
+
+  first.handlers.message({ returnValue: true, broadcastId: 'p4', binded: false, status: 'disconnected' });
+  assert.strictEqual(running(BIND).length, 0, 'the dead pipeline\'s bind is dropped');
+  var got = 'pending';
+  game.read('com.webos.app.hdmi1', function (r) { got = r; });
+  var second = running(BIND)[0];
+  assert.ok(second && second !== first, 'the next read binds afresh');
+  replies.p5 = { returnValue: true, port: 'HDMI1', vrrInfo: { frameRate: 60, vrrType: 'off' } };
+  second.handlers.message({ returnValue: true, broadcastId: 'p5' });
+  assert.deepEqual(got, { frameRate: 60, vrrType: 'off', port: 'HDMI1' });
+  assert.strictEqual(calls[calls.length - 1].payload.pipelineId, 'p5');
+
+  // The stream likewise: dropped with the pipeline, and on the next request
+  // started on the new one.
+  game.frameRate();
+  assert.strictEqual(running(VRR)[0].payload.pipelineId, 'p5');
+  second.handlers.message({ returnValue: true, broadcastId: 'p5', binded: false, status: 'disconnected' });
+  assert.strictEqual(running(VRR).length, 0);
+  assert.strictEqual(running(BIND).length, 0);
+  assert.deepEqual(game.frameRate(), { frameRate: 0, vrrType: 'off', port: null });
+  var third = running(BIND)[0];
+  assert.ok(third && third !== second);
+  third.handlers.message({ returnValue: true, broadcastId: 'p6' });
+  assert.strictEqual(running(VRR).length, 1);
+  assert.strictEqual(running(VRR)[0].payload.pipelineId, 'p6');
+  game.stop();
+  console.log('  ✓ an input change drops the dead pipeline, and the next reader binds afresh');
+})();
+
 // 4. The route keeps its shape, from the stream
 (function testRoute() {
   var routes = require('../server/lib/routes');

@@ -9,7 +9,10 @@
  * The pipeline exists only while some client holds a utp.extinputs/bind
  * subscription, whose replies carry it as broadcastId; once the bind closes,
  * getVRRInfo on the same id answers errorCode -106, "No resource". The bind
- * replies once on connect and then only when the input changes.
+ * replies once on connect. On an input change it says only that the old
+ * pipeline disconnected (binded false), with the same id, and nothing of the
+ * new one: a C4 (webOS 9) sent nothing more in 70 s after switching back. So
+ * a disconnect drops the bind, and the next reader binds afresh.
  *
  * Two readers share one bind. The Game tab's counter (frameRate) streams
  * getVRRInfo once a second while it is asked, and drops the stream IDLE_MS
@@ -96,8 +99,11 @@ function watchPipeline() {
 }
 
 function bindMessage(r) {
-  if (r && r.broadcastId) {
-    // A new pipeline each time the input changes.
+  if (r && (r.binded === false || r.status === 'disconnected')) {
+    // Not rebound here: the new input's pipeline exists only once its app is
+    // up, and the next read or frameRate binds again anyway.
+    dropPipeline();
+  } else if (r && r.broadcastId) {
     if (r.broadcastId !== pipeline) {
       pipeline = r.broadcastId;
       if (vrrSub) watchPipeline();
@@ -125,6 +131,15 @@ function holdBind() {
     bindSub = pipeline = null;
     flushWaiting();
   }
+}
+
+function dropPipeline() {
+  if (vrrSub) vrrSub.stop();
+  vrrSub = null;
+  latest = noReading();
+  if (bindSub) bindSub.stop();
+  bindSub = pipeline = null;
+  flushWaiting();
 }
 
 function stopStream() {
