@@ -584,20 +584,60 @@ function getActiveHdmiDiagnostics(targetPort) {
   return null;
 }
 
-function getHdmiSignal(hdmiNum) {
+/*
+ * The receiver, /proc/lg/hdmi20/port<n>, behind each HDMI input, from the
+ * input map LG's input service loads from configd. Boards wire them
+ * differently: a C4 (o22n2) and a CX (o20) take the base table, HDMI 1 to 4
+ * on receivers 3, 2, 1 and 0, and other boards override it. The TV chooses
+ * among numbered tables by an index it does not expose; table 0 matched every
+ * input on both TVs when swept. Asked once, as it cannot change, and
+ * remembered once configd has answered at all. cb(map or null), where map[n] is
+ * input n's receiver, or null for an input the board does not have.
+ */
+var HDMI_INPUT_MAP_KEY = 'inputMap.videoInputMapIndexInfo0';
+var hdmiReceivers;
+var hdmiReceiverWaiters = null;
+function hdmiReceiverMap(cb) {
+  if (hdmiReceivers !== undefined || !lunaFn) return cb(hdmiReceivers || null);
+  if (hdmiReceiverWaiters) return hdmiReceiverWaiters.push(cb);
+  hdmiReceiverWaiters = [cb];
+  lunaFn('com.webos.service.config/getConfigs', { configNames: [HDMI_INPUT_MAP_KEY] }, function (r) {
+    // A refusal is an answer too: asked again, it would cost a luna-send per collection.
+    if (r) hdmiReceivers = r.returnValue !== false && r.configs ? parseInputMap(r.configs[HDMI_INPUT_MAP_KEY]) : null;
+    var waiting = hdmiReceiverWaiters;
+    hdmiReceiverWaiters = null;
+    for (var i = 0; i < waiting.length; i++) waiting[i](hdmiReceivers || null);
+  });
+}
+
+function parseInputMap(table) {
+  var assignment = Array.isArray(table) && table[0] ? table[0].assignment : null;
+  if (!assignment || typeof assignment !== 'object') return null;
+  var map = {}, any = false;
+  for (var n = 1; n <= 4; n++) {
+    // "none" for an input the board does not have.
+    var v = String(assignment['hdmi' + n]);
+    map[n] = /^[0-3]$/.test(v) ? parseInt(v, 10) : null;
+    if (map[n] !== null) any = true;
+  }
+  return any ? map : null;
+}
+
+/*
+ * The signal on HDMI input hdmiNum, from its own receiver only: another
+ * receiver's link belongs to another input. Without a map from the TV, input
+ * n is looked for on receiver n - 1, then n, as a B8 has HDMI 2.
+ */
+function getHdmiSignal(hdmiNum, map) {
   if (typeof hdmiNum !== 'number' || hdmiNum < 1 || hdmiNum > 4) return null;
-  // Motherboards route HDMI PHYs differently:
-  // e.g. B8 routes HDMI 2 to PHY port 2, while others route HDMI 1..4 to PHY 0..3.
-  var candidates = [hdmiNum - 1, hdmiNum];
+  var candidates = map ? [map[hdmiNum]] : [hdmiNum - 1, hdmiNum];
   for (var c = 0; c < candidates.length; c++) {
     var p = candidates[c];
-    if (p >= 0 && p < 4) {
+    if (typeof p === 'number' && p >= 0 && p < 4) {
       var t = readVideoTiming(p);
       if (t) return hdmiSignal(t, getActiveHdmiDiagnostics(p));
     }
   }
-  var anyTiming = readVideoTiming();
-  if (anyTiming) return hdmiSignal(anyTiming, getActiveHdmiDiagnostics());
   return null;
 }
 
@@ -897,6 +937,7 @@ function hdmiPorts() {
 
 function hdmiInputs(cb) {
   if (!lunaFn) return cb({ ok: false, error: 'luna bus not available' });
+  hdmiReceiverMap(function (receiverMap) {
   lunaFn('com.webos.service.eim/getAllInputStatus', {}, function (res) {
     // eim's activate marks the input last selected, and stays set while
     // another app is in front of it. Only the foreground app says whether the
@@ -929,6 +970,15 @@ function hdmiInputs(cb) {
           signal: null
         });
       }
+      if (receiverMap) {
+        for (var k = 0; k < inputs.length; k++) {
+          var receiver = receiverMap[parseInt(String(inputs[k].id).replace('HDMI_', ''), 10)];
+          for (var r = 0; r < signalling.length; r++) {
+            if (signalling[r].port === receiver) inputs[k].signal = signalling[r];
+          }
+        }
+        return cb({ ok: true, inputs: inputs, ports: ports, pairedUnambiguously: true });
+      }
       // The selected input keeps its signal behind another app, so the pairing
       // does not depend on it being on screen.
       if (selectedIdx !== -1 && signalling.length === 1) {
@@ -936,6 +986,7 @@ function hdmiInputs(cb) {
       }
       cb({ ok: true, inputs: inputs, ports: ports, pairedUnambiguously: (selectedIdx !== -1 && signalling.length === 1) });
     });
+  });
   });
 }
 
@@ -1338,6 +1389,7 @@ function collectStats(cb) {
     });
   }
 
+  hdmiReceiverMap(function (receiverMap) {
   alwaysReadyShowing(function (showing) {
   lunaFn('com.webos.service.tvpower/power/getPowerState', {}, function (pw) {
     var rawPower = pw ? (pw.state || pw.processing) : null;
@@ -1522,7 +1574,7 @@ function collectStats(cb) {
             var isScreenOff = out.screenSaver || (out.powerState && (out.powerState.screenOn === false || String(out.powerState.raw || out.powerState.state || '').toLowerCase() === 'off'));
             if (hdmiMatch && !isScreenOff) {
               inputShown = true;
-              var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10));
+              var sigObj = getHdmiSignal(parseInt(hdmiMatch[1], 10), receiverMap);
               out.signal = sigObj ? sigObj.signal : null;
               out.signal_timing = sigObj ? sigObj.timing : null;
               out.hdmi_diag = sigObj ? sigObj.diag : null;
@@ -1610,6 +1662,7 @@ function collectStats(cb) {
         });
       }
     );
+  });
   });
   });
   });
@@ -1747,6 +1800,7 @@ module.exports = {
   readRemoteInfo: readRemoteInfo,
   getActiveHdmiDiagnostics: getActiveHdmiDiagnostics,
   getHdmiSignal: getHdmiSignal,
+  hdmiReceiverMap: hdmiReceiverMap,
   getPictureEngineInfo: getPictureEngineInfo,
   formatSoundOutput: formatSoundOutput,
   volumeControl: volumeControl,
