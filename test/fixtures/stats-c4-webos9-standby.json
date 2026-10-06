@@ -109,6 +109,7 @@
     "life_est_b": 1
   },
   "signal": null,
+  "signal_timing": null,
   "hdmi_diag": null,
   "picture_engine": {
     "colorimetry": "BT.601",
@@ -186,6 +187,7 @@
   },
   "picture": {
     "dynamicRange": "SDR",
+    "dynamicRange_raw": "sdr",
     "mode": "Eco",
     "mode_raw": "eco",
     "backlight": 80,
@@ -351,6 +353,9 @@
     "failure_alerts": 0,
     "asbl_protection": "Active",
     "gsr_protection": "Active",
+    "gsr_enabled": true,
+    "tpc_enabled": true,
+    "gsr_stress_count": 133204,
     "screen_shift": "on",
     "logo_dimming": "light"
   }

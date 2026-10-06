@@ -65,6 +65,58 @@ function memoryRead(s) {
 // The JEDEC eMMC PRE_EOL_INFO states, as telemetry names them.
 var EMMC_EOL_STATES = ['Normal', 'Warning', 'Urgent'];
 
+/*
+ * The picture settings' dynamic range, with the ALLM suffix (low latency)
+ * read off separately. The settings service accepts these four, each with or
+ * without ALLM, and nothing else: /etc/palm/description.json on a CX (webOS 5)
+ * and a C4 (webOS 9) declares the same eight.
+ */
+var DYNAMIC_RANGES = {
+  sdr: 'sdr',
+  hdr: 'hdr',
+  dolbyHdr: 'dolby_vision',
+  technicolorHdr: 'technicolor'
+};
+
+/*
+ * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
+ * the label is the base, since the range has its own. LG's display names are
+ * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
+ * on webOS 5, "FILMMAKER MODE" on webOS 9) and by region. hdrExternal and
+ * dolbyHdrDarkAmazon appear only in LG's name tables, named as Standard and
+ * Cinema Home. hdrEffect is an SDR mode.
+ */
+var PICTURE_MODES = {
+  personalized: 'personalized', hdrPersonalized: 'personalized', dolbyHdrPersonalized: 'personalized',
+  vivid: 'vivid', hdrVivid: 'vivid', dolbyHdrVivid: 'vivid',
+  normal: 'standard', hdrStandard: 'standard', dolbyHdrStandard: 'standard', hdrExternal: 'standard',
+  eco: 'eco', hdrEco: 'eco',
+  cinema: 'cinema', hdrCinema: 'cinema', dolbyHdrCinema: 'cinema',
+  hdrCinemaBright: 'cinema_bright', dolbyHdrCinemaBright: 'cinema_bright', dolbyHdrDarkAmazon: 'cinema_bright',
+  sports: 'sports',
+  game: 'game', hdrGame: 'game', dolbyHdrGame: 'game',
+  photo: 'photo',
+  filmMaker: 'filmmaker', hdrFilmMaker: 'filmmaker',
+  expert1: 'expert_bright', expert2: 'expert_dark',
+  hdrEffect: 'hdr_effect'
+};
+
+function snakeCase(v) {
+  return v.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+}
+
+// A value outside the table keeps its own name rather than being dropped.
+function mapped(table, v) {
+  return table.hasOwnProperty(v) ? table[v] : snakeCase(v);
+}
+
+function dynamicRange(s) {
+  var raw = path(s, ['picture', 'dynamicRange_raw']);
+  if (typeof raw !== 'string' || !raw) return null;
+  var lowLatency = /ALLM$/.test(raw);
+  return { range: mapped(DYNAMIC_RANGES, lowLatency ? raw.slice(0, -4) : raw), lowLatency: lowLatency };
+}
+
 var FAMILIES = [
   {
     name: 'glasshouse_info', type: 'gauge',
@@ -283,6 +335,59 @@ var FAMILIES = [
     name: 'glasshouse_oled_failure_alerts_total', type: 'counter',
     help: 'Panel maintenance failure alerts the TV has recorded.',
     samples: function (s) { return one(num(path(s, ['oled', 'failure_alerts']))); }
+  },
+  {
+    name: 'glasshouse_oled_gsr_stress_events_total', type: 'counter',
+    help: 'Stress events Global Stress Reduction has counted on the panel, as the TV\'s panel service reports them.',
+    samples: function (s) { return one(num(path(s, ['oled', 'gsr_stress_count']))); }
+  },
+  {
+    name: 'glasshouse_oled_protection_enabled', type: 'gauge',
+    help: '1 when the panel protection is on, 0 when off: asbl is the Automatic Static Brightness Limiter, gsr Global Stress Reduction.',
+    samples: function (s) {
+      var out = [];
+      [['asbl', 'tpc_enabled'], ['gsr', 'gsr_enabled']].forEach(function (p) {
+        var v = bool(path(s, ['oled', p[1]]));
+        if (v !== null) out.push([{ protection: p[0] }, v]);
+      });
+      return out;
+    }
+  },
+  {
+    name: 'glasshouse_signal_info', type: 'gauge',
+    help: 'Always 1, labelled with the dynamic range (sdr, hdr, dolby_vision, technicolor) and the picture mode the picture settings are using.',
+    samples: function (s) {
+      var dr = dynamicRange(s);
+      var mode = path(s, ['picture', 'mode_raw']);
+      var labels = {
+        dynamic_range: dr ? dr.range : '',
+        picture_mode: typeof mode === 'string' && mode ? mapped(PICTURE_MODES, mode) : ''
+      };
+      return labels.dynamic_range || labels.picture_mode ? [[labels, 1]] : [];
+    }
+  },
+  {
+    name: 'glasshouse_signal_low_latency', type: 'gauge',
+    help: '1 while the picture settings are in low-latency mode (ALLM), 0 otherwise.',
+    samples: function (s) {
+      var dr = dynamicRange(s);
+      return one(dr ? (dr.lowLatency ? 1 : 0) : null);
+    }
+  },
+  {
+    name: 'glasshouse_signal_width_pixels', type: 'gauge',
+    help: 'Width of the HDMI source\'s picture in pixels.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'width']))); }
+  },
+  {
+    name: 'glasshouse_signal_height_pixels', type: 'gauge',
+    help: 'Height of the HDMI source\'s picture in pixels.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'height']))); }
+  },
+  {
+    name: 'glasshouse_signal_refresh_hertz', type: 'gauge',
+    help: 'Refresh rate of the HDMI signal in hertz, as the source sends it rather than the content\'s frame rate.',
+    samples: function (s) { return one(positive(path(s, ['signal_timing', 'refresh_hz']))); }
   }
 ];
 

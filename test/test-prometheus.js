@@ -65,7 +65,14 @@ function sampleLines(text) {
     'glasshouse_oled_last_refresher_usage_seconds',
     'glasshouse_oled_refresher_interval_seconds',
     'glasshouse_oled_refresher_runs_total',
-    'glasshouse_oled_failure_alerts_total'
+    'glasshouse_oled_failure_alerts_total',
+    'glasshouse_oled_gsr_stress_events_total',
+    'glasshouse_oled_protection_enabled',
+    'glasshouse_signal_info',
+    'glasshouse_signal_low_latency',
+    'glasshouse_signal_width_pixels',
+    'glasshouse_signal_height_pixels',
+    'glasshouse_signal_refresh_hertz'
   ]);
 
   var renderings = {
@@ -74,6 +81,7 @@ function sampleLines(text) {
     c4: prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1'),
     c4standby: prometheus.render(require('./fixtures/stats-c4-webos9-standby.json'), '0.80.1'),
     cx: prometheus.render(require('./fixtures/stats-cx-webos5.json'), '0.80.1'),
+    cxhdr: prometheus.render(require('./fixtures/stats-cx-webos5-hdr.json'), '0.80.1'),
     empty: prometheus.render({}, '0.80.1'),
     failed: prometheus.render({ ok: false, error: 'timeout' }, '0.80.1')
   };
@@ -103,7 +111,8 @@ function sampleLines(text) {
 (function testValues() {
   // Captured before telemetry gave the precise readings, the CPU times and the
   // eMMC estimates, so this renders from the rounded ones. The C4 has no GPU clock reading and no Pixel Refresher run
-  // recorded yet, so neither has a sample.
+  // recorded yet, so neither has a sample. Nor did it give the raw dynamic
+  // range or the signal's timing yet, so those are empty or absent.
   var c4 = sampleLines(prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1'));
   assert.deepEqual(c4, [
     'glasshouse_info{model="OLED55C4PUA.DUSQLJR",firmware="23.20.35",webos="9.2.0",version="0.80.1"} 1',
@@ -134,7 +143,8 @@ function sampleLines(text) {
     'glasshouse_oled_compensation_runs_total 67',
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 0',
-    'glasshouse_oled_failure_alerts_total 0'
+    'glasshouse_oled_failure_alerts_total 0',
+    'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1'
   ]);
 
   // The same C4 in standby, from a server with the precise readings.
@@ -186,7 +196,12 @@ function sampleLines(text) {
     'glasshouse_oled_compensation_runs_total 67',
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 0',
-    'glasshouse_oled_failure_alerts_total 0'
+    'glasshouse_oled_failure_alerts_total 0',
+    'glasshouse_oled_gsr_stress_events_total 133204',
+    'glasshouse_oled_protection_enabled{protection="asbl"} 1',
+    'glasshouse_oled_protection_enabled{protection="gsr"} 1',
+    'glasshouse_signal_info{dynamic_range="sdr",picture_mode="eco"} 1',
+    'glasshouse_signal_low_latency 0'
   ]);
 
   // A CX on webOS 5 with the screen on: all four cores online, a Pixel
@@ -254,7 +269,21 @@ function sampleLines(text) {
     'glasshouse_oled_compensation_runs_total 1822',
     'glasshouse_oled_last_refresher_usage_seconds 36032400',
     'glasshouse_oled_refresher_interval_seconds 7200000',
-    'glasshouse_oled_refresher_runs_total 5'
+    'glasshouse_oled_refresher_runs_total 5',
+    'glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1'
+  ]);
+
+  // The CX later, playing HDR from HDMI 4. Its panel service reports GSR
+  // without a stress count, so that has no sample.
+  var cxHdr = sampleLines(prometheus.render(require('./fixtures/stats-cx-webos5-hdr.json'), '0.80.1'));
+  assert.deepEqual(cxHdr.filter(function (l) { return /^glasshouse_(oled_gsr|oled_protection|signal)_/.test(l); }), [
+    'glasshouse_oled_protection_enabled{protection="asbl"} 1',
+    'glasshouse_oled_protection_enabled{protection="gsr"} 1',
+    'glasshouse_signal_info{dynamic_range="hdr",picture_mode="standard"} 1',
+    'glasshouse_signal_low_latency 0',
+    'glasshouse_signal_width_pixels 3840',
+    'glasshouse_signal_height_pixels 2160',
+    'glasshouse_signal_refresh_hertz 60'
   ]);
 
   // Readings no fixture has.
@@ -263,7 +292,9 @@ function sampleLines(text) {
     gpuHz: 389998000,
     tempMillidegrees: 54321,
     emmc: { eol: 'Urgent', life_est_a: 11, life_est_b: 4 },
-    oled: { comp_status: 'Running', comp_interval_units: 25, comp_interval_hours: 4.2 }
+    oled: { comp_status: 'Running', comp_interval_units: 25, comp_interval_hours: 4.2,
+            gsr_stress_count: 12, gsr_enabled: true, tpc_enabled: false },
+    picture: { dynamicRange_raw: 'dolbyHdrALLM' }
   }, ''));
   [
     'glasshouse_gpu_frequency_hertz 389998000',
@@ -273,7 +304,12 @@ function sampleLines(text) {
     'glasshouse_emmc_life_used_ratio{type="a"} 1',
     'glasshouse_emmc_life_used_ratio{type="b"} 0.3',
     'glasshouse_oled_compensation_running 1',
-    'glasshouse_oled_compensation_interval_seconds 15000'
+    'glasshouse_oled_compensation_interval_seconds 15000',
+    'glasshouse_oled_gsr_stress_events_total 12',
+    'glasshouse_oled_protection_enabled{protection="asbl"} 0',
+    'glasshouse_oled_protection_enabled{protection="gsr"} 1',
+    'glasshouse_signal_info{dynamic_range="dolby_vision",picture_mode=""} 1',
+    'glasshouse_signal_low_latency 1'
   ].forEach(function (line) { assert.ok(more.indexOf(line) !== -1, line + ' in\n' + more.join('\n')); });
 
   // An unread /proc/meminfo reads as zeros, which are not reported; a TV
@@ -289,9 +325,62 @@ function sampleLines(text) {
   // An eMMC estimate of 0 is "not defined".
   var undefinedEst = sampleLines(prometheus.render({ emmc: { life_est_a: null, life_est_b: 0 } }, ''));
   assert.strictEqual(undefinedEst.length, 1);
+  // A protection neither the service nor a marker reports, as on a B8, and a
+  // TV without the stress count, as the CX, have no sample.
+  var unreported = sampleLines(prometheus.render({ oled: { gsr_enabled: null, tpc_enabled: true, gsr_stress_count: null } }, ''));
+  assert.deepEqual(unreported.slice(1), ['glasshouse_oled_protection_enabled{protection="asbl"} 1']);
+  // Neither picture setting known, or a port connected with no timing yet:
+  // no signal series and no timing samples.
+  assert.strictEqual(sampleLines(prometheus.render({
+    picture: { dynamicRange: 'SDR', dynamicRange_raw: null },
+    signal: 'Connected',
+    signal_timing: null
+  }, '')).length, 1);
   // eMMC state unknown: no samples rather than three zeros.
   assert.strictEqual(sampleLines(prometheus.render({ emmc: { eol: 'unknown' } }, '')).length, 1);
   console.log('  ✓ values are in base units, and unknown readings are left out');
+})();
+
+// 2b. Dynamic range and picture mode are the TV's values put into categories:
+// the range without its low-latency suffix, and the mode without its range.
+(function testPictureCategories() {
+  function signal(range, mode) {
+    var lines = sampleLines(prometheus.render({ picture: { dynamicRange_raw: range, mode_raw: mode } }, ''));
+    return lines.filter(function (l) { return /^glasshouse_signal_(info|low_latency)/.test(l); });
+  }
+  // Every dynamic range the settings service accepts.
+  [['sdr', 'sdr', 0], ['sdrALLM', 'sdr', 1], ['hdr', 'hdr', 0], ['hdrALLM', 'hdr', 1],
+   ['dolbyHdr', 'dolby_vision', 0], ['dolbyHdrALLM', 'dolby_vision', 1],
+   ['technicolorHdr', 'technicolor', 0], ['technicolorHdrALLM', 'technicolor', 1]].forEach(function (c) {
+    assert.deepEqual(signal(c[0], 'normal'), [
+      'glasshouse_signal_info{dynamic_range="' + c[1] + '",picture_mode="standard"} 1',
+      'glasshouse_signal_low_latency ' + c[2]
+    ], c[0]);
+  });
+  // Every picture mode a CX (webOS 5) or C4 (webOS 9) declares, and the two
+  // only LG's name tables have.
+  var modes = {
+    personalized: 'personalized', hdrPersonalized: 'personalized', dolbyHdrPersonalized: 'personalized',
+    vivid: 'vivid', hdrVivid: 'vivid', dolbyHdrVivid: 'vivid',
+    normal: 'standard', hdrStandard: 'standard', dolbyHdrStandard: 'standard', hdrExternal: 'standard',
+    eco: 'eco', hdrEco: 'eco',
+    cinema: 'cinema', hdrCinema: 'cinema', dolbyHdrCinema: 'cinema',
+    hdrCinemaBright: 'cinema_bright', dolbyHdrCinemaBright: 'cinema_bright', dolbyHdrDarkAmazon: 'cinema_bright',
+    sports: 'sports', game: 'game', hdrGame: 'game', dolbyHdrGame: 'game', photo: 'photo',
+    filmMaker: 'filmmaker', hdrFilmMaker: 'filmmaker',
+    expert1: 'expert_bright', expert2: 'expert_dark', hdrEffect: 'hdr_effect'
+  };
+  Object.keys(modes).forEach(function (m) {
+    assert.strictEqual(signal('hdr', m)[0], 'glasshouse_signal_info{dynamic_range="hdr",picture_mode="' + modes[m] + '"} 1', m);
+  });
+  // A value outside the tables keeps its own name.
+  assert.deepEqual(signal('hdr10PlusALLM', 'dolbyHdrCinemaHome'), [
+    'glasshouse_signal_info{dynamic_range="hdr10_plus",picture_mode="dolby_hdr_cinema_home"} 1',
+    'glasshouse_signal_low_latency 1'
+  ]);
+  // No dynamic range from the TV: no low-latency sample either.
+  assert.deepEqual(signal(null, 'eco'), ['glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1']);
+  console.log('  ✓ dynamic range and picture mode are put into categories');
 })();
 
 // 3. Label values are escaped, and a missing one is empty rather than omitted

@@ -256,7 +256,7 @@ function refreshOledStats(picSettings, pState, cb) {
   var REFRESHER_INTERVAL_HOURS = autoJbIntervalRaw ? parseInt(autoJbIntervalRaw, 10) : 2000;
   if (!REFRESHER_INTERVAL_HOURS || REFRESHER_INTERVAL_HOURS <= 0) REFRESHER_INTERVAL_HOURS = 2000;
 
-  function finishOledStats(usageUnits, lastCompUnits, dispRes) {
+  function finishOledStats(usageUnits, lastCompUnits, dispRes, live) {
     var rawStatus = (dispRes && dispRes.status) ? dispRes.status : 'schedule';
     var statusStr = 'Idle';
     if (rawStatus === 'cancel_schedule') statusStr = 'Scheduled';
@@ -332,6 +332,15 @@ function refreshOledStats(picSettings, pState, cb) {
       failure_alerts: failCount,
       asbl_protection: asblStatus,
       gsr_protection: gsrStatus,
+      /*
+       * The live service where the TV has one, the marker files otherwise, and
+       * null where neither reports: a B8 writes neither marker, which says
+       * nothing about whether the protections are on. TPC is the service's
+       * name for what the markers call ASBL.
+       */
+      gsr_enabled: live ? live.gsr : (gsrStatus ? gsrStatus === 'Active' : null),
+      tpc_enabled: live ? live.tpc : (asblStatus ? asblStatus === 'Active' : null),
+      gsr_stress_count: live ? live.gsrStressCount : null,
       screen_shift: (picSettings && picSettings.screenShift) ? picSettings.screenShift : 'off',
       logo_dimming: (picSettings && picSettings.logoLuminanceAdjust) ? picSettings.logoLuminanceAdjust : 'off'
     };
@@ -349,7 +358,11 @@ function refreshOledStats(picSettings, pState, cb) {
 
       function queryDisplayStatus(uUnits, cUnits) {
         luna('com.webos.service.tv.display/getClearPanelNoiseStatus', {}, function (dispRes) {
-          finishOledStats(uUnits, cUnits, dispRes);
+          // Read here, at the cache interval, so a scrape or the OLED Care tab
+          // never waits on the service.
+          readOledProtections(function (live) {
+            finishOledStats(uUnits, cUnits, dispRes, live);
+          });
         });
       }
 
