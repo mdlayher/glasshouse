@@ -65,9 +65,12 @@ function sampleLines(text) {
     'glasshouse_oled_last_refresher_usage_seconds',
     'glasshouse_oled_refresher_interval_seconds',
     'glasshouse_oled_refresher_runs_total',
+    'glasshouse_oled_refresher_running',
+    'glasshouse_oled_refresher_scheduled',
     'glasshouse_oled_failure_alerts_total',
     'glasshouse_oled_gsr_stress_events_total',
     'glasshouse_oled_protection_enabled',
+    'glasshouse_picture_backlight_ratio',
     'glasshouse_signal_info',
     'glasshouse_signal_low_latency',
     'glasshouse_signal_width_pixels',
@@ -110,7 +113,8 @@ function sampleLines(text) {
 // 2. Values are in base units: bytes, hertz, seconds and ratios
 (function testValues() {
   // Captured before telemetry gave the precise readings, the CPU times and the
-  // eMMC estimates, so this renders from the rounded ones. The C4 has no GPU clock reading and no Pixel Refresher run
+  // eMMC estimates, so this renders from the rounded ones. Every fixture
+  // predates the backlight as read, so none has a backlight sample. The C4 has no GPU clock reading and no Pixel Refresher run
   // recorded yet, so neither has a sample. Nor did it give the raw dynamic
   // range or the signal's timing yet, so those are empty or absent.
   var c4 = sampleLines(prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1'));
@@ -143,6 +147,8 @@ function sampleLines(text) {
     'glasshouse_oled_compensation_runs_total 67',
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 0',
+    'glasshouse_oled_refresher_running 0',
+    'glasshouse_oled_refresher_scheduled 0',
     'glasshouse_oled_failure_alerts_total 0',
     'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1'
   ]);
@@ -196,6 +202,8 @@ function sampleLines(text) {
     'glasshouse_oled_compensation_runs_total 67',
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 0',
+    'glasshouse_oled_refresher_running 0',
+    'glasshouse_oled_refresher_scheduled 0',
     'glasshouse_oled_failure_alerts_total 0',
     'glasshouse_oled_gsr_stress_events_total 133204',
     'glasshouse_oled_protection_enabled{protection="asbl"} 1',
@@ -270,6 +278,8 @@ function sampleLines(text) {
     'glasshouse_oled_last_refresher_usage_seconds 36032400',
     'glasshouse_oled_refresher_interval_seconds 7200000',
     'glasshouse_oled_refresher_runs_total 5',
+    'glasshouse_oled_refresher_running 0',
+    'glasshouse_oled_refresher_scheduled 0',
     'glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1'
   ]);
 
@@ -336,6 +346,19 @@ function sampleLines(text) {
     signal: 'Connected',
     signal_timing: null
   }, '')).length, 1);
+  // The Pixel Refresher running or queued for standby, and the backlight as
+  // read, divided without the float error of multiplying by 0.01.
+  ['Running', 'Scheduled'].forEach(function (st) {
+    var lines = sampleLines(prometheus.render({ oled: { refresher_status: st }, picture: { backlight: 57, backlight_raw: 57 } }, ''));
+    assert.deepEqual(lines.slice(1), [
+      'glasshouse_oled_refresher_running ' + (st === 'Running' ? 1 : 0),
+      'glasshouse_oled_refresher_scheduled ' + (st === 'Scheduled' ? 1 : 0),
+      'glasshouse_picture_backlight_ratio 0.57'
+    ], st);
+  });
+  // The 50 telemetry shows where the TV gave no backlight is not reported,
+  // and an LCD has no Pixel Refresher status.
+  assert.strictEqual(sampleLines(prometheus.render({ oled: null, picture: { backlight: 50, backlight_raw: null } }, '')).length, 1);
   // eMMC state unknown: no samples rather than three zeros.
   assert.strictEqual(sampleLines(prometheus.render({ emmc: { eol: 'unknown' } }, '')).length, 1);
   console.log('  ✓ values are in base units, and unknown readings are left out');

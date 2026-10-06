@@ -1550,6 +1550,9 @@ function collectStats(cb) {
                   mode: formatPicMode(pic.settings.pictureMode),
                   mode_raw: pic.settings.pictureMode || 'standard',
                   backlight: toInt(pic.settings.backlight, 50),
+                  // As read, null where the TV gave none rather than the 50
+                  // the dashboards show.
+                  backlight_raw: toInt(pic.settings.backlight, null),
                   energySaving: pic.settings.energySaving || 'off',
                   screenShift: pic.settings.screenShift || 'off',
                   logoLuminanceAdjust: pic.settings.logoLuminanceAdjust || 'off',

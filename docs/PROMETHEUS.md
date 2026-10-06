@@ -92,9 +92,12 @@ The signal gauges describe the HDMI source on screen and have no sample otherwis
 | `glasshouse_oled_last_refresher_usage_seconds`    | gauge   |                                         | Panel usage at the last Pixel Refresher run                 |
 | `glasshouse_oled_refresher_interval_seconds`      | gauge   |                                         | Panel usage between automatic Pixel Refresher runs          |
 | `glasshouse_oled_refresher_runs_total`            | counter |                                         | Pixel Refresher runs completed                              |
+| `glasshouse_oled_refresher_running`               | gauge   |                                         | 1 while a Pixel Refresher run is in progress                |
+| `glasshouse_oled_refresher_scheduled`             | gauge   |                                         | 1 while a Pixel Refresher run waits for the next standby    |
 | `glasshouse_oled_failure_alerts_total`            | counter |                                         | Panel maintenance failure alerts recorded                   |
 | `glasshouse_oled_gsr_stress_events_total`         | counter |                                         | Stress events Global Stress Reduction has counted           |
 | `glasshouse_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
+| `glasshouse_picture_backlight_ratio`              | gauge   |                                         | Backlight of the picture mode in use, OLED light on an OLED |
 | `glasshouse_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
 | `glasshouse_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
 | `glasshouse_signal_width_pixels`                  | gauge   |                                         | Width of the HDMI source's picture                          |
