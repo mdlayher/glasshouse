@@ -76,7 +76,23 @@ var EPL = 'com.webos.service.oledepl/';
   assert.strictEqual(r.stats.gsr_enabled, true);
   assert.strictEqual(r.stats.tpc_enabled, false);
   assert.strictEqual(r.stats.gsr_stress_count, null, 'a TV without the service has no stress count');
+  assert.strictEqual(r.stats.asbl_protection, 'Disabled');
   console.log('  ✓ without the service, the marker files decide');
+})();
+
+(function testSocTpcStatus() {
+  // socTpcStatus sits at 0 between dimming checks whatever the setting.
+  var markers = {};
+  markers[PNWASH + 'socTpcStatus'] = '0';
+  var r = refresh({}, markers);
+  assert.strictEqual(r.stats.asbl_protection, 'Active');
+  assert.strictEqual(r.stats.tpc_enabled, true);
+
+  markers[PNWASH + 'tpcOff'] = '';
+  r = refresh({}, markers);
+  assert.strictEqual(r.stats.asbl_protection, 'Disabled');
+  assert.strictEqual(r.stats.tpc_enabled, false);
+  console.log('  ✓ socTpcStatus is the dimming state, not the setting; tpcOff alone turns ASBL off');
 })();
 
 (function testNeither() {
