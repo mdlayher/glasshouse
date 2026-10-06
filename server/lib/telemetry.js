@@ -434,6 +434,72 @@ function netBytes() {
   return best;
 }
 
+/*
+ * Active sizes of the progressive CTA-861 video codes (VICs), by code. A C4's
+ * receiver measured 1920x1081 and 3840x2161 for 1080p and 2160p over TMDS,
+ * with the VIC saying 16 and 97; it measured an FRL link right.
+ */
+var VIC_SIZES = (function () {
+  var sizes = {};
+  function add(codes, w, h) { for (var i = 0; i < codes.length; i++) sizes[codes[i]] = [w, h]; }
+  add([1], 640, 480);
+  add([2, 3], 720, 480);
+  add([17, 18], 720, 576);
+  add([4, 19, 60, 61, 62], 1280, 720);
+  add([16, 31, 32, 33, 34, 63, 64], 1920, 1080);
+  add([93, 94, 95, 96, 97, 103, 104, 105, 106, 107, 117, 118, 119, 120], 3840, 2160);
+  add([98, 99, 100, 101, 102, 218, 219], 4096, 2160);
+  return sizes;
+})();
+
+/*
+ * One receiver's timing from its status file: the key: value lines of the
+ * HDMI 2.0 driver, or the newer driver's Sig: line, which gives each size as
+ * active(total). Stable Sync Info is preferred over RAW, whose line count
+ * jitters. The newer driver's Pixel Clk field is the clock in kHz on TMDS but
+ * not on FRL, where a 1188 MHz 4K 120 Hz signal reads 40000; there the clock
+ * is worked out from the totals. On TMDS the totals will not do: with deep
+ * colour the total width counts characters, 2752 at 10 bits and 3300 at 12
+ * for 1080p's 2200.
+ */
+function parseTiming(raw) {
+  function field(re) { var m = raw.match(re); return m ? m[1].trim() : null; }
+  var width = toInt(field(/horizontal-active:\s*(\d+)/), 0);
+  var height = toInt(field(/vertical-active:\s*(\d+)/), 0);
+  var refresh = toInt(field(/pixel-clock-V:\s*(\d+)/), 0);
+  var clockKhz = toInt(field(/pixel-clock:\s*(\d+)/), 0);
+  if (!width || !height) {
+    var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
+    var sig = (stablePart || raw).match(/Sig:\s*\[(\d+)\](?:\((\d+)\))?x\[(\d+)\](?:\((\d+)\))?@\[(\d+)\]\s*Hz/i);
+    if (sig && toInt(sig[1], 0) > 0 && toInt(sig[3], 0) > 0) {
+      width = toInt(sig[1], 0);
+      height = toInt(sig[3], 0);
+      refresh = toInt(sig[5], 0);
+      var hTotal = toInt(sig[2], 0), vTotal = toInt(sig[4], 0);
+      if (!clockKhz && /PHY Mode\[FRL/i.test(raw)) {
+        if (hTotal && vTotal) clockKhz = hTotal * vTotal * refresh / 1000;
+      } else if (!clockKhz) {
+        clockKhz = toInt(((stablePart || raw).match(/Pixel Clk\[0*(\d+)\]/i) || [])[1], 0);
+      }
+      // The video code's size where the measured one is a line or two off it;
+      // one further away is a mode the code does not describe.
+      var vic = VIC_SIZES[toInt(((stablePart || raw).match(/VIC Code\[(\d+)\]/i) || [])[1], 0)];
+      if (vic && Math.abs(vic[0] - width) <= 2 && Math.abs(vic[1] - height) <= 2) {
+        width = vic[0];
+        height = vic[1];
+      }
+    }
+  }
+  var hasTiming = width > 0 && height > 0;
+  return {
+    connected: /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw) || hasTiming,
+    width: hasTiming ? width : null,
+    height: hasTiming ? height : null,
+    refreshHz: hasTiming && refresh ? refresh : null,
+    pixelClockKhz: hasTiming && clockKhz ? clockKhz : null
+  };
+}
+
 // The first connected port's timing, as numbers; width and height are null
 // where a port is connected but the receiver gives no timing yet.
 function readVideoTiming(targetPort) {
@@ -445,35 +511,12 @@ function readVideoTiming(targetPort) {
 
   var anyConn = false;
   for (var i = 0; i < portsToScan.length; i++) {
-    var p = portsToScan[i];
-    var raw = readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
+    var raw = readTrimmed('/proc/lg/hdmi20/port' + portsToScan[i] + '/status');
     if (!raw) continue;
-    var isConn = /connected:\s*on/i.test(raw) || /PHY\s+Lock\[1\]/i.test(raw);
-    var w = null, h = null, hz = null;
-    var wMatch = raw.match(/horizontal-active:\s*(\d+)/);
-    var hMatch = raw.match(/vertical-active:\s*(\d+)/);
-    var hzMatch = raw.match(/pixel-clock-V:\s*(\d+)(?:\s*Hz)?/);
-    if (wMatch && hMatch && parseInt(wMatch[1], 10) > 0 && parseInt(hMatch[1], 10) > 0) {
-      w = wMatch[1];
-      h = hMatch[1];
-      if (hzMatch) hz = hzMatch[1];
-    } else {
-      var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
-      var targetText = stablePart || raw;
-      var sigM = targetText.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
-      if (sigM && parseInt(sigM[1], 10) > 0 && parseInt(sigM[2], 10) > 0) {
-        w = sigM[1];
-        h = sigM[2];
-        hz = sigM[3];
-        isConn = true;
-      }
-    }
-    if (isConn) {
-      anyConn = true;
-      if (w && h && parseInt(w, 10) > 0 && parseInt(h, 10) > 0) {
-        return { width: parseInt(w, 10), height: parseInt(h, 10), refresh_hz: hz === null ? null : parseInt(hz, 10) };
-      }
-    }
+    var t = parseTiming(raw);
+    if (!t.connected) continue;
+    anyConn = true;
+    if (t.width !== null) return { width: t.width, height: t.height, refresh_hz: t.refreshHz };
   }
   return anyConn ? { width: null, height: null, refresh_hz: null } : null;
 }
@@ -893,43 +936,19 @@ function hdmiPorts() {
     var raw = readTrimmed('/proc/lg/hdmi20/port' + i + '/status');
     if (!raw) continue;
     function field(re) { var m = raw.match(re); return m ? m[1].trim() : null; }
-    var hact = parseInt(field(/horizontal-active:\s*(\d+)/) || '0', 10);
-    var vact = parseInt(field(/vertical-active:\s*(\d+)/) || '0', 10);
-    var rate = parseInt(field(/pixel-clock-V:\s*(\d+)/) || '0', 10);
-    var pclk = parseInt(field(/pixel-clock:\s*(\d+)/) || '0', 10);
-
-    if (!hact || !vact) {
-      var stablePart = raw.split(/\[Stable Sync Info\]/i)[1];
-      var targetText = stablePart || raw;
-      var sigM = targetText.match(/Sig:\s*\[(\d+)\](?:\(\d+\))?x\[(\d+)\](?:\(\d+\))?@\[(\d+)\]\s*Hz/i);
-      if (sigM) {
-        hact = parseInt(sigM[1], 10);
-        vact = parseInt(sigM[2], 10);
-        if (!rate) rate = parseInt(sigM[3], 10);
-      }
-    }
-    if (!pclk) {
-      var pclkStr = field(/Pixel Clk\[0*([1-9]\d*)\]/i);
-      if (pclkStr) {
-        var pclkNum = parseInt(pclkStr, 10);
-        pclk = (pclkNum < 100000) ? pclkNum * 10 : Math.round(pclkNum / 1000);
-      }
-    }
-    var isConnected = /connected:\s*on/i.test(raw) ||
-                      /PHY\s+Lock\[1\]/i.test(raw) ||
-                      (hact > 0 && vact > 0);
+    var t = parseTiming(raw);
     var colorDepth = field(/deep-color-mode:\s*(\S+ \S+)/) || field(/DeepColorMode\[\s*([^\]]+)\]/);
     if (colorDepth) colorDepth = colorDepth.replace(/^[.\s]+/, '');
     var isInterlaced = /interlaced:\s*yes/i.test(raw) || /Interlaced\[1\]/i.test(raw);
 
     ports.push({
       port: i,
-      connected: isConnected,
-      resolution: (isConnected && hact && vact) ? (hact + 'x' + vact) : null,
-      refreshHz: (isConnected && rate) ? rate : null,
-      pixelClockMhz: (isConnected && pclk) ? Math.round(pclk / 1000 * 10) / 10 : null,
-      colorDepth: isConnected ? colorDepth : null,
-      interlaced: isConnected ? isInterlaced : false
+      connected: t.connected,
+      resolution: t.width !== null ? (t.width + 'x' + t.height) : null,
+      refreshHz: t.refreshHz,
+      pixelClockMhz: t.pixelClockKhz !== null ? Math.round(t.pixelClockKhz / 100) / 10 : null,
+      colorDepth: t.connected ? colorDepth : null,
+      interlaced: t.connected ? isInterlaced : false
     });
   }
   return ports;
