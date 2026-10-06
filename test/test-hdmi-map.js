@@ -103,7 +103,7 @@ c4.hdmiReceiverMap(checked(function (map) {
   assert.deepEqual(map, { 1: 3, 2: 2, 3: 1, 4: 0 });
 
   statsOn(c4, 'com.webos.app.hdmi1', function (s1) {
-    assert.strictEqual(s1.signal, '1920x1081 @ 60Hz', 'HDMI 1 is the streamer on receiver 3');
+    assert.strictEqual(s1.signal, '1920x1080 @ 60Hz', 'HDMI 1 is the streamer on receiver 3');
     assert.strictEqual(s1.hdmi_diag.port, 3);
     assert.strictEqual(s1.hdmi_diag.phy_mode, 'TMDS (3G)');
     assert.strictEqual(s1.hdmi_diag.hdcp, 'HDCP 2.3');
@@ -123,7 +123,7 @@ c4.hdmiReceiverMap(checked(function (map) {
         c4.hdmiInputs(checked(function (r) {
           assert.strictEqual(r.pairedUnambiguously, true);
           assert.strictEqual(r.inputs[0].signal.port, 3);
-          assert.strictEqual(r.inputs[0].signal.resolution, '1920x1081');
+          assert.strictEqual(r.inputs[0].signal.resolution, '1920x1080');
           assert.strictEqual(r.inputs[1].signal, null);
           assert.strictEqual(r.inputs[2].signal, null);
           assert.strictEqual(r.inputs[3].signal.port, 0);

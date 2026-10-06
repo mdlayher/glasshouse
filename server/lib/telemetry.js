@@ -435,6 +435,24 @@ function netBytes() {
 }
 
 /*
+ * Active sizes of the progressive CTA-861 video codes (VICs), by code. A C4's
+ * receiver measured 1920x1081 and 3840x2161 for 1080p and 2160p over TMDS,
+ * with the VIC saying 16 and 97; it measured an FRL link right.
+ */
+var VIC_SIZES = (function () {
+  var sizes = {};
+  function add(codes, w, h) { for (var i = 0; i < codes.length; i++) sizes[codes[i]] = [w, h]; }
+  add([1], 640, 480);
+  add([2, 3], 720, 480);
+  add([17, 18], 720, 576);
+  add([4, 19, 60, 61, 62], 1280, 720);
+  add([16, 31, 32, 33, 34, 63, 64], 1920, 1080);
+  add([93, 94, 95, 96, 97, 103, 104, 105, 106, 107, 117, 118, 119, 120], 3840, 2160);
+  add([98, 99, 100, 101, 102, 218, 219], 4096, 2160);
+  return sizes;
+})();
+
+/*
  * One receiver's timing from its status file: the key: value lines of the
  * HDMI 2.0 driver, or the newer driver's Sig: line, which gives each size as
  * active(total). Stable Sync Info is preferred over RAW, whose line count
@@ -462,6 +480,13 @@ function parseTiming(raw) {
         if (hTotal && vTotal) clockKhz = hTotal * vTotal * refresh / 1000;
       } else if (!clockKhz) {
         clockKhz = toInt(((stablePart || raw).match(/Pixel Clk\[0*(\d+)\]/i) || [])[1], 0);
+      }
+      // The video code's size where the measured one is a line or two off it;
+      // one further away is a mode the code does not describe.
+      var vic = VIC_SIZES[toInt(((stablePart || raw).match(/VIC Code\[(\d+)\]/i) || [])[1], 0)];
+      if (vic && Math.abs(vic[0] - width) <= 2 && Math.abs(vic[1] - height) <= 2) {
+        width = vic[0];
+        height = vic[1];
       }
     }
   }

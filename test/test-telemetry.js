@@ -251,10 +251,36 @@ console.log('Running test-telemetry.js ...');
   ['8', '10', '12'].forEach(function (depth) {
     mockEnv.files['/proc/lg/hdmi20/port2/status'] =
       fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port0-1080p-' + depth + 'bit.status'), 'utf8');
-    assert.strictEqual(telemetry.hdmiPorts()[2].pixelClockMhz, 148.5, depth + '-bit TMDS');
+    var deep = telemetry.hdmiPorts()[2];
+    assert.strictEqual(deep.pixelClockMhz, 148.5, depth + '-bit TMDS');
+    assert.strictEqual(deep.resolution, '1920x1080', depth + '-bit TMDS, VIC 16');
   });
   delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
   console.log('  ✓ the pixel clock on a deep-colour TMDS link is the receiver\'s Pixel Clk');
+})();
+
+// 6a1b. The VIC's size over a measured one a line off it, as a C4 measures
+// TMDS; a measured size the VIC does not describe is kept.
+(function testVicSize() {
+  function sizeWith(sig, vic) {
+    mockEnv.files['/proc/lg/hdmi20/port2/status'] =
+      '[Stable Sync Info]\n  [15] Sig:' + sig + ' (0). vo/ho:(65530)/(2152)\n' +
+      '  [17] VIC Code[' + vic + '] / VIC Vfreq[600] / DeepColorMode[ 8BIT]\nPHY Lock[1]\n';
+    return telemetry.hdmiPorts()[2];
+  }
+  // A C4's streamer at 2160p 60 over TMDS: Sig:[3840](4400)x[2161](2250), VIC 97.
+  mockEnv.files['/proc/lg/hdmi20/port2/status'] =
+    fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port3-2160p.status'), 'utf8');
+  var p = telemetry.hdmiPorts()[2];
+  assert.strictEqual(p.resolution, '3840x2160', 'VIC 97 is 2160p');
+  assert.strictEqual(p.pixelClockMhz, 594, 'the Pixel Clk field, in kHz on TMDS');
+  assert.strictEqual(telemetry.getVideoSignal(2), '3840x2160 @ 60Hz');
+  assert.strictEqual(sizeWith('[2560](2720)x[1440](1481)@[60]Hz', 16).resolution, '2560x1440',
+    'a size far from the VIC\'s is kept');
+  assert.strictEqual(sizeWith('[1920](2200)x[1081](1125)@[60]Hz', 0).resolution, '1920x1081',
+    'no VIC, no correction');
+  delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
+  console.log('  ✓ the VIC\'s size is used where the measured one is a line off it');
 })();
 
 // 6a2. isFreeSync is a mode: G-SYNC over HDMI reads 2, and is VRR
