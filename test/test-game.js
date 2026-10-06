@@ -114,6 +114,15 @@ function readNow(appId) {
   game.appChanged(HDMI4);
   assert.strictEqual(running(BIND).length, 0, 'a switch to an input alone does not bind');
 
+  // With no source change reported (no MQTT), the stats' hold lapses five
+  // minutes after their last read; each read starts the five minutes again.
+  readNow(HDMI4);
+  running(BIND)[0].handlers.message({ returnValue: true, broadcastId: 'p2' });
+  readNow(HDMI4);
+  assert.strictEqual(timers.filter(function (t) { return t.ms === 300000; }).length, 1);
+  fire(300000);
+  assert.strictEqual(running(BIND).length, 0);
+
   // A bind that never answers leaves the read empty after its wait.
   var got = 'pending';
   game.read(HDMI4, function (r) { got = r; });

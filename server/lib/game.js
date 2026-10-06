@@ -17,13 +17,17 @@
  * through the shared luna cache, so a Prometheus scrape never starts the
  * stream, and take the stream's reading instead while it runs. The bind is
  * held while the stream runs or the stats last saw an HDMI input on screen,
- * so nothing is bound to the input otherwise.
+ * so nothing is bound to the input otherwise. Without MQTT nothing reports a
+ * source change (tvweb.js starts the live subscriptions only with it), so the
+ * stats' hold also lapses READ_IDLE_MS after their last read.
  *
  * Strict ES5 for node 0.12 on webOS 4.
  */
 var luna = require('./luna');
 
 var IDLE_MS = 15000;
+// Well above any scrape interval, so a TV being scraped never rebinds.
+var READ_IDLE_MS = 300000;
 var READ_TTL_MS = 2000;
 // The bind's first reply, after a luna-send has started; a read waits this
 // long for it rather than coming back empty after every switch to an input.
@@ -36,6 +40,7 @@ var pipeline = null;
 var supported = true;
 var inputShown = false;
 var idleTimer = null;
+var readIdleTimer = null;
 var latest = noReading();
 var waiting = [];
 var waitTimer = null;
@@ -147,8 +152,7 @@ function frameRate() {
  * other than an input's drops the bind, unless the stream holds it.
  */
 function read(appId, cb) {
-  inputShown = isInputApp(appId);
-  holdBind();
+  setInputShown(isInputApp(appId));
   if (!inputShown || !supported || !lunaCachedFn) return cb(null);
   if (!pipeline && !vrrSub) {
     waiting.push(function () { readPipeline(appId, cb); });
@@ -168,15 +172,20 @@ function readPipeline(appId, cb) {
     });
 }
 
-// Leaving an input drops the bind without waiting for the next stats read.
-function appChanged(appId) {
-  if (isInputApp(appId)) return;
-  inputShown = false;
+function setInputShown(shown) {
+  inputShown = shown;
+  clearTimeout(readIdleTimer);
+  readIdleTimer = shown ? setTimeout(function () { setInputShown(false); }, READ_IDLE_MS) : null;
   holdBind();
 }
 
+// Leaving an input drops the bind without waiting for the next stats read.
+function appChanged(appId) {
+  if (!isInputApp(appId)) setInputShown(false);
+}
+
 function stop() {
-  inputShown = false;
+  setInputShown(false);
   stopStream();
 }
 
