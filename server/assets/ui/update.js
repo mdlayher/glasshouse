@@ -52,7 +52,7 @@ function renderUpdate(d) {
 
   desc.textContent = !d.available ? ''
     : d.viaHomebrewChannel
-    ? t('server.available.hbc', 'v{version} is out. Update Glasshouse in the Homebrew Channel; the server follows within a few minutes.', { version: d.latest })
+    ? t('server.available.hbc', 'v{version} is out. Update Glasshouse in the Homebrew Channel, or sideload the latest .ipk from GitHub releases.', { version: d.latest })
     : t('server.available', 'v{version} is out. Installing it replaces the server and restarts it.', { version: d.latest });
   desc.hidden = !d.available;
 

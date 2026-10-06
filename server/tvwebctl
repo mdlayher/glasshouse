@@ -266,11 +266,24 @@ update_app() {
   [ -f "$APP" ]  || { echo "not installed: $APP"; exit 1; }
   case "$1" in
     --check|check) "$NODE" "$APP" --check-update; exit $? ;;
+    --force|-f|force) "$NODE" "$APP" --update --force ;;
+    *) "$NODE" "$APP" --update ;;
   esac
-  "$NODE" "$APP" --update
   rc=$?
   [ "$rc" = 3 ] && exit 0
   [ "$rc" = 0 ] || exit "$rc"
+  stop_watch; stop_app; sleep 1; start_app; start_watch
+  sleep 4
+  "$SELF" status
+}
+
+rollback_app() {
+  [ -x "$NODE" ] || { echo "node not found at $NODE"; exit 1; }
+  [ -f "$APP" ]  || { echo "not installed: $APP"; exit 1; }
+  case "$1" in
+    --force|-f|force) "$NODE" "$APP" --rollback --force || exit $? ;;
+    *) "$NODE" "$APP" --rollback || exit $? ;;
+  esac
   stop_watch; stop_app; sleep 1; start_app; start_watch
   sleep 4
   "$SELF" status
@@ -282,11 +295,7 @@ case "$1" in
   restart) stop_watch; stop_app; sleep 1; start_app; start_watch ;;
   watch)   watch_loop ;;
   update)  update_app "$2" ;;
-  rollback)
-    "$NODE" "$APP" --rollback || exit $?
-    stop_watch; stop_app; sleep 1; start_app; start_watch
-    sleep 4
-    "$SELF" status ;;
+  rollback) rollback_app "$2" ;;
   status)
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
       echo "running (pid $(cat "$PIDFILE"))"
@@ -303,5 +312,5 @@ case "$1" in
       echo "watchdog not running"
     fi
     [ -s "$RESTARTS" ] && echo "last restart: $(tail -1 "$RESTARTS")" ;;
-  *) echo "usage: $0 {start|stop|restart|status|watch|update [--check]|rollback}"; exit 2 ;;
+  *) echo "usage: $0 {start|stop|restart|status|watch|update [--check|--force]|rollback [--force]}"; exit 2 ;;
 esac

@@ -255,10 +255,14 @@ function installBusy(cb) {
   return true;
 }
 
-function installUpdate(cb) {
+function installUpdate(opts, cb) {
+  if (typeof opts === 'function') { cb = opts; opts = {}; }
+  opts = opts || {};
   if (installBusy(cb)) return;
   if (UPDATE.busy) return cb({ ok: false, error: msg('srv.update.busy', 'an update is already running') });
-  if (viaHomebrewChannel()) return cb({ ok: false, error: msg('srv.update.viaHbc', 'updates for this install come from the Homebrew Channel') });
+  if (viaHomebrewChannel() && !opts.force) {
+    return cb({ ok: false, error: msg('srv.update.viaHbc', 'updates for this install come from the Homebrew Channel (or sideload the latest .ipk from GitHub releases)') });
+  }
 
   if (fs.existsSync(path.join(installDir, '..', '.git'))) {
     return cb({ ok: false, error: msg('srv.update.gitCheckout', 'this is a git checkout - update it with git, not from here') });
@@ -280,7 +284,7 @@ function installUpdate(cb) {
     if (err) return done({ ok: false, error: err.message });
     var ver = UPDATE.latest;
     if (!ver) return done({ ok: false, error: msg('srv.update.noInfo', 'no release information yet - check first') });
-    if (!verNewer(ver, currentVersion)) {
+    if (!verNewer(ver, currentVersion) && !opts.force) {
       return done({ ok: true, updated: false, installed: currentVersion, latest: ver,
                     note: msg('srv.update.latest', 'already on the latest release') });
     }
@@ -367,9 +371,13 @@ function installUpdate(cb) {
   });
 }
 
-function rollbackUpdate(cb) {
+function rollbackUpdate(opts, cb) {
+  if (typeof opts === 'function') { cb = opts; opts = {}; }
+  opts = opts || {};
   if (installBusy(cb)) return;
-  if (viaHomebrewChannel()) return cb({ ok: false, error: msg('srv.update.viaHbc', 'updates for this install come from the Homebrew Channel') });
+  if (viaHomebrewChannel() && !opts.force) {
+    return cb({ ok: false, error: msg('srv.update.viaHbc', 'updates for this install come from the Homebrew Channel (or sideload the latest .ipk from GitHub releases)') });
+  }
   var was = rollbackVersion();
   if (!was) return cb({ ok: false, error: msg('srv.update.noRollback', 'nothing to roll back to') });
   var files = listFiles(prevDir);
