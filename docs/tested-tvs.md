@@ -51,8 +51,8 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED65C9PLA | 4.10.2       | —        | OLED  | Working fine                                                   |
 | OLED77CX6LA | 5.5.0        | 04.50.90 | OLED  | OLED Care, telemetry and MQTT bridge confirmed                 |
 | OLED77CXAUA | 5.6.0        | 04.60.65 | OLED  | Rooted with faultmanager; SSH install; dashboard and telemetry |
-| OLED48CXPUB | 5.6.2        | 04.64.00 | OLED  | Web dashboard, telemetry and .ipk install over the API confirmed |
-| OLED65CXPUA | 5.6.2        | 04.64.00 | OLED  | Web dashboard, telemetry and .ipk install over the API confirmed |
+| OLED48CXPUB | 5.6.2        | 04.64.00 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
+| OLED65CXPUA | 5.6.2        | 04.64.00 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
 | OLED55C17LB | 6.x          | —        | OLED  | HDMI 2.1 diagnostics and remote battery reporting              |
 | OLED55C1PUB | 6.x (6.3+)   | 03.53.45 | OLED  | SSH install and MQTT bridge confirmed                          |
 | 50UP81006LR | 6.5.0        | 03.51.16 | LCD   | Installed over telnet; in-app update confirmed                 |
@@ -73,7 +73,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED77C4PSA | 25 (10.3.1)  | 33.31.68 | OLED  | Rooted with Dangbro; resolution reported stuck at 1920x1081    |
 | OLED48C55LA | 25 (10.3.1)  | 33.31.68 | OLED  | Installed over telnet; in-app update to 0.37.2 confirmed       |
 | OLED77C57LA | 25 (10.3.1)  | 33.31.68 | OLED  | MQTT, privacy, screen saver and web dashboard confirmed        |
-| OLED48C5PUA | 25 (10.3.1)  | 33.31.69 | OLED  | Web dashboard, telemetry and .ipk install over the API confirmed |
+| OLED48C5PUA | 25 (10.3.1)  | 33.31.69 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
 | 42LX3Q6LA   | —            | 33.31.68 | OLED  | Flex; model number has no OLED prefix                          |
 | OLED65G36LA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; privacy and app installs confirmed        |
 | OLED83G5WUA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; runs with internet access blocked         |

@@ -69,7 +69,9 @@ nav:
       - TV hardware specifications:
           - development/tv-specs/index.md
           - LG B8 (OLED65B8SLC): development/tv-specs/b8.md
+          - LG CX (OLED48CXPUB): development/tv-specs/cx.md
           - LG C2 (OLED42C24LA): development/tv-specs/c2.md
+          - LG C5 (OLED48C5PUA): development/tv-specs/c5.md
       - Testing and CI: development/testing.md
       - Translating the dashboards: STRINGS.md
 
