@@ -1,6 +1,15 @@
-# Prometheus
+# Prometheus metrics
 
-The server can answer Prometheus scrapes at `/api/prometheus/metrics`, in the text exposition format. It is off by default, and while it is off the path does not exist: a request gets 404.
+[Prometheus](https://prometheus.io/) is an open-source time-series monitoring and alerting platform. Rather than waiting for systems to push events, Prometheus periodically scrapes metrics over HTTP from instrumented endpoints, storing timestamped samples that can be queried with PromQL and visualized in dashboards like [Grafana](https://grafana.com/).
+
+In Glasshouse, the Prometheus metrics endpoint exposes your TV's system, panel, and HDMI telemetry directly to Prometheus-compatible scrapers (including VictoriaMetrics and Grafana Agent). Common use-cases include:
+
+* **Long-term OLED panel and storage health:** Graphing panel run-time against automatic pixel refresher cycles in Grafana to monitor panel aging, verify that compensation cycles run after prolonged sessions, and track eMMC flash wear over the life of the TV.
+* **Thermal and hardware observability:** Recording SoC temperatures, processor clocks, and memory utilization over time to identify thermal throttling, background spikes, or resource constraints during high-bitrate 4K HDR playback and gaming.
+* **Proactive home lab alerting:** Setting Alertmanager alert rules to trigger notifications when Magic Remote battery levels drop below 15%, when internal storage approaches capacity, when eMMC enters pre-EOL warning states, or if panel maintenance errors occur.
+* **Infrastructure monitoring without Home Assistant:** Collecting rich telemetry directly into an existing monitoring and observability stack without requiring an MQTT broker or Home Assistant instance.
+
+The server answers scrapes at `/api/prometheus/metrics` in the standard Prometheus text exposition format. It is off by default, and while it is off the path does not exist: a request receives a `404 Not Found`.
 
 ## Switching it on
 
