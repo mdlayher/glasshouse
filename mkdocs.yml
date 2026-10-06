@@ -41,6 +41,7 @@ nav:
       - dashboard/index.md
       - Control: dashboard/control.md
       - Advanced Controls: dashboard/advanced.md
+      - Ambient light (PicCap): dashboard/piccap.md
       - Metrics: dashboard/metrics.md
       - Apps: dashboard/apps.md
       - Privacy: dashboard/privacy.md
