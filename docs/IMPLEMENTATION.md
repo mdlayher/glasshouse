@@ -107,6 +107,13 @@ instead:
 
 **Do not read `/proc/lg/pm/ts_enable`** — it segfaults the reading process.
 
+The `port<n>` receivers are not numbered as the inputs are, and each keeps its
+link whichever input is on screen. configd holds the board's wiring as
+`inputMap.videoInputMapIndexInfo0`, an `assignment` of `hdmi1` to `hdmi4` to a
+receiver number, or `none` for an input the board does not have. An input's
+signal is read from its own receiver only; where configd has no map, from
+receiver n − 1, then n.
+
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is
 empty, there is no `hwmon`, and `systemproperty` rejects every temperature key. The
