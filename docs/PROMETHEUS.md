@@ -43,7 +43,7 @@ These names are stable: one is not renamed or removed, so dashboards and alerts 
 
 The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Temporal Peak Control on the TV), which lowers brightness while a bright image is held, and `gsr`, Global Stress Reduction, which dims the screen when it detects a stationary element. They come from the TV's panel service, or from its panel maintenance records where it has none; a TV that reports neither has no sample for them.
 
-`glasshouse_signal_info` labels the picture settings in use: `dynamic_range` is `sdr`, `hdr` or `dolbyHdr`, with `ALLM` appended in low-latency mode, and `picture_mode` is the picture mode.
+`glasshouse_signal_info` labels the picture settings in use: `dynamic_range` is `sdr`, `hdr`, `dolby_vision` or `technicolor`, and `picture_mode` is the mode within it: `personalized`, `vivid`, `standard`, `eco`, `cinema`, `cinema_bright`, `sports`, `game`, `photo`, `filmmaker`, `expert_bright`, `expert_dark` or `hdr_effect`. A value the TV adds later keeps its own name in snake case.
 
 The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate.
 
@@ -85,6 +85,7 @@ The signal gauges describe the HDMI source on screen and have no sample otherwis
 | `glasshouse_oled_gsr_stress_events_total`         | counter |                                         | Stress events Global Stress Reduction has counted           |
 | `glasshouse_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
 | `glasshouse_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
+| `glasshouse_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
 | `glasshouse_signal_width_pixels`                  | gauge   |                                         | Width of the HDMI source's picture                          |
 | `glasshouse_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
 | `glasshouse_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
