@@ -50,7 +50,7 @@ handed to another through init() is typed with
 For background, open the doc for the area rather than README.md:
 docs/IMPLEMENTATION.md (platform quirks and how each subsystem works),
 docs/HOME-ASSISTANT.md (setup) and docs/HOME-ASSISTANT-ENTITIES.md (entities), docs/TV-CHANGES.md (what the server changes
-on the TV), docs/TV-SPECS.md (hardware of the tested TVs), docs/ACR.md,
+on the TV), docs/development/tv-specs/index.md (hardware of the tested TVs), docs/ACR.md,
 docs/SECURITY.md and docs/STRINGS.md.
 
 # Writing conventions

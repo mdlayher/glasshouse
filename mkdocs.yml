@@ -63,10 +63,13 @@ nav:
       - What it changes on the TV: TV-CHANGES.md
   - Reference:
       - What LG's ACR does: ACR.md
-      - TV specifications: TV-SPECS.md
   - Development:
       - Contributing: CONTRIBUTING.md
       - Internals: IMPLEMENTATION.md
+      - TV hardware specifications:
+          - development/tv-specs/index.md
+          - LG B8 (OLED65B8SLC): development/tv-specs/b8.md
+          - LG C2 (OLED42C24LA): development/tv-specs/c2.md
       - Testing and CI: development/testing.md
       - Translating the dashboards: STRINGS.md
 
