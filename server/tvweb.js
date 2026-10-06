@@ -277,12 +277,14 @@ loadConfig();
  * dashboard switched off and the server not running.
  */
 var CLI_MODE = null;
+var CLI_FORCE = false;
 (function cliMode() {
   var a = process.argv.slice(2);
   for (var i = 0; i < a.length; i++) {
     if (a[i] === '--update') CLI_MODE = 'update';
     else if (a[i] === '--check-update') CLI_MODE = 'check';
     else if (a[i] === '--rollback') CLI_MODE = 'rollback';
+    else if (a[i] === '--force' || a[i] === '-f') CLI_FORCE = true;
   }
 })();
 
@@ -1347,14 +1349,14 @@ if (CLI_MODE === 'check') {
     process.exit(0);
   });
 } else if (CLI_MODE === 'update') {
-  updater.installUpdate(function (r) {
+  updater.installUpdate({ force: CLI_FORCE }, function (r) {
     if (!r.ok) { console.error(r.error); process.exit(1); }
     if (!r.updated) { console.log(r.note + ' (v' + r.installed + ')'); process.exit(3); }
     console.log('installed v' + r.latest + ' over v' + r.installed + ', ' + r.files + ' files');
     process.exit(0);
   });
 } else if (CLI_MODE === 'rollback') {
-  updater.rollbackUpdate(function (r) {
+  updater.rollbackUpdate({ force: CLI_FORCE }, function (r) {
     if (!r.ok) { console.error(r.error); process.exit(1); }
     console.log('restored v' + r.restored + ', ' + r.files + ' files');
     process.exit(0);

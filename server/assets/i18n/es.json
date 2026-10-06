@@ -2024,8 +2024,8 @@
   "from": "v{version} is out. Installing it replaces the server and restarts it."
  },
  "server.available.hbc": {
-  "text": "Ya está disponible v{version}. Actualiza Glasshouse en el Homebrew Channel; el servidor se actualiza en unos minutos.",
-  "from": "v{version} is out. Update Glasshouse in the Homebrew Channel; the server follows within a few minutes."
+  "text": "Ya está disponible v{version}. Actualiza Glasshouse en el Homebrew Channel o instala el último .ipk desde GitHub releases.",
+  "from": "v{version} is out. Update Glasshouse in the Homebrew Channel, or sideload the latest .ipk from GitHub releases."
  },
  "server.checkDaily": {
   "text": "Comprobar a diario",
@@ -3840,8 +3840,8 @@
   "from": "could not restore {file}: {error}"
  },
  "srv.update.viaHbc": {
-  "text": "las actualizaciones de esta instalación llegan desde el Homebrew Channel",
-  "from": "updates for this install come from the Homebrew Channel"
+  "text": "las actualizaciones de esta instalación llegan desde el Homebrew Channel (o instala el último .ipk desde GitHub releases)",
+  "from": "updates for this install come from the Homebrew Channel (or sideload the latest .ipk from GitHub releases)"
  },
  "ss.bright": {
   "text": "Brillante",
@@ -5320,8 +5320,8 @@
   "from": "Install update"
  },
  "tv.update.installUpdate.hint": {
-  "text": "Actualiza Glasshouse en el Homebrew Channel. El servidor se actualiza en pocos minutos.",
-  "from": "Update Glasshouse in the Homebrew Channel. The server follows within a few minutes."
+  "text": "Actualiza Glasshouse en el Homebrew Channel o instala el último .ipk desde GitHub releases.",
+  "from": "Update Glasshouse in the Homebrew Channel, or sideload the latest .ipk from GitHub releases."
  },
  "tv.update.installedVersion": {
   "text": "Versión instalada",

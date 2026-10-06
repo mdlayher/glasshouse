@@ -118,4 +118,33 @@ console.log('Running test-updater.js ...');
   console.log('  \u2713 installUpdate and rollbackUpdate refuse while an app install runs');
 })();
 
+// 100. Homebrew Channel install refuses updates unless force is specified
+(function testHomebrewChannelBypass() {
+  updater.init({
+    config: { allowControl: true, update: { check: true } },
+    version: '0.39.1',
+    installDir: path.resolve(__dirname, '..'),
+    viaHomebrewChannel: function () { return true; }
+  });
+  var refused = 0;
+  updater.installUpdate(function (r) {
+    refused++;
+    assert.strictEqual(r.ok, false);
+    assert.ok(/Homebrew Channel/.test(r.error));
+  });
+  updater.rollbackUpdate(function (r) {
+    refused++;
+    assert.strictEqual(r.ok, false);
+    assert.ok(/Homebrew Channel/.test(r.error));
+  });
+  assert.strictEqual(refused, 2);
+
+  // With force, viaHomebrewChannel check is bypassed
+  updater.rollbackUpdate({ force: true }, function (r) {
+    assert.strictEqual(r.ok, false);
+    assert.ok(/nothing to roll back to/.test(r.error));
+  });
+  console.log('  \u2713 Homebrew Channel installs refuse updates unless force is specified');
+})();
+
 console.log('ALL test-updater.js assertions passed!\n');

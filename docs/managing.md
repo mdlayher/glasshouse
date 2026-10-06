@@ -20,6 +20,14 @@ ssh root@<tv-ip> /var/lib/tvweb/tvwebctl update --check   # report without insta
 ssh root@<tv-ip> /var/lib/tvweb/tvwebctl rollback         # put the previous version back
 ```
 
+**Installed from the Homebrew Channel or as an `.ipk`.** Updates come through the Homebrew Channel. While the package awaits approval in the official repository ([webosbrew/apps-repo#261](https://github.com/webosbrew/apps-repo/pull/261)), install the newer `.ipk` from [GitHub releases](https://github.com/rorygallagher2024/lg-webos-dashboard/releases) over the existing one (with webOS Dev Manager, Homebrew Channel sideload, or `ares-install`). The server follows the updated app on launch or reboot, preserving settings.
+
+To force an in-place server update over SSH on an IPK install:
+
+```bash
+ssh root@<tv-ip> /var/lib/tvweb/tvwebctl update --force
+```
+
 **Without it, or for something unreleased,** pull the latest code into the clone from [step 1](install.md#1-get-the-files) and deploy again, with the flags used the first time:
 
 ```bash
