@@ -1,6 +1,6 @@
 # Tested TVs
 
-Confirmed across 34 models so far (webOS 3.4 through 26). Other rooted models should work.
+Confirmed across 35 models so far (webOS 3.4 through 26). Other rooted models should work.
 
 The Luna service names and `/proc/lg` paths this relies on may differ across webOS versions and panel types.
 
@@ -15,6 +15,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | 43LM5760PTC | 4.5          | —        | LCD   | Configured with panel: lcd; service and web UI confirmed       |
 | OLED55C9PLA | 4.9.0        | 05.30.40 | OLED  | Working fine                                                   |
 | OLED65C9AUA | 4.9.x (4.5+) | 05.50.00 | OLED  |                                                                |
+| OLED65C9PLA | 4.10.2       | —        | OLED  | Working fine                                                   |
 | OLED77CX6LA | 5.5.0        | 04.50.90 | OLED  | OLED Care, telemetry and MQTT bridge confirmed                 |
 | OLED77CXAUA | 5.6.0        | 04.60.65 | OLED  | Rooted with faultmanager; SSH install; dashboard and telemetry |
 | OLED55C17LB | 6.x          | —        | OLED  | HDMI 2.1 diagnostics and remote battery reporting              |
