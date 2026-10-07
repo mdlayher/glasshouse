@@ -6,6 +6,10 @@
  * is the signal's fixed rate (a console at 120 Hz with VRR off reads 120), and
  * 0 with nothing on the input.
  *
+ * webOS 5 gives the rate and type as strings in vrrInfo's sublist_1 and
+ * sublist_2: "60.0Hz" and "FIXED" with a 4K60 source (a CX, webOS 5.6).
+ * FIXED reads as off.
+ *
  * The pipeline exists only while some client holds a utp.extinputs/bind
  * subscription, whose replies carry it as broadcastId; once the bind closes,
  * getVRRInfo on the same id answers errorCode -106, "No resource". The bind
@@ -70,6 +74,14 @@ function onScreen(r, appId) {
 function fromReply(r) {
   var info = r && r.returnValue !== false && r.vrrInfo;
   if (!info) return null;
+  if (typeof info.frameRate !== 'number' && typeof info.sublist_1 === 'string') {
+    var hz = parseFloat(info.sublist_1);
+    return {
+      frameRate: isNaN(hz) ? 0 : hz,
+      vrrType: !info.sublist_2 || info.sublist_2 === 'FIXED' ? 'off' : info.sublist_2,
+      port: r.port || null
+    };
+  }
   return {
     frameRate: typeof info.frameRate === 'number' ? info.frameRate : 0,
     vrrType: info.vrrType || 'off',
