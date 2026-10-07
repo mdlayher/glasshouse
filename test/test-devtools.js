@@ -133,6 +133,42 @@ test('the rule drops 9998 from everything but loopback', function () {
   assert.equal(devtools.RULE.join(' '), 'INPUT -p tcp --dport 9998 ! -i lo -j DROP');
 });
 
+test('setNetworkDebuggerAllowed toggles the firewall rule and writes config', function () {
+  var controls = require('../server/lib/controls');
+  var written = null;
+  controls.init({
+    config: { allowControl: true, allowNetworkDebugger: false },
+    devtools: devtools,
+    writeSettings: function (patch, cb) { written = patch; cb(null); },
+    updateSummary: function () { return { ok: true, devtools: devtools.status() }; }
+  });
+
+  tv([FLAG, '/usr/sbin/iptables'], function () {
+    controls.doControl('setNetworkDebuggerAllowed', true, function (res) {
+      assert.strictEqual(res.ok, true);
+      assert.strictEqual(written.allowNetworkDebugger, true);
+      assert.strictEqual(devtools.status(), 'allowed');
+    });
+
+    controls.doControl('setNetworkDebuggerAllowed', false, function (res) {
+      assert.strictEqual(res.ok, true);
+      assert.strictEqual(written.allowNetworkDebugger, false);
+      assert.strictEqual(devtools.status(), 'closed');
+    });
+  });
+});
+
+test('setNetworkDebuggerAllowed is refused when controls are disabled', function () {
+  var controls = require('../server/lib/controls');
+  controls.init({
+    config: { allowControl: false },
+    devtools: devtools
+  });
+  controls.doControl('setNetworkDebuggerAllowed', true, function (res) {
+    assert.strictEqual(res.ok, false);
+  });
+});
+
 var failures = 0;
 tests.forEach(function (t) {
   try {

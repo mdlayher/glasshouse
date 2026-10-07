@@ -81,6 +81,8 @@ var appsModule = null;
 var lgSettings = null;
 /** @type {typeof import('./updater')} */
 var updater = null;
+/** @type {typeof import('./devtools')} */
+var devtoolsModule = null;
 var tvAppFn = null;
 var restartSelfFn = null;
 var updateSummaryFn = null;
@@ -850,6 +852,23 @@ function doControl(action, value, cb) {
         cb(getUpdateSummary());
       });
 
+    case 'setNetworkDebuggerAllowed':
+      var allowDbg = (value === true || value === 'on' || value === 'true');
+      if (!writeSettingsFn) return cb({ ok: false, error: 'no writeSettings handler configured' });
+      return writeSettingsFn({ allowNetworkDebugger: allowDbg }, function (err) {
+        if (err) return cb({ ok: false, error: 'could not save setting: ' + err.message });
+        if (config) config.allowNetworkDebugger = allowDbg;
+        if (devtoolsModule) {
+          if (allowDbg) {
+            devtoolsModule.leaveOpen(function () { cb(getUpdateSummary()); });
+          } else {
+            devtoolsModule.blockFromNetwork(function () { cb(getUpdateSummary()); });
+          }
+        } else {
+          cb(getUpdateSummary());
+        }
+      });
+
     default:
       return cb({ ok: false, error: 'unknown action' });
   }
@@ -870,6 +889,7 @@ function init(opts) {
   if (opts.apps) appsModule = opts.apps;
   if (opts.lgSettings) lgSettings = opts.lgSettings;
   if (opts.updater) updater = opts.updater;
+  if (opts.devtools) devtoolsModule = opts.devtools;
   if (opts.tvApp) tvAppFn = opts.tvApp;
   if (opts.restartSelf) restartSelfFn = opts.restartSelf;
   if (opts.updateSummary) updateSummaryFn = opts.updateSummary;

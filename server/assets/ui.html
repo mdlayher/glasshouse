@@ -918,10 +918,9 @@
       <div class="prot-row">
         <div class="prot-main">
           <div class="prot-title" data-t="server.devtools.title">Debugger access</div>
-          <div class="prot-desc" data-t="server.devtools.desc">Glasshouse keeps it to the TV itself, so other
-            devices on the network can't use it to run code on the TV.</div>
+          <div class="prot-desc" data-t="server.devtools.desc">Developer Mode opens Chromium DevTools on port 9998 for inspecting web apps with tools like ares-inspect. webOS leaves it open to the local network with no authentication, so Glasshouse blocks external access by default. Allowing access lets developer tools connect without an SSH tunnel.</div>
         </div>
-        <div class="prot-status"><span class="pill idle" id="srv-devtools">&mdash;</span></div>
+        <div class="prot-status"><button type="button" class="pill idle" id="srv-devtools" onclick="toggleNetworkDebugger()">&mdash;</button></div>
       </div>
     </div>
 

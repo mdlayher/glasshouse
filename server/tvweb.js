@@ -451,6 +451,7 @@ controls.init({
   apps: appsModule,
   lgSettings: lgSettings,
   updater: updater,
+  devtools: devtools,
   tvApp: tvApp,
   restartSelf: restartSelf,
   updateSummary: routes.updateSummary,

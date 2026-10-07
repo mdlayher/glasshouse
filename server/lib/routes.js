@@ -162,8 +162,8 @@ function setupPending() {
  * those decide who may reach this server at all, and a UI that can widen its
  * own exposure defeats the point of setting them. The one exception is host,
  * from the TV itself during setup - see setNetworkAccess. Experimental feature
- * toggles (allowTileHiding, allowOnWebos10) and prometheus.enabled are
- * writable from the Server tab.
+ * toggles (allowTileHiding, allowOnWebos10), allowNetworkDebugger and
+ * prometheus.enabled are writable from the Server tab.
  */
 function readConfigFile() {
   try {
@@ -557,6 +557,7 @@ function updateSummary() {
   var s = updaterModule.updateSummary();
   s.tvUpdatesBlocked = privacyModule.tvUpdatesBlocked();
   s.devtools = devtools.status();
+  s.allowNetworkDebugger = !!(config && config.allowNetworkDebugger);
   s.allowTileHiding = !!(appsModule && appsModule.tileHidingAllowed && appsModule.tileHidingAllowed());
   s.allowOnWebos10 = !!(screensaversModule && screensaversModule.allowedAnyway && screensaversModule.allowedAnyway());
   s.isWebos10 = !!(screensaversModule && screensaversModule.slowSwitch && screensaversModule.slowSwitch());
