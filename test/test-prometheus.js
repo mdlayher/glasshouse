@@ -71,6 +71,7 @@ function sampleLines(text) {
     'glasshouse_oled_gsr_stress_events_total',
     'glasshouse_oled_protection_enabled',
     'glasshouse_picture_backlight_ratio',
+    'glasshouse_foreground_app_info',
     'glasshouse_signal_info',
     'glasshouse_signal_low_latency',
     'glasshouse_signal_vrr',
@@ -78,6 +79,7 @@ function sampleLines(text) {
     'glasshouse_signal_height_pixels',
     'glasshouse_signal_refresh_hertz',
     'glasshouse_signal_frame_rate_hertz',
+    'glasshouse_hdmi_input_info',
     'glasshouse_hdmi_link_info',
     'glasshouse_hdmi_link_bits_per_second',
     'glasshouse_hdmi_qms',
@@ -156,8 +158,13 @@ function sampleLines(text) {
     'glasshouse_oled_refresher_running 0',
     'glasshouse_oled_refresher_scheduled 0',
     'glasshouse_oled_failure_alerts_total 0',
+    'glasshouse_foreground_app_info{app_id="com.webos.app.hdmi4",app_name="PC"} 1',
     'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1',
-    'glasshouse_signal_vrr 0'
+    'glasshouse_signal_vrr 0',
+    'glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="HDMI 1"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi2",app_id="com.webos.app.hdmi2",name="HDMI 2"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi3",app_id="com.webos.app.hdmi3",name="HDMI 3"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi4",app_id="com.webos.app.hdmi4",name="PC"} 1'
   ]);
 
   // The same C4 in standby, from a server with the precise readings.
@@ -216,7 +223,11 @@ function sampleLines(text) {
     'glasshouse_oled_protection_enabled{protection="asbl"} 1',
     'glasshouse_oled_protection_enabled{protection="gsr"} 1',
     'glasshouse_signal_info{dynamic_range="sdr",picture_mode="eco"} 1',
-    'glasshouse_signal_low_latency 0'
+    'glasshouse_signal_low_latency 0',
+    'glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="HDMI 1"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi2",app_id="com.webos.app.hdmi2",name="HDMI 2"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi3",app_id="com.webos.app.hdmi3",name="HDMI 3"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi4",app_id="com.webos.app.hdmi4",name="PC"} 1'
   ]);
 
   // A CX on webOS 5 with the screen on: all four cores online, a Pixel
@@ -287,7 +298,12 @@ function sampleLines(text) {
     'glasshouse_oled_refresher_runs_total 5',
     'glasshouse_oled_refresher_running 0',
     'glasshouse_oled_refresher_scheduled 0',
-    'glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1'
+    'glasshouse_foreground_app_info{app_id="com.webos.app.hdmi4",app_name="HDMI 4"} 1',
+    'glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="HDMI 1"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi2",app_id="com.webos.app.hdmi2",name="HDMI 2"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi3",app_id="com.webos.app.hdmi3",name="HDMI 3"} 1',
+    'glasshouse_hdmi_input_info{input="hdmi4",app_id="com.webos.app.hdmi4",name="HDMI 4"} 1'
   ]);
 
   // The CX later, playing HDR from HDMI 4. Its panel service reports GSR
@@ -314,7 +330,7 @@ function sampleLines(text) {
   var cxHdrStats = JSON.parse(JSON.stringify(require('./fixtures/stats-cx-webos5-hdr.json')));
   cxHdrStats.source_frame_rate = { hz: 119, vrr_type: 'gsync', port: 'HDMI4' };
   var withRate = sampleLines(prometheus.render(cxHdrStats, '0.80.1'));
-  assert.strictEqual(withRate[withRate.length - 1], 'glasshouse_signal_frame_rate_hertz{vrr_type="gsync"} 119');
+  assert.ok(withRate.indexOf('glasshouse_signal_frame_rate_hertz{vrr_type="gsync"} 119') !== -1, withRate.join('\n'));
   assert.strictEqual(standby.filter(function (l) { return /^glasshouse_signal_(vrr|frame_rate)/.test(l); }).length, 0);
   // The type in snake case, off without VRR, and no sample for 0, which is
   // nothing on the input.
@@ -470,6 +486,37 @@ function sampleLines(text) {
   // No dynamic range from the TV: no low-latency sample either.
   assert.deepEqual(signal(null, 'eco'), ['glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1']);
   console.log('  ✓ dynamic range and picture mode are put into categories');
+})();
+
+// 2c. The foreground app and the HDMI inputs' names, which join on app_id
+(function testForegroundAndInputs() {
+  function matching(stats, re) {
+    return sampleLines(prometheus.render(stats, '')).filter(function (l) { return re.test(l); });
+  }
+  var foreground = /^glasshouse_foreground_app_info/;
+  var inputs = /^glasshouse_hdmi_input_info/;
+  // The B8 with the screen off still has its foreground app.
+  var b8 = require('./fixtures/stats-b8-webos4.json');
+  assert.deepEqual(matching(b8, foreground), ['glasshouse_foreground_app_info{app_id="com.webos.app.hdmi2",app_name="Apple TV"} 1']);
+  assert.ok(sampleLines(prometheus.render(b8, '')).indexOf('glasshouse_screen_on 0') !== -1);
+  assert.strictEqual(matching(b8, inputs)[1], 'glasshouse_hdmi_input_info{input="hdmi2",app_id="com.webos.app.hdmi2",name="Apple TV"} 1');
+  // In standby there is no foreground app, and the inputs keep their names.
+  var standby = require('./fixtures/stats-c4-webos9-standby.json');
+  assert.deepEqual(matching(standby, foreground), []);
+  assert.strictEqual(matching(standby, inputs).length, 4);
+  // The CX's AV input is not an HDMI input.
+  var cx = require('./fixtures/stats-cx-webos5.json');
+  assert.ok(cx.inputs['externalinput.av1']);
+  assert.deepEqual(matching(cx, inputs).map(function (l) { return /input="([^"]*)"/.exec(l)[1]; }),
+    ['hdmi1', 'hdmi2', 'hdmi3', 'hdmi4']);
+  // An app that is not an input, an empty id, and names needing escaping.
+  assert.deepEqual(matching({ app_id: 'netflix', app_name: 'Netflix' }, foreground),
+    ['glasshouse_foreground_app_info{app_id="netflix",app_name="Netflix"} 1']);
+  assert.deepEqual(matching({ app_id: '', app_name: '' }, foreground), []);
+  var quoted = { app_id: 'com.webos.app.hdmi1', app_name: 'Den"on\\s', inputs: { hdmi1: 'Den"on\\s', hdmi5: 'X' } };
+  assert.deepEqual(matching(quoted, foreground), ['glasshouse_foreground_app_info{app_id="com.webos.app.hdmi1",app_name="Den\\"on\\\\s"} 1']);
+  assert.deepEqual(matching(quoted, inputs), ['glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="Den\\"on\\\\s"} 1']);
+  console.log('  ✓ the foreground app and the HDMI input names are exported');
 })();
 
 // 3. Label values are escaped, and a missing one is empty rather than omitted
