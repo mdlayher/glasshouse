@@ -70,8 +70,6 @@ This project is intended to give a rooted webOS TV a useful local control surfac
 9. **[Opening the service menu, and unlocking it where it is locked](https://rorygallagher2024.github.io/lg-webos-dashboard/dashboard/service-menu/).** LG's own engineering menu, put on the TV screen from a browser which means no service remote is needed. Newer firmware shows a cut-down version of it until it is unlocked, which the dashboard can do as well.
 
 10. **[Reading all of it on the TV itself](https://rorygallagher2024.github.io/lg-webos-dashboard/dashboard/tv-app/).** An optional app on the home screen puts the same readings and controls on the TV, driven by the remote, for when there is no phone or laptop to hand.
- 
-11. **[Inspecting system logs and diagnostics](https://rorygallagher2024.github.io/lg-webos-dashboard/dashboard/tools/).** Live webOS system logs, Glasshouse service activity, and kernel ring buffer diagnostics with microsecond interleaving, instant search, and structured event inspection directly in the browser.
 
 ---
 
