@@ -88,6 +88,9 @@ console.log('Running test-telemetry.js ...');
     max_luminance: null, min_luminance: null, max_cll: null, max_fall: null,
     game_mode: true, freesync: true
   });
+  assert.strictEqual(telemetry.signalFormat({ video: [
+    { sink: 'MAIN', connected: true, videoInfo: { hdrType: 'NONE', colormetry: 'BT709' } }
+  ] }).type, 'sdr', 'an SDR source is sdr, not none');
   console.log('  ✓ signalFormat reads the connected sink\'s format and HDR metadata');
 })();
 
