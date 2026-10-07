@@ -160,7 +160,7 @@ function getFilteredEntries() {
   const qry = toolsQuery.toLowerCase().trim();
   return toolsEntries.filter(e => {
     if (toolsLevel === 'error' && e.level !== 'error') return false;
-    if (toolsLevel === 'warning' && e.level !== 'warning' && e.level !== 'error') return false;
+    if (toolsLevel === 'warning' && e.level !== 'warning') return false;
     if (toolsLevel === 'info' && e.level !== 'info') return false;
 
     if (qry) {

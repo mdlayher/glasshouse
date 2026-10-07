@@ -14,9 +14,9 @@ const TABS = {
   servicemenu: 'svcpane',
   screensaver: 'sspane',
   privacy:     'privpane',
+  advanced:    'advpane',
   mqtt:        'mqttpane',
   server:      'serverpane',
-  advanced:    'advpane',
   tools:       'toolspane'
 };
 let activeTab = null;
