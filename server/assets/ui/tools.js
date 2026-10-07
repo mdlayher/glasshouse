@@ -255,7 +255,10 @@ function renderToolsLogs() {
 function toggleToolsSource(src) {
   toolsSources[src] = !toolsSources[src];
   const btn = document.querySelector(`.tools-src-btn[data-src="${src}"]`);
-  if (btn) btn.classList.toggle('active', toolsSources[src]);
+  if (btn) {
+    btn.classList.toggle('active', toolsSources[src]);
+    btn.classList.toggle('on', toolsSources[src]);
+  }
   toolsExpandedIdx = null;
   loadLogs(false);
 }
@@ -263,7 +266,9 @@ function toggleToolsSource(src) {
 function setToolsLimit(lim) {
   toolsLimit = lim;
   document.querySelectorAll('.tools-lim-btn').forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.limit, 10) === lim);
+    const isAct = parseInt(b.dataset.limit, 10) === lim;
+    b.classList.toggle('active', isAct);
+    b.classList.toggle('on', isAct);
   });
   toolsExpandedIdx = null;
   loadLogs(false);
@@ -276,7 +281,9 @@ function setToolsLevelFilter(lvl) {
     toolsLevel = lvl;
   }
   document.querySelectorAll('.tools-lvl-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.level === toolsLevel);
+    const isAct = b.dataset.level === toolsLevel;
+    b.classList.toggle('active', isAct);
+    b.classList.toggle('on', isAct);
   });
   toolsExpandedIdx = null;
   updateToolsStats();
