@@ -335,7 +335,6 @@ console.log('Running test-telemetry.js ...');
   ], 'asleep without a lock is still powered; an unread receiver is left out');
   assert.deepEqual(telemetry.hdmiSources(['connected: on\n', null, null, null], { 1: 0 }), [],
     'the HDMI 2.0 driver\'s files have no 5V field');
-  assert.strictEqual(telemetry.hdmiSources(status, null), null);
   console.log('  ✓ a powered source is told from a link, by the input map');
 })();
 
@@ -359,12 +358,12 @@ console.log('Running test-telemetry.js ...');
 // 6a. The signal's timing as numbers, beside the string made from them, and
 // none for a port connected before the receiver has a timing
 (function testSignalTiming() {
-  var r = telemetry.getHdmiSignal(2);
+  var r = telemetry.getHdmiSignal(2, { 2: 1 });
   assert.strictEqual(r.signal, '3840x2160 @ 120Hz');
   assert.deepEqual(r.timing, { width: 3840, height: 2160, refresh_hz: 120 });
   var orig = mockEnv.files['/proc/lg/hdmi20/port0/status'];
   mockEnv.files['/proc/lg/hdmi20/port0/status'] = 'connected: on\n';
-  var bare = telemetry.getHdmiSignal(1);
+  var bare = telemetry.getHdmiSignal(1, { 1: 0 });
   mockEnv.files['/proc/lg/hdmi20/port0/status'] = orig;
   assert.strictEqual(bare.signal, 'Connected');
   assert.strictEqual(bare.timing, null);
@@ -561,7 +560,11 @@ telemetry.refreshInstalledApps(function (apps) {
         ]
       };
 
-      // 10. Full collectStats test (async)
+      // 10. Full collectStats test (async). configd has no input map, so
+      // HDMI 1 and 2 are on receivers 3 and 2 by the base table.
+      var hdmiFiles = mockEnv.files;
+      hdmiFiles['/proc/lg/hdmi20/port3/status'] = hdmiFiles['/proc/lg/hdmi20/port0/status'];
+      hdmiFiles['/proc/lg/hdmi20/port2/status'] = hdmiFiles['/proc/lg/hdmi20/port1/status'];
       telemetry.clearCache();
       telemetry.collectStats(function (stats) {
         assert.ok(stats, 'Expected stats payload');
@@ -574,7 +577,7 @@ telemetry.refreshInstalledApps(function (apps) {
         assert.ok(stats.oled && stats.oled.panel_hours === 3500);
         assert.ok(Array.isArray(stats.apps) && stats.apps.length === 2);
         assert.strictEqual(stats.signal, '3840x2160 @ 120Hz', 'stats signal matches active HDMI 2 input');
-        assert.ok(stats.hdmi_diag && stats.hdmi_diag.port === 1, 'stats hdmi_diag matches active port 1');
+        assert.ok(stats.hdmi_diag && stats.hdmi_diag.port === 2, 'stats hdmi_diag matches HDMI 2\'s receiver 2');
         assert.deepEqual(stats.source_frame_rate, { hz: 119, vrr_type: 'gsync', port: 'HDMI2' });
         assert.deepEqual(gameAsked, ['com.webos.app.hdmi2']);
         assert.deepEqual(stats.picture_engine, { colorimetry: 'BT.709', hdr_mode: 'sdr' });
@@ -600,23 +603,21 @@ telemetry.refreshInstalledApps(function (apps) {
           assert.strictEqual(internalStats.source_frame_rate, null, 'internal app yields no frame rate');
           assert.strictEqual(gameAsked[gameAsked.length - 1], '', 'off an input, game.js is told so');
 
-          // Switching to HDMI 1 (port 0)
+          // Switching to HDMI 1 (receiver 3)
           mockEnv.luna['com.webos.applicationManager/getForegroundAppInfo'] = { returnValue: true, appId: 'com.webos.app.hdmi1' };
           telemetry.clearCache();
           telemetry.collectStats(function (hdmi1Stats) {
-            assert.strictEqual(hdmi1Stats.signal, '3840x2160 @ 60Hz', 'HDMI 1 yields port 0 signal');
-            assert.ok(hdmi1Stats.hdmi_diag && hdmi1Stats.hdmi_diag.port === 0, 'HDMI 1 yields port 0 diagnostics');
+            assert.strictEqual(hdmi1Stats.signal, '3840x2160 @ 60Hz', 'HDMI 1 yields receiver 3\'s signal');
+            assert.ok(hdmi1Stats.hdmi_diag && hdmi1Stats.hdmi_diag.port === 3, 'HDMI 1 yields receiver 3\'s diagnostics');
 
-            // Switching to HDMI 2 on B8 hardware where HDMI 2 routes to PHY port 2 (port 1 disconnected)
-            mockEnv.files['/proc/lg/hdmi20/port2/status'] = mockEnv.files['/proc/lg/hdmi20/port1/status'];
-            delete mockEnv.files['/proc/lg/hdmi20/port1/status'];
+            // HDMI 2 with receiver 2 idle takes nothing from receiver 1.
+            delete hdmiFiles['/proc/lg/hdmi20/port2/status'];
+            delete hdmiFiles['/proc/lg/hdmi20/port3/status'];
             mockEnv.luna['com.webos.applicationManager/getForegroundAppInfo'] = { returnValue: true, appId: 'com.webos.app.hdmi2' };
             telemetry.clearCache();
-            telemetry.collectStats(function (b8Stats) {
-              assert.strictEqual(b8Stats.signal, '3840x2160 @ 120Hz', 'HDMI 2 yields port 2 signal when port 1 has no signal (B8 routing)');
-              assert.ok(b8Stats.hdmi_diag && b8Stats.hdmi_diag.port === 2, 'HDMI 2 yields port 2 diagnostics on B8 routing');
-              mockEnv.files['/proc/lg/hdmi20/port1/status'] = mockEnv.files['/proc/lg/hdmi20/port2/status'];
-              delete mockEnv.files['/proc/lg/hdmi20/port2/status'];
+            telemetry.collectStats(function (idleStats) {
+              assert.strictEqual(idleStats.signal, null, 'receiver 1 is not HDMI 2\'s');
+              assert.strictEqual(idleStats.hdmi_diag, null);
 
               mockEnv.luna['com.webos.applicationManager/getForegroundAppInfo'] = origApp;
               console.log('  ✓ active foreground app determines HDMI signal and diagnostics');
