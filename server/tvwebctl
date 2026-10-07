@@ -58,7 +58,7 @@ stop_app() {
   start-stop-daemon -K -q -p "$PIDFILE" 2>/dev/null
   # Catch instances started before this script existed.
   # shellcheck disable=SC2009  # busybox pgrep has no -f, so ps is the only way
-  for p in $(ps -eo pid,args 2>/dev/null | grep "$APP" | grep -v grep | awk '{print $1}'); do
+  for p in $(ps -eo pid,args 2>/dev/null | grep -E "$APP|remotebuttons" | grep -v grep | awk '{print $1}'); do
     [ "$p" = "$$" ] && continue
     kill -9 "$p" 2>/dev/null
   done
@@ -146,7 +146,11 @@ stuck_children() {
   [ -n "$node" ] || return
   for st in /proc/[0-9]*/stat; do
     read -r cpid _ _ ppid _ < "$st" 2>/dev/null || continue
-    [ "$ppid" = "$1" ] && [ "$(readlink "/proc/$cpid/exe" 2>/dev/null)" = "$node" ] && printf "%s " "$cpid"
+    [ "$ppid" = "$1" ] || continue
+    [ "$(readlink "/proc/$cpid/exe" 2>/dev/null)" = "$node" ] || continue
+    cmd=$(tr '\0' ' ' < "/proc/$cpid/cmdline" 2>/dev/null)
+    case "$cmd" in *remotebuttons*) continue ;; esac
+    printf "%s " "$cpid"
   done
 }
 

@@ -4,10 +4,14 @@
  * Reads Linux evdev streams on webOS remote input devices (/dev/input/event*)
  * to detect red, green, yellow, and blue button presses on LG Magic and IR remotes.
  *
+ * Runs in a dedicated worker child process to avoid blocking the main server's
+ * libuv threadpool when waiting on Linux evdev character devices.
+ *
  * Strict ES5 for Node 0.12.2 on webOS 4.
  */
 
 var fs = require('fs');
+var child_process = require('child_process');
 
 // Linux EV_KEY event type and button keycodes
 var EV_KEY = 1;
@@ -22,7 +26,7 @@ var BUTTON_CODES = {
 
 var configObj = null;
 var onButtonFn = null;
-var activeStreams = [];
+var workerProc = null;
 var activeDevices = [];
 var lastPressTime = {};
 var DEBOUNCE_MS = 200;
@@ -58,17 +62,6 @@ function findRcuDevices() {
   return found;
 }
 
-function stop() {
-  for (var i = 0; i < activeStreams.length; i++) {
-    try {
-      if (activeStreams[i].destroy) activeStreams[i].destroy();
-      else if (activeStreams[i].close) activeStreams[i].close();
-    } catch (e) {}
-  }
-  activeStreams = [];
-  activeDevices = [];
-}
-
 function handleParsedEvent(type, code, val) {
   if (type !== EV_KEY || val !== KEY_PRESS) return;
   var color = BUTTON_CODES[code];
@@ -80,7 +73,11 @@ function handleParsedEvent(type, code, val) {
   }
   lastPressTime[color] = now;
 
-  if (onButtonFn) {
+  if (process.argv.indexOf('--worker') !== -1) {
+    try {
+      process.stdout.write(color + ' ' + code + '\n');
+    } catch (e) {}
+  } else if (onButtonFn) {
     onButtonFn(color, code);
   }
 }
@@ -123,31 +120,112 @@ function createDeviceStream(devPath) {
     }
   });
 
-  stream.on('error', function (err) {
-    // Input device disconnects or access errors are handled gracefully
-  });
-
-  stream.on('end', function () {
-    var idx = activeStreams.indexOf(stream);
-    if (idx !== -1) activeStreams.splice(idx, 1);
-  });
-
+  stream.on('error', function (err) {});
   return stream;
+}
+
+function runWorker() {
+  process.stdout.on('error', function (err) {
+    if (err && err.code === 'EPIPE') process.exit(0);
+  });
+  if (process.stdin) {
+    process.stdin.resume();
+    process.stdin.on('end', function () {
+      process.exit(0);
+    });
+    process.stdin.on('close', function () {
+      process.exit(0);
+    });
+  }
+  var devs = findRcuDevices();
+  var streams = [];
+  for (var i = 0; i < devs.length; i++) {
+    var s = createDeviceStream(devs[i]);
+    if (s) streams.push(s);
+  }
+  process.on('SIGTERM', function () {
+    for (var j = 0; j < streams.length; j++) {
+      try {
+        if (streams[j].destroy) streams[j].destroy();
+        else if (streams[j].close) streams[j].close();
+      } catch (e) {}
+    }
+    process.exit(0);
+  });
+  setInterval(function () {}, 60000);
+}
+
+function stop() {
+  if (workerProc) {
+    try {
+      workerProc.kill('SIGTERM');
+    } catch (e) {}
+    workerProc = null;
+  }
+  activeDevices = [];
 }
 
 function start() {
   stop();
-  var devs = findRcuDevices();
-  for (var i = 0; i < devs.length; i++) {
-    var s = createDeviceStream(devs[i]);
-    if (s) {
-      activeStreams.push(s);
-      activeDevices.push(devs[i]);
+  activeDevices = findRcuDevices();
+  if (!activeDevices.length) return;
+
+  /** @type {any} */
+  var env = {};
+  for (var k in process.env) env[k] = process.env[k];
+  env.UV_THREADPOOL_SIZE = '16';
+
+  var child;
+  try {
+    child = child_process.spawn(process.execPath, [__filename, '--worker'], {
+      env: env,
+      stdio: ['pipe', 'pipe', 'inherit']
+    });
+  } catch (e) {
+    console.error('remotebuttons: failed to spawn worker: ' + e.message);
+    return;
+  }
+
+  workerProc = child;
+  var remainder = '';
+
+  if (child.stdout) {
+    child.stdout.on('error', function () {});
+    child.stdout.on('data', function (chunk) {
+      if (!chunk) return;
+      var str = remainder + chunk.toString('utf8');
+      var lines = str.split('\n');
+      remainder = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        var parts = line.split(' ');
+        var color = parts[0];
+        var code = parseInt(parts[1], 10);
+        if (BUTTON_CODES[code] && onButtonFn) {
+          onButtonFn(color, code);
+        }
+      }
+    });
+  }
+
+  child.on('error', function (err) {
+    console.error('remotebuttons: worker process error: ' + (err ? err.message : err));
+  });
+
+  child.on('exit', function () {
+    if (workerProc === child) {
+      workerProc = null;
+      if (isEnabled()) {
+        console.log('remotebuttons: worker exited, restarting in 1s...');
+        setTimeout(function () {
+          if (isEnabled()) start();
+        }, 1000);
+      }
     }
-  }
-  if (activeDevices.length) {
-    console.log('remotebuttons: listening for colored button events on ' + activeDevices.join(', '));
-  }
+  });
+
+  console.log('remotebuttons: listening for colored button events on ' + activeDevices.join(', ') + ' (worker pid ' + child.pid + ')');
 }
 
 function init(opts) {
@@ -178,8 +256,13 @@ function isEnabled() {
 function status() {
   return {
     enabled: isEnabled(),
-    devices: activeDevices.slice()
+    devices: activeDevices.slice(),
+    workerPid: workerProc ? workerProc.pid : null
   };
+}
+
+if (process.argv.indexOf('--worker') !== -1) {
+  runWorker();
 }
 
 module.exports = {

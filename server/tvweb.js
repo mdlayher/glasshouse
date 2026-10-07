@@ -1326,10 +1326,12 @@ function setupHomeAssistant() {
   });
 
   process.on('SIGTERM', function() {
+    remotebuttons.stop();
     if (mqttClient) mqttClient.disconnect();
     process.exit(0);
   });
   process.on('SIGINT', function() {
+    remotebuttons.stop();
     if (mqttClient) mqttClient.disconnect();
     process.exit(0);
   });
