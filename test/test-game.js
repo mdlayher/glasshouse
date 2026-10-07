@@ -220,6 +220,28 @@ function readNow(appId) {
   console.log('  ✓ a TV without the service is not asked again');
 })();
 
+// 6. webOS 5 lists the rate and type as strings
+(function testSublists() {
+  delete require.cache[require.resolve('../server/lib/game')];
+  game = require('../server/lib/game');
+  game.init({ lunaCached: function (uri, payload, ttl, cb) { cache.get(uri, payload, ttl, cb); } });
+  cache.forget();
+  // As a CX (webOS 5.6) answers with a 4K60 source on HDMI 4.
+  replies.w1 = { returnValue: true, port: 'HDMI4', pipelineId: 'w1', vrrInfo: {
+    sublist_1: '60.0Hz', sublist_2: 'FIXED', sublist_3: '3840 x 2160P@60', sublist_4: 'YCBCR422 8b TM HDR10  ',
+    sublist_5: '', sublist_6: '', sublist_7: '', sublist_8: '', sublist_9: '', sublist_10: '' } };
+  var got = 'pending';
+  game.read(HDMI4, function (r) { got = r; });
+  running(BIND)[0].handlers.message({ returnValue: true, broadcastId: 'w1' });
+  assert.deepEqual(got, { frameRate: 60, vrrType: 'off', port: 'HDMI4' });
+
+  game.frameRate();
+  running(VRR)[0].handlers.message(replies.w1);
+  assert.deepEqual(game.frameRate(), { frameRate: 60, vrrType: 'off', port: 'HDMI4' });
+  game.stop();
+  console.log('  ✓ webOS 5\'s sublist strings give the rate, and FIXED reads as off');
+})();
+
 global.setTimeout = realSetTimeout;
 global.clearTimeout = realClearTimeout;
 console.log('ALL test-game.js assertions passed!\n');
