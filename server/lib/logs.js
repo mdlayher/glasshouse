@@ -14,6 +14,11 @@ function getTvwebLogPath() {
   return process.env.TVWEB_LOG || '/var/lib/tvweb/tvweb.log';
 }
 
+// Where tvwebctl keeps the last copy when it trims tvweb.log.
+function getTvwebRotatedLogPath() {
+  return getTvwebLogPath() + '.1';
+}
+
 /*
  * Reads a file's complete lines from `from` to the end, or the last maxBytes
  * of it when `from` is null, no longer in the file (rotated or truncated), on
@@ -275,12 +280,17 @@ function getLogs(opts, cb) {
   var bootTimeMs = now - Math.round(uptime * 1000);
 
   var tvwebPath = getTvwebLogPath();
+  var rotPath = getTvwebRotatedLogPath();
   var sysAvailable = fs.existsSync(MESSAGES_LOG);
-  var ghAvailable = fs.existsSync(tvwebPath);
+  var ghAvailable = fs.existsSync(tvwebPath) || fs.existsSync(rotPath);
 
   var meta = {
     system: { available: sysAvailable, path: MESSAGES_LOG },
-    glasshouse: { available: ghAvailable, path: tvwebPath },
+    glasshouse: {
+      available: ghAvailable,
+      path: tvwebPath,
+      rotatedAvailable: fs.existsSync(rotPath)
+    },
     kernel: { available: true }
   };
 
@@ -299,6 +309,7 @@ function getLogs(opts, cb) {
     cursor.push(name + ':' + r.end + ':' + r.ino);
     var entries = parse(r.text);
     for (var e = 0; e < entries.length; e++) allEntries.push(entries[e]);
+    return { whole: r.whole, count: entries.length };
   }
 
   if (wantSystem && sysAvailable) {
@@ -306,7 +317,16 @@ function getLogs(opts, cb) {
   }
 
   if (wantGlasshouse && ghAvailable) {
-    readSource('glasshouse', tvwebPath, function (text) { return parseGlasshouseLogs(text, bootTimeMs, uptime); });
+    var gh = readSource('glasshouse', tvwebPath, function (text) { return parseGlasshouseLogs(text, bootTimeMs, uptime); });
+    // Just after tvwebctl trims tvweb.log it holds a few lines: a whole read
+    // that comes up short is topped up from the copy it kept, oldest first.
+    if (gh && gh.whole && gh.count < limit && fs.existsSync(rotPath)) {
+      var rot = readLines(rotPath, null, '', MAX_FILE_READ);
+      if (rot) {
+        var rotEntries = parseGlasshouseLogs(rot.text, bootTimeMs, uptime);
+        for (var o = 0; o < rotEntries.length; o++) allEntries.push(rotEntries[o]);
+      }
+    }
   }
 
   function finish() {
@@ -399,5 +419,7 @@ module.exports = {
   parseGlasshouseLogs: parseGlasshouseLogs,
   parseKernelLogs: parseKernelLogs,
   detectLevel: detectLevel,
-  formatFatalError: formatFatalError
+  formatFatalError: formatFatalError,
+  getTvwebLogPath: getTvwebLogPath,
+  getTvwebRotatedLogPath: getTvwebRotatedLogPath
 };
