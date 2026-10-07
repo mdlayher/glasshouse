@@ -42,7 +42,7 @@ async function loadServiceMenu() {
     <div class="oled-row">
       <div class="oled-main">
         <div class="oled-name">${t('svc.open', 'Open')}<span class="oled-sub">${t('svc.open.sub', 'On the TV screen')}</span></div>
-        <div class="oled-desc">${t('svc.open.desc', 'Puts the menu on the TV, where it asks for a four-digit PIN \u2014 usually 0413, though it varies by model and region. EZ Adjust is for configuration and feature tweaks (such as Tool Options and auto-dimming protections like TPC and GSR). In Start is for system diagnostics, hardware readouts, total power-on hours (UTT), and error logs.')}</div>
+        <div class="oled-desc">${t('svc.open.desc', 'Puts the menu on the TV, where it asks for a four-digit PIN \u2014 usually 0413, though it varies by model and region. In Start is for system diagnostics, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). EZ Adjust is for hardware configuration, Tool Options, and white balance calibration.')}</div>
       </div>
       <div class="oled-ctl">
         <button class="pill" data-svc="open" data-menu="ezAdjust" ${dis}>EZ Adjust</button>

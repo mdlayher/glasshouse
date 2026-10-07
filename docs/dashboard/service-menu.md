@@ -6,8 +6,8 @@ Newer firmware shows a cut-down version until it is unlocked, and the dashboard 
 
 ### EZ Adjust vs In Start
 
-* **EZ Adjust**: The hardware and picture configuration menu. Used for Tool Option tweaks, audio and display calibration parameters, and feature toggles (such as disabling TPC and GSR auto-dimming protections on OLED panels).
-* **In Start**: The factory diagnostic and telemetry menu. Used for inspecting system status, total power-on hours (UTT), firmware and SoC revisions, eMMC storage health, and internal error logs.
+* **EZ Adjust**: The hardware configuration and calibration menu. Used for Tool Options (1–7), model and area/regional options, and factory white balance calibration.
+* **In Start**: The factory diagnostic and telemetry menu. Used for inspecting system status, total power-on hours (UTT), firmware and SoC revisions, error logs, and OLED panel protections (such as disabling TPC and GSR auto-dimming).
 
 > [!WARNING]
 > The service menu provides low-level hardware and calibration control. Changing unfamiliar values in EZ Adjust or In Start can cause permanent display corruption or render the TV unbootable.

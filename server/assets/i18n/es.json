@@ -3920,8 +3920,8 @@
   "from": "Open"
  },
  "svc.open.desc": {
-  "text": "Muestra el menú en la TV, que pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región. EZ Adjust es para ajustes de configuración y funciones (como opciones Tool Option y protecciones de atenuación automática como TPC y GSR). In Start es para diagnósticos del sistema, lecturas de hardware, horas totales de uso (UTT) y registros de errores.",
-  "from": "Puts the menu on the TV, where it asks for a four-digit PIN — usually 0413, though it varies by model and region. EZ Adjust is for configuration and feature tweaks (such as Tool Options and auto-dimming protections like TPC and GSR). In Start is for system diagnostics, hardware readouts, total power-on hours (UTT), and error logs."
+  "text": "Muestra el menú en la TV, que pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región. In Start es para diagnósticos del sistema, horas totales de uso (UTT), registros de errores y protecciones OLED (TPC y GSR). EZ Adjust es para configuración de hardware, opciones Tool Option y calibración de balance de blancos.",
+  "from": "Puts the menu on the TV, where it asks for a four-digit PIN — usually 0413, though it varies by model and region. In Start is for system diagnostics, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). EZ Adjust is for hardware configuration, Tool Options, and white balance calibration."
  },
  "svc.open.sub": {
   "text": "En la pantalla de la TV",
@@ -5072,8 +5072,8 @@
   "from": "Open EZ Adjust"
  },
  "tv.svc.openEzAdjust.hint": {
-  "text": "El menú de ingeniería de LG para configuración de hardware e imagen (como opciones Tool Option y protecciones de atenuación automática). La TV pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región.",
-  "from": "LG’s engineering menu for hardware and picture configuration (such as Tool Options and auto-dimming protections). The TV asks for a four-digit PIN — usually 0413, though it varies by model and region."
+  "text": "El menú de ingeniería de LG para configuración de hardware, opciones Tool Option y calibración de balance de blancos. La TV pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región.",
+  "from": "LG’s engineering menu for hardware configuration, Tool Options, and white balance calibration. The TV asks for a four-digit PIN — usually 0413, though it varies by model and region."
  },
  "tv.svc.openEzAdjust.press": {
   "text": "Pulsa OK para abrir",
@@ -5084,8 +5084,8 @@
   "from": "Open In Start"
  },
  "tv.svc.openInStart.hint": {
-  "text": "El menú de diagnóstico de fábrica de LG para el estado del sistema, horas totales de uso (UTT), lecturas de hardware y registros de errores. La TV pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región.",
-  "from": "LG’s factory diagnostic menu for system status, total power-on hours (UTT), hardware readouts, and error logs. The TV asks for a four-digit PIN — usually 0413, though it varies by model and region."
+  "text": "El menú de diagnóstico de fábrica de LG para el estado del sistema, horas totales de uso (UTT), registros de errores y protecciones OLED (TPC y GSR). La TV pide un PIN de cuatro dígitos - normalmente 0413, aunque varía según el modelo y la región.",
+  "from": "LG’s factory diagnostic menu for system status, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). The TV asks for a four-digit PIN — usually 0413, though it varies by model and region."
  },
  "tv.svc.openInStart.press": {
   "text": "Pulsa OK para abrir",

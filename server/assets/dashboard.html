@@ -1034,10 +1034,10 @@ function svcRows(d) {
   if (d.app && d.writable) {
     r.push({ label: t('tv.svc.openEzAdjust', 'Open EZ Adjust'), value: '→', cls: 'act', act: 'menu', key: 'ezAdjust',
              press: t('tv.svc.openEzAdjust.press', 'Press OK to open'),
-             hint: t('tv.svc.openEzAdjust.hint', 'LG’s engineering menu for hardware and picture configuration (such as Tool Options and auto-dimming protections). The TV asks for a four-digit PIN — usually 0413, though it varies by model and region.') });
+             hint: t('tv.svc.openEzAdjust.hint', 'LG’s engineering menu for hardware configuration, Tool Options, and white balance calibration. The TV asks for a four-digit PIN — usually 0413, though it varies by model and region.') });
     r.push({ label: t('tv.svc.openInStart', 'Open In Start'), value: '→', cls: 'act', act: 'menu', key: 'inStart',
              press: t('tv.svc.openInStart.press', 'Press OK to open'),
-             hint: t('tv.svc.openInStart.hint', 'LG’s factory diagnostic menu for system status, total power-on hours (UTT), hardware readouts, and error logs. The TV asks for a four-digit PIN — usually 0413, though it varies by model and region.') });
+             hint: t('tv.svc.openInStart.hint', 'LG’s factory diagnostic menu for system status, total power-on hours (UTT), error logs, and OLED protections (TPC and GSR). The TV asks for a four-digit PIN — usually 0413, though it varies by model and region.') });
   }
   if (r.length === 1) r.push({ label: t('tv.svc.notAvailableOnThis', 'Not available on this TV'), value: '' });
   return r;
