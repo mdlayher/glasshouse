@@ -88,15 +88,6 @@ function renderUpdate(d) {
     });
   }
 
-  if (typeof d.allowRemoteButtons === 'boolean') {
-    updateToggle('exp-remotebuttons', {
-      cls: d.allowRemoteButtons ? 'good' : 'idle',
-      label: d.allowRemoteButtons ? t('common.on', 'On') : t('common.off', 'Off'),
-      on: d.allowRemoteButtons,
-      disabled: !d.writable
-    });
-  }
-
   if (typeof d.allowTileHiding === 'boolean') {
     updateToggle('exp-tilehiding', {
       cls: d.allowTileHiding ? 'good' : 'idle',
@@ -344,13 +335,6 @@ async function toggleAutoCheck() {
   const b = q('upd-auto');
   b.disabled = true;
   const r = await sendCommand('updateAutoCheck', !b.dataset.on);
-  if (r && r.ok) renderUpdate(r); else loadUpdate();
-}
-
-async function toggleExpRemoteButtons() {
-  const b = q('exp-remotebuttons');
-  b.disabled = true;
-  const r = await sendCommand('setRemoteButtonsAllowed', !b.dataset.on);
   if (r && r.ok) renderUpdate(r); else loadUpdate();
 }
 

@@ -83,7 +83,6 @@ var lgSettings = null;
 var updater = null;
 /** @type {typeof import('./devtools')} */
 var devtoolsModule = null;
-var remoteButtonsModule = null;
 var republishDiscoveryFn = null;
 var tvAppFn = null;
 var restartSelfFn = null;
@@ -871,21 +870,6 @@ function doControl(action, value, cb) {
         }
       });
 
-    case 'setRemoteButtonsAllowed':
-      var allowBtns = (value === true || value === 'on' || value === 'true');
-      if (!writeSettingsFn) return cb({ ok: false, error: 'no writeSettings handler configured' });
-      return writeSettingsFn({ allowRemoteButtons: allowBtns }, function (err) {
-        if (err) return cb({ ok: false, error: 'could not save setting: ' + err.message });
-        if (config) config.allowRemoteButtons = allowBtns;
-        if (remoteButtonsModule) {
-          remoteButtonsModule.setEnabled(allowBtns);
-        }
-        if (republishDiscoveryFn) {
-          republishDiscoveryFn();
-        }
-        cb(getUpdateSummary());
-      });
-
     default:
       return cb({ ok: false, error: 'unknown action' });
   }
@@ -907,7 +891,6 @@ function init(opts) {
   if (opts.lgSettings) lgSettings = opts.lgSettings;
   if (opts.updater) updater = opts.updater;
   if (opts.devtools) devtoolsModule = opts.devtools;
-  if (opts.remoteButtons) remoteButtonsModule = opts.remoteButtons;
   if (opts.republishDiscovery) republishDiscoveryFn = opts.republishDiscovery;
   if (opts.tvApp) tvAppFn = opts.tvApp;
   if (opts.restartSelf) restartSelfFn = opts.restartSelf;

@@ -29,12 +29,12 @@ var BUTTON_CODES = {
   18874388: 'blue'
 };
 
-var configObj = null;
 var onButtonFn = null;
 var workerProc = null;
 var activeDevices = [];
 var lastPressTime = {};
 var DEBOUNCE_MS = 200;
+var running = false;
 
 function findRcuDevices() {
   var found = [];
@@ -161,6 +161,7 @@ function runWorker() {
 }
 
 function stop() {
+  running = false;
   if (workerProc) {
     try {
       workerProc.kill('SIGTERM');
@@ -176,10 +177,16 @@ function getPythonBin() {
   return null;
 }
 
+function isSupported() {
+  var devs = findRcuDevices();
+  return devs.length > 0 || fs.existsSync('/tmp/var/log/inputcommon');
+}
+
 function start() {
   stop();
+  running = true;
+  if (!isSupported()) return;
   activeDevices = findRcuDevices();
-  if (!activeDevices.length) return;
 
   var pyBin = getPythonBin();
   var pyScript = path.join(__dirname, 'remotebuttons.py');
@@ -235,46 +242,31 @@ function start() {
   child.on('exit', function () {
     if (workerProc === child) {
       workerProc = null;
-      if (isEnabled()) {
+      if (running) {
         console.log('remotebuttons: worker exited, restarting in 1s...');
         setTimeout(function () {
-          if (isEnabled()) start();
+          if (running) start();
         }, 1000);
       }
     }
   });
 
-  console.log('remotebuttons: listening for colored button events on ' + activeDevices.join(', ') + ' (worker pid ' + child.pid + ')');
+  console.log('remotebuttons: listening for colored button events on ' + (activeDevices.length ? activeDevices.join(', ') : 'inputcommon') + ' (worker pid ' + child.pid + ')');
 }
 
 function init(opts) {
   opts = opts || {};
-  configObj = opts.config;
   onButtonFn = opts.onButton;
-
-  if (configObj && configObj.allowRemoteButtons) {
-    start();
-  }
 }
 
-function setEnabled(enabled) {
-  enabled = !!enabled;
-  if (configObj) configObj.allowRemoteButtons = enabled;
-  if (enabled) {
-    start();
-  } else {
-    stop();
-    console.log('remotebuttons: stopped listening for button events');
-  }
-}
-
-function isEnabled() {
-  return !!(configObj && configObj.allowRemoteButtons);
+function isRunning() {
+  return running && !!workerProc;
 }
 
 function status() {
   return {
-    enabled: isEnabled(),
+    running: isRunning(),
+    supported: isSupported(),
     devices: activeDevices.slice(),
     workerPid: workerProc ? workerProc.pid : null
   };
@@ -291,7 +283,7 @@ module.exports = {
   init: init,
   start: start,
   stop: stop,
-  setEnabled: setEnabled,
-  isEnabled: isEnabled,
+  isSupported: isSupported,
+  isRunning: isRunning,
   status: status
 };

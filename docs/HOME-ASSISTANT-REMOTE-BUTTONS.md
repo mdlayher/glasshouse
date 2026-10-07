@@ -12,30 +12,15 @@ Because it is exposed as an `event` entity rather than a `sensor`, every press f
 
 ---
 
-## How to Turn It On
+## Automatic Availability
 
-This feature is **experimental** and turned off by default.
+Remote button event capture is **automatically enabled** whenever Home Assistant MQTT integration is configured and the TV hardware supports remote input capture.
 
-### From the Dashboard
+No manual toggle or configuration flag is needed:
 
-1. Open the dashboard in your browser.
-2. Go to the **Server** tab (`/?tab=server`).
-3. Scroll down to **Experimental features**.
-4. Toggle **Remote button events** to **On**.
-
-Home Assistant will automatically discover the `event.lg_tv_remote_button` entity within seconds.
-
-### From `config.json`
-
-Add `"allowRemoteButtons": true` to your `config.json`:
-
-```json
-{
-  "allowRemoteButtons": true
-}
-```
-
-Then restart the server or re-run `./deploy.sh <tv-ip>`.
+- **Enabled with MQTT**: When MQTT is enabled in your configuration (**Server** → **Home Assistant**), Glasshouse checks whether your TV model exposes remote control input devices (RCU event devices in `/proc/bus/input/devices` or input log).
+- **Zero Overhead when MQTT is Off**: If MQTT is disabled or not configured, the remote button listener process is not spawned and uses zero CPU or memory.
+- **Hardware-Supported**: On supported hardware (such as LG B8, C2, and other webOS 4+ TVs), the `event.lg_tv_remote_button` entity is automatically discovered in Home Assistant. On unsupported platforms (such as emulators), the entity is automatically withheld from discovery.
 
 ### Availability & Boot Caveats
 
@@ -240,4 +225,4 @@ trigger:
 - **Input Devices**: webOS exposes remote input streams via `/dev/input/event*` devices (`LGE RCU` for infrared, `LGE M-RCU` for Bluetooth Magic Remotes).
 - **Non-Invasive**: The listener reads the Linux kernel input stream passively without injecting binaries or intercepting system processes.
 - **Debouncing**: Hardware keypresses across duplicate event devices are automatically debounced within 200 ms to prevent double-triggering.
-- **State Cleanup**: When the feature is disabled, the Home Assistant discovery payload is automatically withdrawn so unused entities do not clutter your setup.
+- **Automatic Discovery**: On supported hardware, the entity is discovered automatically; on unsupported hardware or emulators, the discovery entity is withheld.

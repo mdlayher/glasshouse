@@ -561,7 +561,6 @@ function updateSummary() {
   s.allowTileHiding = !!(appsModule && appsModule.tileHidingAllowed && appsModule.tileHidingAllowed());
   s.allowOnWebos10 = !!(screensaversModule && screensaversModule.allowedAnyway && screensaversModule.allowedAnyway());
   s.isWebos10 = !!(screensaversModule && screensaversModule.slowSwitch && screensaversModule.slowSwitch());
-  s.allowRemoteButtons = !!(config && config.allowRemoteButtons);
   s.prometheusEnabled = prometheusEnabled();
   return s;
 }

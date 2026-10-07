@@ -1,10 +1,6 @@
 # Experimental features
 
-Three features are experimental and off by default. They are turned on under **Server** → **Experimental features**.
-
-## Remote button events
-
-Listens for red, green, yellow, and blue button presses on LG Magic and IR remotes to publish events to Home Assistant. Covered in detail in [Remote Button Events](HOME-ASSISTANT-REMOTE-BUTTONS.md).
+Two features are experimental and off by default. They are turned on under **Server** → **Experimental features**.
 
 ## Hiding home screen system apps
 

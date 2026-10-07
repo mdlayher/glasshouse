@@ -6,9 +6,7 @@
 
 var assert = require('assert');
 var remotebuttons = require('../server/lib/remotebuttons');
-var controls = require('../server/lib/controls');
 var ha = require('../server/lib/ha');
-var routes = require('../server/lib/routes');
 
 var tests = [];
 function test(name, fn) { tests.push([name, fn]); }
@@ -23,7 +21,6 @@ test('BUTTON_CODES maps 398-401 to red, green, yellow, blue', function () {
 test('handleParsedEvent ignores non-EV_KEY, non-press, or unknown keycodes', function () {
   var called = 0;
   remotebuttons.init({
-    config: { allowRemoteButtons: true },
     onButton: function () { called++; }
   });
 
@@ -45,7 +42,6 @@ test('handleParsedEvent ignores non-EV_KEY, non-press, or unknown keycodes', fun
 test('handleParsedEvent calls onButton for each color and debounces rapid duplicates', function () {
   var events = [];
   remotebuttons.init({
-    config: { allowRemoteButtons: true },
     onButton: function (btn, code) {
       events.push({ btn: btn, code: code });
     }
@@ -75,73 +71,14 @@ test('handleParsedEvent calls onButton for each color and debounces rapid duplic
   assert.strictEqual(events[3].btn, 'blue');
 });
 
-test('remotebuttons init and setEnabled lifecycle', function () {
-  var cfg = { allowRemoteButtons: false };
-  remotebuttons.init({ config: cfg });
-  assert.strictEqual(remotebuttons.isEnabled(), false);
-  assert.strictEqual(remotebuttons.status().enabled, false);
-
-  remotebuttons.setEnabled(true);
-  assert.strictEqual(remotebuttons.isEnabled(), true);
-  assert.strictEqual(remotebuttons.status().enabled, true);
-  assert.strictEqual(cfg.allowRemoteButtons, true);
-
-  remotebuttons.setEnabled(false);
-  assert.strictEqual(remotebuttons.isEnabled(), false);
-  assert.strictEqual(remotebuttons.status().enabled, false);
-  assert.strictEqual(cfg.allowRemoteButtons, false);
-});
-
-test('controls doControl setRemoteButtonsAllowed toggles setting and republishes discovery', function () {
-  var config = { allowControl: true, allowRemoteButtons: false };
-  var written = null;
-  var republishCount = 0;
-  var mockRemoteButtons = {
-    enabled: false,
-    setEnabled: function (v) { this.enabled = v; }
-  };
-
-  controls.init({
-    config: config,
-    remoteButtons: mockRemoteButtons,
-    republishDiscovery: function () { republishCount++; },
-    writeSettings: function (patch, cb) {
-      written = patch;
-      cb(null);
-    },
-    updateSummary: function () {
-      return { ok: true, allowRemoteButtons: config.allowRemoteButtons };
-    }
-  });
-
-  // Enable
-  controls.doControl('setRemoteButtonsAllowed', true, function (res) {
-    assert.strictEqual(res.ok, true);
-    assert.strictEqual(written.allowRemoteButtons, true);
-    assert.strictEqual(config.allowRemoteButtons, true);
-    assert.strictEqual(mockRemoteButtons.enabled, true);
-    assert.strictEqual(republishCount, 1);
-  });
-
-  // Disable
-  controls.doControl('setRemoteButtonsAllowed', false, function (res) {
-    assert.strictEqual(res.ok, true);
-    assert.strictEqual(written.allowRemoteButtons, false);
-    assert.strictEqual(config.allowRemoteButtons, false);
-    assert.strictEqual(mockRemoteButtons.enabled, false);
-    assert.strictEqual(republishCount, 2);
-  });
-});
-
-test('controls doControl setRemoteButtonsAllowed refused when allowControl is false', function () {
-  var config = { allowControl: false, allowRemoteButtons: false };
-  controls.init({
-    config: config
-  });
-
-  controls.doControl('setRemoteButtonsAllowed', true, function (res) {
-    assert.strictEqual(res.ok, false);
-  });
+test('remotebuttons lifecycle and status', function () {
+  remotebuttons.stop();
+  assert.strictEqual(remotebuttons.isRunning(), false);
+  assert.strictEqual(typeof remotebuttons.isSupported(), 'boolean');
+  var s = remotebuttons.status();
+  assert.strictEqual(s.running, false);
+  assert.strictEqual(typeof s.supported, 'boolean');
+  assert.strictEqual(Array.isArray(s.devices), true);
 });
 
 test('Home Assistant discovery builds remote_button entity with red/green/yellow/blue events', function () {
@@ -192,26 +129,6 @@ test('ha filterWithholds drops remote_button when hasRemoteButtons is false, kee
   });
   var hasBtnEnabled = filteredEnabled.some(function (e) { return e.id === 'remote_button'; });
   assert.strictEqual(hasBtnEnabled, true, 'should be kept when hasRemoteButtons is true');
-});
-
-test('routes updateSummary exposes allowRemoteButtons', function () {
-  routes.init({
-    config: { allowRemoteButtons: true },
-    updater: { updateSummary: function () { return { ok: true }; } },
-    privacy: { tvUpdatesBlocked: function () { return false; } },
-    devtools: { status: function () { return 'closed'; } }
-  });
-  var s1 = routes.updateSummary();
-  assert.strictEqual(s1.allowRemoteButtons, true);
-
-  routes.init({
-    config: { allowRemoteButtons: false },
-    updater: { updateSummary: function () { return { ok: true }; } },
-    privacy: { tvUpdatesBlocked: function () { return false; } },
-    devtools: { status: function () { return 'closed'; } }
-  });
-  var s2 = routes.updateSummary();
-  assert.strictEqual(s2.allowRemoteButtons, false);
 });
 
 // Run all tests

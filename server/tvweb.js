@@ -100,11 +100,6 @@ var CONFIG = {
   // `token`: it widens who can run code on the TV.
   allowNetworkDebugger: false,
 
-  // Listening for colored remote button presses (red, green, yellow, blue)
-  // on Magic and IR remotes is experimental. Off by default; set here or from
-  // the Server tab.
-  allowRemoteButtons: false,
-
   // PicCap is offered where it is installed; its Home Assistant entity is
   // switched off like any other.
   piccap: { pollIntervalMs: 30000 },
@@ -450,7 +445,6 @@ var onRemoteButton = function (button, code) {
 };
 
 remotebuttons.init({
-  config: CONFIG,
   onButton: function (button, code) {
     onRemoteButton(button, code);
   }
@@ -470,7 +464,6 @@ controls.init({
   lgSettings: lgSettings,
   updater: updater,
   devtools: devtools,
-  remoteButtons: remotebuttons,
   republishDiscovery: function () { republishDiscovery(); },
   tvApp: tvApp,
   restartSelf: restartSelf,
@@ -864,6 +857,9 @@ function setupHomeAssistant() {
     });
     mqttClient.publish(mqttTopics.eventsButton, payload, false);
   };
+  if (remotebuttons.isSupported()) {
+    remotebuttons.start();
+  }
 
   MQTT_STATUS.broker = CONFIG.mqtt.host + ':' + mqttClient.opts.port;
   MQTT_STATUS.tls = useTls;
@@ -910,7 +906,7 @@ function setupHomeAssistant() {
       capabilities: telemetry.getCapabilities({
         updateCheck: !!(CONFIG.update && CONFIG.update.check),
         isOled: oled.getIsOled(),
-        hasRemoteButtons: !!CONFIG.allowRemoteButtons,
+        hasRemoteButtons: remotebuttons.isSupported(),
         userEntities: (CONFIG.mqtt && CONFIG.mqtt.entities) || {}
       })
     });
@@ -958,6 +954,7 @@ function setupHomeAssistant() {
   // The client has no publish acknowledgement, so this waits a moment for the
   // messages to leave.
   forgetHomeAssistant = function (cb) {
+    remotebuttons.stop();
     if (!mqttClient.connected) return cb();
     var topics = Object.keys(retained).filter(function (t) { return retained[t]; });
     topics.forEach(function (t) { mqttClient.publish(t, '', true); });
