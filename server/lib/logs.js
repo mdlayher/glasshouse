@@ -468,6 +468,24 @@ function redactEntry(entry) {
   };
 }
 
+/**
+ * Determine if a log entry with the given levelTag should be output
+ * under the configured verbosity setting ('quiet', 'info', 'debug').
+ * @param {string} levelTag 'INFO', 'WARN', 'ERR', 'DBG'
+ * @param {string} [configuredLevel='info']
+ * @returns {boolean}
+ */
+function shouldLog(levelTag, configuredLevel) {
+  var tag = (levelTag || 'INFO').toUpperCase();
+  var cfg = String(configuredLevel || 'info').toLowerCase();
+  if (tag === 'ERR' || tag === 'FATAL' || tag === 'ERROR') return true;
+  if (tag === 'WARN' || tag === 'WARNING') return true;
+  if (cfg === 'quiet' || cfg === 'error' || cfg === 'warn') return false;
+  if (tag === 'INFO') return true;
+  if (tag === 'DBG' || tag === 'DEBUG') return cfg === 'debug';
+  return true;
+}
+
 module.exports = {
   getLogs: getLogs,
   parseCursor: parseCursor,
@@ -478,6 +496,7 @@ module.exports = {
   formatFatalError: formatFatalError,
   redact: redact,
   redactEntry: redactEntry,
+  shouldLog: shouldLog,
   getTvwebLogPath: getTvwebLogPath,
   getTvwebRotatedLogPath: getTvwebRotatedLogPath
 };
