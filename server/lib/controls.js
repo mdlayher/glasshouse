@@ -83,6 +83,7 @@ var lgSettings = null;
 var updater = null;
 /** @type {typeof import('./devtools')} */
 var devtoolsModule = null;
+var republishDiscoveryFn = null;
 var tvAppFn = null;
 var restartSelfFn = null;
 var updateSummaryFn = null;
@@ -890,6 +891,7 @@ function init(opts) {
   if (opts.lgSettings) lgSettings = opts.lgSettings;
   if (opts.updater) updater = opts.updater;
   if (opts.devtools) devtoolsModule = opts.devtools;
+  if (opts.republishDiscovery) republishDiscoveryFn = opts.republishDiscovery;
   if (opts.tvApp) tvAppFn = opts.tvApp;
   if (opts.restartSelf) restartSelfFn = opts.restartSelf;
   if (opts.updateSummary) updateSummaryFn = opts.updateSummary;

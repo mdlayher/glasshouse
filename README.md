@@ -105,7 +105,7 @@ Play only releases the app publicly once testers have stayed opted in for 14 day
 
 * [Installing](https://rorygallagher2024.github.io/lg-webos-dashboard/install/) and [tested TVs](https://rorygallagher2024.github.io/lg-webos-dashboard/tested-tvs/)
 * [The dashboard](https://rorygallagher2024.github.io/lg-webos-dashboard/dashboard/), tab by tab
-* [Home Assistant](https://rorygallagher2024.github.io/lg-webos-dashboard/HOME-ASSISTANT/)
+* [Home Assistant](https://rorygallagher2024.github.io/lg-webos-dashboard/HOME-ASSISTANT/), [entities](https://rorygallagher2024.github.io/lg-webos-dashboard/HOME-ASSISTANT-ENTITIES/) and [remote button events](https://rorygallagher2024.github.io/lg-webos-dashboard/HOME-ASSISTANT-REMOTE-BUTTONS/)
 * [Updating and uninstalling](https://rorygallagher2024.github.io/lg-webos-dashboard/managing/)
 * [Security](https://rorygallagher2024.github.io/lg-webos-dashboard/SECURITY/)
 * [What it changes on the TV](https://rorygallagher2024.github.io/lg-webos-dashboard/TV-CHANGES/)

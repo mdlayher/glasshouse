@@ -1,6 +1,6 @@
 # Home Assistant
 
-Setting up the MQTT bridge, and example automations. Every entity it publishes is listed in [Entities](HOME-ASSISTANT-ENTITIES.md).
+Setting up the MQTT bridge, and example automations. Every entity it publishes is listed in [Entities](HOME-ASSISTANT-ENTITIES.md), and listening to remote button presses is covered in [Remote Button Events](HOME-ASSISTANT-REMOTE-BUTTONS.md).
 
 ---
 

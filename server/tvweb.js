@@ -47,6 +47,7 @@ var say = require('./lib/say');
 var lgSettings = require('./lib/lgsettings');
 var game = require('./lib/game');
 var piccapTransport = require('./lib/piccap');
+var remotebuttons = require('./lib/remotebuttons');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -438,6 +439,17 @@ var INPUTS = ha.INPUTS;
 // from there go without it.
 var TILE_HIDING_OFF = 'hiding home-screen tiles is not available when installed from the Homebrew Channel';
 
+var republishDiscovery = function () {};
+var onRemoteButton = function (button, code) {
+  console.log('remotebuttons: ' + button + ' button pressed (code ' + code + ')');
+};
+
+remotebuttons.init({
+  onButton: function (button, code) {
+    onRemoteButton(button, code);
+  }
+});
+
 controls.init({
   luna: luna,
   piccap: piccap,
@@ -452,6 +464,7 @@ controls.init({
   lgSettings: lgSettings,
   updater: updater,
   devtools: devtools,
+  republishDiscovery: function () { republishDiscovery(); },
   tvApp: tvApp,
   restartSelf: restartSelf,
   updateSummary: routes.updateSummary,
@@ -831,6 +844,22 @@ function setupHomeAssistant() {
     console.log('mqtt: PicCap ' + (piccap.getState() ? 'answering' : 'gone') + ' - republishing discovery');
     publishDiscovery();
   };
+  republishDiscovery = function () {
+    if (!mqttClient || !mqttClient.connected) return;
+    publishDiscovery();
+  };
+  onRemoteButton = function (button, code) {
+    console.log('remotebuttons: ' + button + ' button pressed (code ' + code + ')');
+    if (!mqttClient || !mqttClient.connected) return;
+    var payload = JSON.stringify({
+      event_type: button,
+      button: button
+    });
+    mqttClient.publish(mqttTopics.eventsButton, payload, false);
+  };
+  if (remotebuttons.isSupported()) {
+    remotebuttons.start();
+  }
 
   MQTT_STATUS.broker = CONFIG.mqtt.host + ':' + mqttClient.opts.port;
   MQTT_STATUS.tls = useTls;
@@ -877,6 +906,7 @@ function setupHomeAssistant() {
       capabilities: telemetry.getCapabilities({
         updateCheck: !!(CONFIG.update && CONFIG.update.check),
         isOled: oled.getIsOled(),
+        hasRemoteButtons: remotebuttons.isSupported(),
         userEntities: (CONFIG.mqtt && CONFIG.mqtt.entities) || {}
       })
     });
@@ -924,6 +954,7 @@ function setupHomeAssistant() {
   // The client has no publish acknowledgement, so this waits a moment for the
   // messages to leave.
   forgetHomeAssistant = function (cb) {
+    remotebuttons.stop();
     if (!mqttClient.connected) return cb();
     var topics = Object.keys(retained).filter(function (t) { return retained[t]; });
     topics.forEach(function (t) { mqttClient.publish(t, '', true); });
@@ -1292,10 +1323,12 @@ function setupHomeAssistant() {
   });
 
   process.on('SIGTERM', function() {
+    remotebuttons.stop();
     if (mqttClient) mqttClient.disconnect();
     process.exit(0);
   });
   process.on('SIGINT', function() {
+    remotebuttons.stop();
     if (mqttClient) mqttClient.disconnect();
     process.exit(0);
   });
