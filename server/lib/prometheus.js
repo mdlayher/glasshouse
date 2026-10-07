@@ -143,6 +143,14 @@ function hdmiSources(s) {
   return Array.isArray(s.hdmi_sources) ? s.hdmi_sources : [];
 }
 
+// The HDMI inputs the TV names, by short id, as the other HDMI families number
+// them; AV and other inputs are left out.
+function hdmiInputNames(s) {
+  var names = s.inputs && typeof s.inputs === 'object' ? s.inputs : {};
+  return Object.keys(names).filter(function (k) { return /^hdmi[1-4]$/.test(k); }).sort()
+    .map(function (k) { return { input: k, name: names[k] }; });
+}
+
 function hdmiInput(link) {
   return { input: 'hdmi' + link.input };
 }
@@ -413,6 +421,13 @@ var FAMILIES = [
     samples: function (s) { return one(percent(path(s, ['picture', 'backlight_raw']))); }
   },
   {
+    name: 'glasshouse_foreground_app_info', type: 'gauge',
+    help: 'Always 1 for the app in the foreground, whether or not glasshouse_screen_on reports the screen lit, labelled with its id and its name: the name given an input in the TV\'s settings, an app\'s title, or the short id.',
+    samples: function (s) {
+      return typeof s.app_id === 'string' && s.app_id ? [[{ app_id: s.app_id, app_name: s.app_name }, 1]] : [];
+    }
+  },
+  {
     name: 'glasshouse_signal_info', type: 'gauge',
     help: 'Always 1, labelled with the dynamic range (sdr, hdr, dolby_vision, technicolor) and the picture mode the picture settings are using.',
     samples: function (s) {
@@ -460,6 +475,15 @@ var FAMILIES = [
       var hz = positive(path(s, ['source_frame_rate', 'hz']));
       var type = path(s, ['source_frame_rate', 'vrr_type']);
       return hz === null ? [] : [[{ vrr_type: typeof type === 'string' && type ? snakeCase(type) : 'off' }, hz]];
+    }
+  },
+  {
+    name: 'glasshouse_hdmi_input_info', type: 'gauge',
+    help: 'Always 1 for each HDMI input, labelled with the input, its app id, and the name given it in the TV\'s settings.',
+    samples: function (s) {
+      return hdmiInputNames(s).map(function (i) {
+        return [{ input: i.input, app_id: 'com.webos.app.' + i.input, name: i.name }, 1];
+      });
     }
   },
   {

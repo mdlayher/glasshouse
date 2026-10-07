@@ -60,6 +60,8 @@ The signal gauges describe the HDMI source on screen and have no sample otherwis
 
 The HDMI link families describe every input with a source linked to it, whichever input is on screen, and have no sample for an input without one; `glasshouse_hdmi_source_powered` has a sample for every input, linked or not. `input` is `hdmi1` to `hdmi4`, as the TV numbers its inputs. `phy_mode` is `frl_48`, `frl_40`, `frl_32`, `frl_24`, `frl_18`, `frl_9`, `tmds_6g`, or `tmds_3g`, and `other` for a mode outside these, which has no rate; `chroma` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`; and `hdcp` is `2_3`, `2_2`, `1_4`, or `none`. A chroma format or HDCP version outside these keeps its own name in snake case.
 
+`glasshouse_foreground_app_info` has a sample while an app is in the foreground, including with the screen off, and none in standby: `app_id` is the app's id, such as `com.webos.app.hdmi4` or `netflix`, and `app_name` is the name given an input in the TV's settings, an app's title, or the short id. `glasshouse_hdmi_input_info` has a sample for every HDMI input, labelled with `input`, its `app_id`, and the `name` given it in the TV's settings, so the foreground app joins it on `app_id` and the input then joins the HDMI link families on `input`.
+
 `version` is the Glasshouse version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `glasshouse_oled_panel_usage_seconds_total - glasshouse_oled_last_compensation_usage_seconds`, the uptime is `time() - glasshouse_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(glasshouse_cpu_seconds_total{mode="idle"}[5m]))`.
 
 | Metric                                            | Type    | Labels                                  | Value                                                       |
@@ -100,6 +102,7 @@ The HDMI link families describe every input with a source linked to it, whicheve
 | `glasshouse_oled_gsr_stress_events_total`         | counter |                                         | Stress events Global Stress Reduction has counted           |
 | `glasshouse_oled_protection_enabled`              | gauge   | `protection`                            | 1 when the protection is on: `asbl`, `gsr`                  |
 | `glasshouse_picture_backlight_ratio`              | gauge   |                                         | Backlight of the picture mode in use, OLED light on an OLED |
+| `glasshouse_foreground_app_info`                  | gauge   | `app_id`, `app_name`                    | 1                                                           |
 | `glasshouse_signal_info`                          | gauge   | `dynamic_range`, `picture_mode`         | 1                                                           |
 | `glasshouse_signal_low_latency`                   | gauge   |                                         | 1 while the picture is in low-latency mode (ALLM)           |
 | `glasshouse_signal_vrr`                           | gauge   |                                         | 1 while the HDMI source uses VRR                            |
@@ -107,6 +110,7 @@ The HDMI link families describe every input with a source linked to it, whicheve
 | `glasshouse_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
 | `glasshouse_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
 | `glasshouse_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |
+| `glasshouse_hdmi_input_info`                      | gauge   | `input`, `app_id`, `name`               | 1                                                           |
 | `glasshouse_hdmi_link_info`                       | gauge   | `input`, `phy_mode`, `chroma`, `hdcp`   | 1                                                           |
 | `glasshouse_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |
 | `glasshouse_hdmi_qms`                             | gauge   | `input`                                 | 1 while Quick Media Switching is active on the link         |
