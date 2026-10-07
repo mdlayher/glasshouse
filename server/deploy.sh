@@ -27,6 +27,14 @@ set -e
 
 TV=""
 PERSIST=1
+# The telnet fallback opens its socket through bash's /dev/tcp, so another
+# shell cannot run this script. Checked before the first bash-only line, which
+# a POSIX shell would otherwise report as a syntax error.
+if [ -z "$BASH_VERSION" ]; then
+  echo "deploy.sh needs bash: run it as 'bash deploy.sh <tv-ip>'" >&2
+  exit 2
+fi
+
 FORCE_TELNET=""
 APP_MODE=auto     # auto: add on a first install, leave an update alone
 for a in "$@"; do
