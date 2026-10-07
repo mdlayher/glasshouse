@@ -241,6 +241,23 @@ test('the cursor is read back as it was written', function () {
   assert.deepEqual(logs.parseCursor('rubbish,system:x'), {}, 'anything malformed is ignored');
 });
 
+test('formatFatalError formats stack traces and primitives with memory stats', function () {
+  var err = new Error('simulated test failure');
+  var lines = logs.formatFatalError(err);
+  assert.ok(Array.isArray(lines));
+  assert.ok(lines.length >= 2);
+  assert.ok(/^fatal: uncaught exception/.test(lines[0]));
+  assert.ok(lines[1].indexOf('Error: simulated test failure') !== -1);
+  for (var i = 0; i < lines.length; i++) {
+    assert.strictEqual(lines[i].indexOf('fatal: '), 0);
+  }
+
+  // String / non-Error crash values
+  var strLines = logs.formatFatalError('string error reason');
+  assert.ok(strLines.length >= 2);
+  assert.strictEqual(strLines[1], 'fatal: string error reason');
+});
+
 // Run all tests
 var failures = 0;
 // Every async test and the synchronous pass, so a test registered after an
