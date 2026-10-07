@@ -789,13 +789,17 @@ function getPictureEngineInfo() {
 // CTA-861-G's EOTF codes in the HDR static metadata; 4 to 7 are reserved.
 var HDR_EOTFS = ['sdr', 'hdr', 'pq', 'hlg'];
 
+// hdrType values renamed after snake-casing. An SDR source reports none,
+// and a C4 (webOS 9) reports player-led (low-latency) Dolby Vision as dolby_ll.
+var HDR_TYPES = { none: 'sdr', dolby_ll: 'dolby_vision_low_latency' };
+
 /*
  * The format and HDR metadata of the connected sink in videooutput's
  * getStatus, or null with none connected or no videoInfo, as in standby.
  * Luminances are in cd/m²: the minimum arrives in units of 0.0001. A MaxCLL
  * or MaxFALL of 0 means the source gave none, and is kept for the reader to
  * tell apart. colormetry "FUTURE" says the colorimetry is in
- * extendedColormetry. hdrType is NONE for an SDR source, named sdr here.
+ * extendedColormetry.
  */
 function signalFormat(reply) {
   var sinks = reply && Array.isArray(reply.video) ? reply.video : [];
@@ -817,7 +821,7 @@ function signalFormat(reply) {
   var type = typeof vi.hdrType === 'string' && vi.hdrType ?
     vi.hdrType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase() : null;
   return {
-    type: type === 'none' ? 'sdr' : type,
+    type: type && HDR_TYPES.hasOwnProperty(type) ? HDR_TYPES[type] : type,
     eotf: meta && typeof meta.EOTFtype === 'number' ? (HDR_EOTFS[meta.EOTFtype] || null) : null,
     colorimetry: typeof colorimetry === 'string' && colorimetry ? colorimetry : null,
     encoding: typeof vi.pixelEncoding === 'string' && vi.pixelEncoding ? vi.pixelEncoding : null,
