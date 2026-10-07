@@ -6,6 +6,7 @@ let toolsLevel = 'all';
 let toolsQuery = '';
 let toolsLive = true;
 let toolsAutoScroll = true;
+let toolsRedact = false;
 let toolsEntries = [];
 // The open row, by what it is rather than where: new lines on a live tab move
 // every row, so a position would drift onto another entry.
@@ -18,6 +19,30 @@ let toolsMeta = null;
 // for the sources and line limit it was read with.
 let toolsCursor = '';
 let toolsCursorKey = '';
+
+function redactToolsText(str) {
+  if (!str) return str;
+  return String(str)
+    .replace(/(:\/\/[^:]+:)[^@\s]+(@)/g, '$1<REDACTED>$2')
+    .replace(/((\?|&)(?:k|token|key|api_key|auth)=)[^&\s"'`>]+/gi, '$1<REDACTED>')
+    .replace(/(Bearer\s+)[A-Za-z0-9_\-\.]+/gi, '$1<REDACTED>')
+    .replace(/(["']?(?:password|passwd|secret|client_secret|access_token|refresh_token)["']?\s*[:=]\s*["']?)[^"',\s}]+(["']?)/gi, '$1<REDACTED>$2')
+    .replace(/(["']?(?:serial(?:_?number)?|device_?id|esn)["']?\s*[:=]\s*["']?)[A-Za-z0-9_-]{6,}(["']?)/gi, '$1<SERIAL>$2')
+    .replace(/(ssid["':=\s]+["'])[^\r\n"']*(["'])/gi, '$1<SSID>$2')
+    .replace(/\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\b/g, '<MAC>')
+    .replace(/(?:\bfe80:[0-9a-fA-F:]+\b|\b(?:[0-9a-fA-F]{1,4}:){3,7}[0-9a-fA-F]{1,4}\b|\b[0-9a-fA-F]{1,4}::[0-9a-fA-F:]*\b)/gi, '<IPV6>')
+    .replace(/\b(?!(?:127\.0\.0\.1|0\.0\.0\.0)\b)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g, '<IP>');
+}
+
+function toggleToolsRedact() {
+  toolsRedact = !toolsRedact;
+  const btn = q('tools-redact-btn');
+  if (btn) {
+    btn.classList.toggle('active', toolsRedact);
+    btn.classList.toggle('on', toolsRedact);
+  }
+  renderToolsLogs();
+}
 
 function formatLogTime(isoStr) {
   if (!isoStr) return '—';
@@ -226,16 +251,19 @@ function renderToolsLogs() {
     const uptime = e.mono != null ? t('tools.uptimeOffset', '+{sec}s uptime', { sec: e.mono.toFixed(1) }) : '';
     const fullTimeTip = esc(e.ts + (uptime ? ' (' + uptime + ')' : ''));
     const lvl = levelShort(e.level);
+    const displayMsg = toolsRedact ? redactToolsText(e.msg) : e.msg;
+    const displayRaw = toolsRedact ? redactToolsText(e.raw) : e.raw;
+    const displayProc = toolsRedact ? redactToolsText(e.proc) : e.proc;
 
     let detailHtml = '';
     if (isExpanded) {
-      const jsonPayload = extractJsonPayload(e.msg);
+      const jsonPayload = extractJsonPayload(displayMsg);
       detailHtml = `
         <div class="log-detail" onclick="event.stopPropagation()">
           <div class="log-detail-meta">
             <div><span class="lbl">${esc(t('tools.col.time', 'Time'))}:</span> <code>${esc(e.ts)}</code>${uptime ? ' (' + esc(uptime) + ')' : ''}</div>
             <div><span class="lbl">${esc(t('tools.col.source', 'Source'))}:</span> <code>${esc(e.source)}</code></div>
-            <div><span class="lbl">${esc(t('tools.col.process', 'Process'))}:</span> <code>${esc(e.proc)}</code></div>
+            <div><span class="lbl">${esc(t('tools.col.process', 'Process'))}:</span> <code>${esc(displayProc)}</code></div>
             <div><span class="lbl">${esc(t('tools.col.level', 'Level'))}:</span> <span class="log-lvl lvl-${lvl}">${lvl}</span></div>
           </div>
           <div class="log-detail-sec">
@@ -243,7 +271,7 @@ function renderToolsLogs() {
               <span>${esc(t('tools.rawLine', 'Raw log line'))}</span>
               <button type="button" class="pill" onclick="copyToolsRaw(${i}, this)">${esc(t('tools.copyRaw', 'Copy raw'))}</button>
             </div>
-            <pre class="log-raw-box"><code>${esc(e.raw)}</code></pre>
+            <pre class="log-raw-box"><code>${esc(displayRaw)}</code></pre>
           </div>
           ${jsonPayload ? `
           <div class="log-detail-sec">
@@ -260,8 +288,8 @@ function renderToolsLogs() {
         <div class="term-col term-col-time" title="${fullTimeTip}">${timeFormatted}</div>
         <div class="term-col term-col-src"><span class="log-src src-${esc(e.source)}">${esc(e.source)}</span></div>
         <div class="term-col term-col-lvl"><span class="log-lvl lvl-${lvl}">${lvl}</span></div>
-        <div class="term-col term-col-proc" title="${esc(e.proc)}">${highlightText(e.proc, toolsQuery)}</div>
-        <div class="term-col term-col-msg">${highlightText(e.msg, toolsQuery)}</div>
+        <div class="term-col term-col-proc" title="${esc(displayProc)}">${highlightText(displayProc, toolsQuery)}</div>
+        <div class="term-col term-col-msg">${highlightText(displayMsg, toolsQuery)}</div>
       </div>
       ${detailHtml}`;
   }
@@ -369,9 +397,12 @@ function toggleToolsLogDetail(idx) {
   renderToolsLogs();
 }
 
-// One line per entry, as Copy and Export both give it.
+// One line per entry, as Copy and Export both give it, with private details
+// taken out while Redact is on.
 function logLine(e) {
-  return `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${e.proc}] ${e.msg}`;
+  const msg = toolsRedact ? redactToolsText(e.msg) : e.msg;
+  const proc = toolsRedact ? redactToolsText(e.proc) : e.proc;
+  return `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${proc}] ${msg}`;
 }
 
 function copyToClipboard(text) {
@@ -425,8 +456,9 @@ async function copyToolsRaw(idx, btn) {
   const filtered = getFilteredEntries();
   const e = filtered[idx];
   if (!e) return;
+  const raw = toolsRedact ? redactToolsText(e.raw) : e.raw;
   try {
-    await copyToClipboard(e.raw);
+    await copyToClipboard(raw);
     if (btn) {
       const orig = btn.textContent;
       btn.textContent = t('tools.copied', 'Copied!');
@@ -444,7 +476,7 @@ async function copyToolsRaw(idx, btn) {
 function downloadToolsLogs() {
   const filtered = getFilteredEntries();
   if (!filtered.length) return;
-  const header = `# Glasshouse & webOS System Logs\n# Exported: ${new Date().toISOString()}\n# Entries: ${filtered.length}\n\n`;
+  const header = `# Glasshouse & webOS System Logs\n# Exported: ${new Date().toISOString()}\n# Entries: ${filtered.length}\n# Redacted: ${toolsRedact ? 'true' : 'false'}\n\n`;
   const lines = filtered.map(logLine);
   const content = header + lines.join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });

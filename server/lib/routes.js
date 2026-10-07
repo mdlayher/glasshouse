@@ -975,11 +975,13 @@ function handleRequest(req, res) {
     var sourcesParam = u.query.sources ? String(u.query.sources).split(',') : null;
     var limitParam = u.query.limit ? parseInt(u.query.limit, 10) : 100;
     var filterParam = u.query.filter ? String(u.query.filter) : '';
+    var redactParam = u.query.redact === '1' || u.query.redact === 'true';
     return logsModule.getLogs({
       sources: sourcesParam,
       limit: limitParam,
       filter: filterParam,
-      since: u.query.since ? String(u.query.since) : ''
+      since: u.query.since ? String(u.query.since) : '',
+      redact: redactParam
     }, function (err, result) {
       if (err) return send(res, 500, JSON.stringify({ ok: false, error: err.message }));
       send(res, 200, JSON.stringify(result));
