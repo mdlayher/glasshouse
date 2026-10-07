@@ -139,6 +139,10 @@ function hdmiLinks(s) {
   return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
 }
 
+function hdmiSources(s) {
+  return Array.isArray(s.hdmi_sources) ? s.hdmi_sources : [];
+}
+
 function hdmiInput(link) {
   return { input: 'hdmi' + link.input };
 }
@@ -493,6 +497,15 @@ var FAMILIES = [
         if (v !== null) out.push([hdmiInput(link), v]);
       });
       return out;
+    }
+  },
+  {
+    name: 'glasshouse_hdmi_source_powered', type: 'gauge',
+    help: '1 while a powered source is on the HDMI input\'s cable, whether or not its link is up, 0 otherwise.',
+    samples: function (s) {
+      return hdmiSources(s).map(function (source) {
+        return [hdmiInput(source), source.powered ? 1 : 0];
+      });
     }
   }
 ];

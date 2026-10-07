@@ -80,7 +80,8 @@ function sampleLines(text) {
     'glasshouse_signal_frame_rate_hertz',
     'glasshouse_hdmi_link_info',
     'glasshouse_hdmi_link_bits_per_second',
-    'glasshouse_hdmi_qms'
+    'glasshouse_hdmi_qms',
+    'glasshouse_hdmi_source_powered'
   ]);
 
   var renderings = {
@@ -409,6 +410,21 @@ function sampleLines(text) {
   // lines: no HDMI samples.
   assert.strictEqual(sampleLines(prometheus.render({ hdmi_links: null }, '')).length, 1);
   assert.strictEqual(sampleLines(prometheus.render({ hdmi_links: [] }, '')).length, 1);
+  // A source powered and linked, one powered without a link, and none.
+  var sources = sampleLines(prometheus.render({
+    hdmi_links: [{ input: 4, receiver: 0, phy_mode: 'FRL 12G 4L(R6)', chroma: 'R444', hdcp: 'HDCP0', tmds_clock_khz: null, qms: false }],
+    hdmi_sources: [
+      { input: 1, receiver: 3, powered: true },
+      { input: 3, receiver: 1, powered: false },
+      { input: 4, receiver: 0, powered: true }
+    ]
+  }, ''));
+  assert.deepEqual(sources.filter(function (l) { return /^glasshouse_hdmi_source_/.test(l); }), [
+    'glasshouse_hdmi_source_powered{input="hdmi1"} 1',
+    'glasshouse_hdmi_source_powered{input="hdmi3"} 0',
+    'glasshouse_hdmi_source_powered{input="hdmi4"} 1'
+  ]);
+  assert.strictEqual(sampleLines(prometheus.render({ hdmi_sources: null }, '')).length, 1);
   // eMMC state unknown: no samples rather than three zeros.
   assert.strictEqual(sampleLines(prometheus.render({ emmc: { eol: 'unknown' } }, '')).length, 1);
   console.log('  ✓ values are in base units, and unknown readings are left out');

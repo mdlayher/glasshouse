@@ -134,7 +134,11 @@ c4.hdmiReceiverMap(checked(function (map) {
           'glasshouse_hdmi_link_bits_per_second{input="hdmi1"} 4455000000',
           'glasshouse_hdmi_link_bits_per_second{input="hdmi4"} 48000000000',
           'glasshouse_hdmi_qms{input="hdmi1"} 0',
-          'glasshouse_hdmi_qms{input="hdmi4"} 0'
+          'glasshouse_hdmi_qms{input="hdmi4"} 0',
+          'glasshouse_hdmi_source_powered{input="hdmi1"} 1',
+          'glasshouse_hdmi_source_powered{input="hdmi2"} 0',
+          'glasshouse_hdmi_source_powered{input="hdmi3"} 0',
+          'glasshouse_hdmi_source_powered{input="hdmi4"} 1'
         ]);
         console.log('  ✓ every input with a link is in the stats and the metrics, by its input number');
         // A PC at 1080p 60 over TMDS: the rate follows the colour depth.
@@ -176,6 +180,7 @@ function noMap() {
     assert.strictEqual(s2.signal, null, 'receivers 1 and 2 are idle, and the PC on 0 is not HDMI 2');
     assert.strictEqual(s2.hdmi_diag, null);
     assert.strictEqual(s2.hdmi_links, null, 'no map, no telling which input a link is');
+    assert.strictEqual(s2.hdmi_sources, null);
     statsOn(old, 'com.webos.app.hdmi1', function (s1) {
       assert.strictEqual(s1.signal, '3840x2160 @ 120Hz', 'HDMI 1 guessed on receiver 0');
       assert.strictEqual(configdCalls, 1, 'an answer without a map is remembered too');

@@ -681,6 +681,24 @@ function hdmiLinks(status, map) {
 }
 
 /*
+ * Whether a powered source is on each HDMI input's cable, by the input map:
+ * is5Vconnected is the source's +5V on the cable, there with or without a
+ * link, as from a streamer asleep. The HDMI 2.0 driver's files have no such
+ * field, and their inputs are left out.
+ */
+function hdmiSources(status, map) {
+  if (!map) return null;
+  var sources = [];
+  for (var n = 1; n <= 4; n++) {
+    var raw = typeof map[n] === 'number' ? status[map[n]] : null;
+    var fiveVolt = raw ? raw.match(/is5Vconnected\[(\d)\]/i) : null;
+    if (!fiveVolt) continue;
+    sources.push({ input: n, receiver: map[n], powered: fiveVolt[1] === '1' });
+  }
+  return sources;
+}
+
+/*
  * The receiver, /proc/lg/hdmi20/port<n>, behind each HDMI input, from the
  * input map LG's input service loads from configd. Boards wire them
  * differently: a C4 (o22n2) and a CX (o20) take the base table, HDMI 1 to 4
@@ -1437,6 +1455,7 @@ function collectStats(cb) {
     hdmi_diag: null,
     source_frame_rate: null,
     hdmi_links: null,
+    hdmi_sources: null,
     picture_engine: peInfo,
     colorimetry: peInfo ? peInfo.colorimetry : null,
     inputs: inputNameMap
@@ -1467,6 +1486,7 @@ function collectStats(cb) {
   hdmiReceiverMap(function (receiverMap) {
     var hdmiStatus = readHdmiStatus();
     out.hdmi_links = hdmiLinks(hdmiStatus, receiverMap);
+    out.hdmi_sources = hdmiSources(hdmiStatus, receiverMap);
   alwaysReadyShowing(function (showing) {
   lunaFn('com.webos.service.tvpower/power/getPowerState', {}, function (pw) {
     var rawPower = pw ? (pw.state || pw.processing) : null;
@@ -1879,6 +1899,7 @@ module.exports = {
   getHdmiSignal: getHdmiSignal,
   hdmiReceiverMap: hdmiReceiverMap,
   hdmiLinks: hdmiLinks,
+  hdmiSources: hdmiSources,
   readHdmiStatus: readHdmiStatus,
   getPictureEngineInfo: getPictureEngineInfo,
   formatSoundOutput: formatSoundOutput,
