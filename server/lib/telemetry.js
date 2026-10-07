@@ -795,7 +795,7 @@ var HDR_EOTFS = ['sdr', 'hdr', 'pq', 'hlg'];
  * Luminances are in cd/m²: the minimum arrives in units of 0.0001. A MaxCLL
  * or MaxFALL of 0 means the source gave none, and is kept for the reader to
  * tell apart. colormetry "FUTURE" says the colorimetry is in
- * extendedColormetry.
+ * extendedColormetry. hdrType is NONE for an SDR source, named sdr here.
  */
 function signalFormat(reply) {
   var sinks = reply && Array.isArray(reply.video) ? reply.video : [];
@@ -814,9 +814,10 @@ function signalFormat(reply) {
     return typeof v === 'number' || typeof v === 'boolean' ? !!v : null;
   }
   var colorimetry = vi.colormetry === 'FUTURE' ? vi.extendedColormetry : vi.colormetry;
+  var type = typeof vi.hdrType === 'string' && vi.hdrType ?
+    vi.hdrType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase() : null;
   return {
-    type: typeof vi.hdrType === 'string' && vi.hdrType ?
-      vi.hdrType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase() : null,
+    type: type === 'none' ? 'sdr' : type,
     eotf: meta && typeof meta.EOTFtype === 'number' ? (HDR_EOTFS[meta.EOTFtype] || null) : null,
     colorimetry: typeof colorimetry === 'string' && colorimetry ? colorimetry : null,
     encoding: typeof vi.pixelEncoding === 'string' && vi.pixelEncoding ? vi.pixelEncoding : null,

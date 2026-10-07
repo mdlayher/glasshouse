@@ -488,7 +488,7 @@ var FAMILIES = [
   },
   {
     name: 'glasshouse_signal_format_info', type: 'gauge',
-    help: 'Always 1 while a video sink is connected, labelled with the source\'s HDR type, such as hdr10, the EOTF its HDR metadata names (sdr, hdr, pq, or hlg), its colorimetry, and its pixel encoding (rgb_444, ycbcr_444, ycbcr_422, or ycbcr_420).',
+    help: 'Always 1 while a video sink is connected, labelled with the source\'s HDR type, such as sdr or hdr10, the EOTF its HDR metadata names (sdr, hdr, pq, or hlg), its colorimetry, and its pixel encoding (rgb_444, ycbcr_444, ycbcr_422, or ycbcr_420).',
     samples: function (s) {
       var format = s.signal_format;
       if (!format || typeof format !== 'object') return [];
