@@ -186,7 +186,7 @@ async function tick() {
     const o = d.oled || {};
     pwStandby = ps.raw === 'Active Standby';
     if (q('poff')) q('poff').textContent = pwStandby ? t('ctl.powerOn', 'Power on') : t('ctl.powerOff', 'Power off');
-    const isComp = !!(o.comp_status === 'Running' || (ps.raw === 'Active Standby' && o.hours_until_comp === 0));
+    const isComp = (o.comp_status === 'Running');
     const stEl = q('state');
     stEl.classList.toggle('comp', isComp);
     stEl.classList.toggle('off', !isComp && ps.screenOn === false);
