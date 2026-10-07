@@ -134,8 +134,8 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
   if (!raw) return [];
   var lines = raw.split('\n');
   var out = [];
-  var lastMono = defaultMono;
-  var lastTs = new Date(bootTimeMs + Math.round(defaultMono * 1000)).toISOString();
+  var lastMono = null;
+  var lastTs = null;
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
@@ -151,9 +151,13 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
       lastTs = ts;
       // console.error's mark (tvweb.js); lines from before it are guessed.
       if (msg.indexOf('ERROR ') === 0) { marked = true; msg = msg.substring(6); }
-    } else {
+    } else if (lastMono !== null) {
       ts = lastTs;
       mono = lastMono;
+      msg = line;
+    } else {
+      ts = new Date(bootTimeMs).toISOString();
+      mono = 0;
       msg = line;
     }
     var proc = 'tvweb';
