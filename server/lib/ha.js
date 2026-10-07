@@ -116,6 +116,7 @@ var HA_ENTITIES = [
   { id: 'remote_ok', type: 'button', name: 'Remote OK', cat: 'controls' },
   { id: 'remote_back', type: 'button', name: 'Remote Back', cat: 'controls' },
   { id: 'remote_home', type: 'button', name: 'Remote Home', cat: 'controls' },
+  { id: 'remote_button', type: 'event', name: 'Remote Button', cat: 'controls' },
   { id: 'play', type: 'button', name: 'Play', cat: 'controls' },
   { id: 'pause', type: 'button', name: 'Pause', cat: 'controls' },
   { id: 'play_pause', type: 'button', name: 'Play / Pause', cat: 'controls' },
@@ -1246,6 +1247,15 @@ function buildEntities(opts) {
         }
       },
       {
+        type: 'event', id: 'remote_button',
+        payload: {
+          name: 'Remote Button',
+          state_topic: topic.eventsButton,
+          event_types: ['red', 'green', 'yellow', 'blue'],
+          icon: 'mdi:remote'
+        }
+      },
+      {
         type: 'button', id: 'play',
         payload: {
           name: 'Play',
@@ -1375,7 +1385,7 @@ var AWAKE_ONLY = {
 };
 
 // Entities that send commands, which need the server awake to receive them.
-var CONTROL_TYPES = { 'switch': 1, 'select': 1, 'number': 1, 'button': 1, 'text': 1 };
+var CONTROL_TYPES = { 'switch': 1, 'select': 1, 'number': 1, 'button': 1, 'text': 1, 'event': 1 };
 
 /*
  * Whether Home Assistant shows an entity as available, from the status topic:
@@ -1488,6 +1498,7 @@ function filterWithholds(entities, opts) {
   if (!caps.hasLightSensor) withhold(byId('ambient_light'));
 
   if (!caps.updateCheck) withhold(byId('server_update'));
+  if (!caps.hasRemoteButtons) withhold(byId('remote_button'));
 
   var hdmiSeen = caps.hdmiSeen || {};
   withhold(function (e) {

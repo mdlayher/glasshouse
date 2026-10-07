@@ -1829,6 +1829,7 @@ function getCapabilities(extra) {
     hdmiSeen: hdmiSeen,
     hasGpuClock: gpuClockMhz() !== null,
     isOled: !!extra.isOled,
+    hasRemoteButtons: !!extra.hasRemoteButtons,
     userEntities: extra.userEntities || {}
   };
 }

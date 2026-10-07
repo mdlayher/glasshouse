@@ -53,6 +53,7 @@ nav:
   - Home Assistant:
       - HOME-ASSISTANT.md
       - Entities: HOME-ASSISTANT-ENTITIES.md
+      - Remote button events: HOME-ASSISTANT-REMOTE-BUTTONS.md
   - Additional Features:
       - Ambient light (PicCap): piccap.md
       - Prometheus metrics: PROMETHEUS.md

@@ -2071,6 +2071,14 @@
   "text": "Funciones experimentales",
   "from": "Experimental features"
  },
+ "server.experimental.remoteButtons": {
+  "text": "Eventos de botones del mando",
+  "from": "Remote button events"
+ },
+ "server.experimental.remoteButtons.desc": {
+  "text": "Escucha las pulsaciones de los botones rojo, verde, amarillo y azul en mandos LG Magic e infrarrojos para publicar eventos en Home Assistant.",
+  "from": "Listens for red, green, yellow, and blue button presses on LG Magic and IR remotes to publish events to Home Assistant."
+ },
  "server.experimental.screensaver": {
   "text": "Salvapantallas personalizados (webOS 10+)",
   "from": "Custom screen savers (webOS 10+)"

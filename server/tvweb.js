@@ -47,6 +47,7 @@ var say = require('./lib/say');
 var lgSettings = require('./lib/lgsettings');
 var game = require('./lib/game');
 var piccapTransport = require('./lib/piccap');
+var remotebuttons = require('./lib/remotebuttons');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -98,6 +99,11 @@ var CONFIG = {
   // set, for inspecting Homebrew apps with ares-inspect. File-only, like
   // `token`: it widens who can run code on the TV.
   allowNetworkDebugger: false,
+
+  // Listening for colored remote button presses (red, green, yellow, blue)
+  // on Magic and IR remotes is experimental. Off by default; set here or from
+  // the Server tab.
+  allowRemoteButtons: false,
 
   // PicCap is offered where it is installed; its Home Assistant entity is
   // switched off like any other.
@@ -438,6 +444,18 @@ var INPUTS = ha.INPUTS;
 // from there go without it.
 var TILE_HIDING_OFF = 'hiding home-screen tiles is not available when installed from the Homebrew Channel';
 
+var republishDiscovery = function () {};
+var onRemoteButton = function (button, code) {
+  console.log('remotebuttons: ' + button + ' button pressed (code ' + code + ')');
+};
+
+remotebuttons.init({
+  config: CONFIG,
+  onButton: function (button, code) {
+    onRemoteButton(button, code);
+  }
+});
+
 controls.init({
   luna: luna,
   piccap: piccap,
@@ -452,6 +470,8 @@ controls.init({
   lgSettings: lgSettings,
   updater: updater,
   devtools: devtools,
+  remoteButtons: remotebuttons,
+  republishDiscovery: function () { republishDiscovery(); },
   tvApp: tvApp,
   restartSelf: restartSelf,
   updateSummary: routes.updateSummary,
@@ -831,6 +851,19 @@ function setupHomeAssistant() {
     console.log('mqtt: PicCap ' + (piccap.getState() ? 'answering' : 'gone') + ' - republishing discovery');
     publishDiscovery();
   };
+  republishDiscovery = function () {
+    if (!mqttClient || !mqttClient.connected) return;
+    publishDiscovery();
+  };
+  onRemoteButton = function (button, code) {
+    console.log('remotebuttons: ' + button + ' button pressed (code ' + code + ')');
+    if (!mqttClient || !mqttClient.connected) return;
+    var payload = JSON.stringify({
+      event_type: button,
+      button: button
+    });
+    mqttClient.publish(mqttTopics.eventsButton, payload, false);
+  };
 
   MQTT_STATUS.broker = CONFIG.mqtt.host + ':' + mqttClient.opts.port;
   MQTT_STATUS.tls = useTls;
@@ -877,6 +910,7 @@ function setupHomeAssistant() {
       capabilities: telemetry.getCapabilities({
         updateCheck: !!(CONFIG.update && CONFIG.update.check),
         isOled: oled.getIsOled(),
+        hasRemoteButtons: !!CONFIG.allowRemoteButtons,
         userEntities: (CONFIG.mqtt && CONFIG.mqtt.entities) || {}
       })
     });
