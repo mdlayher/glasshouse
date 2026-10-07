@@ -111,8 +111,10 @@ The `port<n>` receivers are not numbered as the inputs are, and each keeps its
 link whichever input is on screen. configd holds the board's wiring as
 `inputMap.videoInputMapIndexInfo0`, an `assignment` of `hdmi1` to `hdmi4` to a
 receiver number, or `none` for an input the board does not have. An input's
-signal is read from its own receiver only; where configd has no map, from
-receiver n − 1, then n.
+signal is read from its own receiver only. Where configd has no map, the base
+table is used, HDMI 1 to 4 on receivers 3, 2, 1, and 0, as every board measured
+is wired: a C4 and a CX by their table, a B8 with HDMI 2 on receiver 2, and a
+C9, which has no map, with HDMI 2 on receiver 2 and HDMI 4 on receiver 0.
 
 The format and HDR metadata of the source on screen come from
 `com.webos.service.videooutput/getStatus`, in the `videoInfo` of the connected

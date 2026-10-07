@@ -4,7 +4,9 @@
  *
  * Its own suite: telemetry remembers the map for good. The status files are
  * a C4's (webOS 9) with a PC at 4K 120 Hz on HDMI 4 and a streamer at 1080p
- * on HDMI 1; its input map puts HDMI 1 to 4 on receivers 3, 2, 1 and 0.
+ * on HDMI 1; its input map puts HDMI 1 to 4 on receivers 3, 2, 1 and 0. A
+ * C9's (webOS 4.10), whose configd has no map, have an Apple TV at 4K 50 Hz
+ * on HDMI 4 and a soundbar at 1080p 30 Hz on HDMI 2.
  *
  * Strict ES5: runs on node 0.12.
  */
@@ -12,13 +14,16 @@ var assert = require('assert');
 var fs = require('fs');
 var path = require('path');
 
-var C4_STATUS = {};
-for (var p = 0; p < 4; p++) {
-  C4_STATUS['/proc/lg/hdmi20/port' + p + '/status'] =
-    fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', 'port' + p + '.status'), 'utf8');
+function statusFiles(tv) {
+  var files = {};
+  for (var p = 0; p < 4; p++) {
+    files['/proc/lg/hdmi20/port' + p + '/status'] =
+      fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-' + tv, 'port' + p + '.status'), 'utf8');
+  }
+  return files;
 }
 
-var mockEnv = require('./mocks/mock-env').createMockEnv({ files: C4_STATUS });
+var mockEnv = require('./mocks/mock-env').createMockEnv({ files: statusFiles('c4') });
 mockEnv.install();
 
 console.log('Running test-hdmi-map.js ...');
@@ -153,7 +158,6 @@ c4.hdmiReceiverMap(checked(function (map) {
           { 1: 0, 2: 1, 3: 2, 4: 3 }), []);
 
         c4.hdmiInputs(checked(function (r) {
-          assert.strictEqual(r.pairedUnambiguously, true);
           assert.strictEqual(r.inputs[0].signal.port, 3);
           assert.strictEqual(r.inputs[0].signal.resolution, '1920x1080');
           assert.strictEqual(r.inputs[1].signal, null);
@@ -172,36 +176,66 @@ c4.hdmiReceiverMap(checked(function (map) {
   });
 }));
 
-// A TV whose configd has no map keeps the old guess, receiver n - 1 then n,
-// but no longer borrows a receiver outside it.
+// A TV whose configd has no map takes the base table, HDMI 1 to 4 on
+// receivers 3, 2, 1 and 0.
 function noMap() {
-  var old = load({ returnValue: true, configs: {}, missingConfigs: ['inputMap.videoInputMapIndexInfo0'] });
-  statsOn(old, 'com.webos.app.hdmi2', function (s2) {
-    assert.strictEqual(s2.signal, null, 'receivers 1 and 2 are idle, and the PC on 0 is not HDMI 2');
+  var noMapTv = load({ returnValue: true, configs: {}, missingConfigs: ['inputMap.videoInputMapIndexInfo0'] });
+  statsOn(noMapTv, 'com.webos.app.hdmi2', function (s2) {
+    assert.strictEqual(s2.signal, null, 'receiver 2 is idle, and the PC on 0 is not HDMI 2');
     assert.strictEqual(s2.hdmi_diag, null);
-    assert.strictEqual(s2.hdmi_links, null, 'no map, no telling which input a link is');
-    assert.strictEqual(s2.hdmi_sources, null);
-    statsOn(old, 'com.webos.app.hdmi1', function (s1) {
-      assert.strictEqual(s1.signal, '3840x2160 @ 120Hz', 'HDMI 1 guessed on receiver 0');
-      assert.strictEqual(configdCalls, 1, 'an answer without a map is remembered too');
-      console.log('  ✓ without a map, the guess stays within an input\'s own candidates');
-      unanswered();
+    assert.strictEqual(configdCalls, 1, 'an answer without a map is remembered too');
+    console.log('  ✓ without a map, HDMI 2 takes nothing from receiver 0');
+    c9();
+  });
+}
+
+// A C9's HDMI 2.0 driver: no link lines and no 5V field.
+function c9() {
+  var files = statusFiles('c9');
+  for (var f in files) mockEnv.files[f] = files[f];
+  var t = load({ returnValue: true, configs: {}, missingConfigs: ['inputMap.videoInputMapIndexInfo0'] });
+  statsOn(t, 'com.webos.app.hdmi4', function (s4) {
+    assert.strictEqual(s4.signal, '3840x2160 @ 50Hz', 'HDMI 4 is the Apple TV on receiver 0');
+    assert.deepEqual(s4.signal_timing, { width: 3840, height: 2160, refresh_hz: 50 });
+    assert.strictEqual(s4.hdmi_diag.port, 0);
+    assert.deepEqual(s4.hdmi_links, [], 'no link lines, no links');
+    assert.deepEqual(s4.hdmi_sources, [], 'no 5V field, no sources');
+    var lines = require('../server/lib/prometheus').render(s4, '').split('\n').filter(function (l) {
+      return /^glasshouse_hdmi_(link|qms|source)/.test(l);
+    });
+    assert.deepEqual(lines, []);
+    statsOn(t, 'com.webos.app.hdmi2', function (s2) {
+      assert.strictEqual(s2.signal, '1920x1080 @ 30Hz', 'HDMI 2 is the soundbar on receiver 2');
+      assert.strictEqual(s2.hdmi_diag.port, 2);
+      console.log('  ✓ without a map, a C9\'s HDMI 4 is read from receiver 0 and HDMI 2 from receiver 2');
+      t.hdmiInputs(checked(function (r) {
+        assert.strictEqual(r.inputs[0].signal, null);
+        assert.strictEqual(r.inputs[1].signal.port, 2);
+        assert.strictEqual(r.inputs[1].signal.resolution, '1920x1080');
+        assert.strictEqual(r.inputs[2].signal, null);
+        assert.strictEqual(r.inputs[3].signal.port, 0);
+        assert.strictEqual(r.inputs[3].signal.refreshHz, 50);
+        console.log('  ✓ /api/hdmi pairs the inputs by the same table');
+        unanswered();
+      }));
     });
   });
 }
+
+var BASE_MAP = { 1: 3, 2: 2, 3: 1, 4: 0 };
 
 // No answer is asked again, rather than remembered as no map; a refusal is not.
 function unanswered() {
   var t = load(null);
   t.hdmiReceiverMap(checked(function (map) {
-    assert.strictEqual(map, null);
+    assert.deepEqual(map, BASE_MAP, 'the base table meanwhile');
     t.hdmiReceiverMap(checked(function (map2) {
-      assert.strictEqual(map2, null, 'still no answer');
+      assert.deepEqual(map2, BASE_MAP, 'still no answer');
       assert.strictEqual(configdCalls, 2, 'asked again after no answer');
       var refused = load({ returnValue: false, errorText: 'Unknown method' });
       refused.hdmiReceiverMap(checked(function () {
         refused.hdmiReceiverMap(checked(function (map3) {
-          assert.strictEqual(map3, null);
+          assert.deepEqual(map3, BASE_MAP);
           assert.strictEqual(configdCalls, 1, 'a refusal is remembered');
           console.log('  ✓ the map is asked for again until configd answers, and a refusal is final');
           absentInput();

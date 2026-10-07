@@ -663,10 +663,9 @@ function readHdmiStatus() {
 /*
  * The link on every HDMI input whose receiver has locked to a source, by the
  * input map: the cable and the handshake are there whichever input is on
- * screen. Without a map there is no telling which input a receiver is.
+ * screen.
  */
 function hdmiLinks(status, map) {
-  if (!map) return null;
   var links = [];
   for (var n = 1; n <= 4; n++) {
     var raw = typeof map[n] === 'number' ? status[map[n]] : null;
@@ -687,7 +686,6 @@ function hdmiLinks(status, map) {
  * field, and their inputs are left out.
  */
 function hdmiSources(status, map) {
-  if (!map) return null;
   var sources = [];
   for (var n = 1; n <= 4; n++) {
     var raw = typeof map[n] === 'number' ? status[map[n]] : null;
@@ -700,19 +698,22 @@ function hdmiSources(status, map) {
 
 /*
  * The receiver, /proc/lg/hdmi20/port<n>, behind each HDMI input, from the
- * input map LG's input service loads from configd. Boards wire them
- * differently: a C4 (o22n2) and a CX (o20) take the base table, HDMI 1 to 4
- * on receivers 3, 2, 1 and 0, and other boards override it. The TV chooses
- * among numbered tables by an index it does not expose; table 0 matched every
- * input on both TVs when swept. Asked once, as it cannot change, and
- * remembered once configd has answered at all. cb(map or null), where map[n] is
+ * input map LG's input service loads from configd. The TV chooses among
+ * numbered tables by an index it does not expose; table 0 matched every input
+ * on a C4 (o22n2) and a CX (o20) when swept. Where configd has no map, the
+ * base table is used, HDMI 1 to 4 on receivers 3, 2, 1 and 0, as every board
+ * measured is wired: a C4 and a CX by their table, a B8 (webOS 4.4) with
+ * HDMI 2 on receiver 2, and a C9 (webOS 4.10), which has no map, with HDMI 2
+ * on receiver 2 and HDMI 4 on receiver 0. Asked once, as it cannot change,
+ * and remembered once configd has answered at all. cb(map), where map[n] is
  * input n's receiver, or null for an input the board does not have.
  */
 var HDMI_INPUT_MAP_KEY = 'inputMap.videoInputMapIndexInfo0';
+var HDMI_BASE_MAP = { 1: 3, 2: 2, 3: 1, 4: 0 };
 var hdmiReceivers;
 var hdmiReceiverWaiters = null;
 function hdmiReceiverMap(cb) {
-  if (hdmiReceivers !== undefined || !lunaFn) return cb(hdmiReceivers || null);
+  if (hdmiReceivers !== undefined || !lunaFn) return cb(hdmiReceivers || HDMI_BASE_MAP);
   if (hdmiReceiverWaiters) return hdmiReceiverWaiters.push(cb);
   hdmiReceiverWaiters = [cb];
   lunaFn('com.webos.service.config/getConfigs', { configNames: [HDMI_INPUT_MAP_KEY] }, function (r) {
@@ -720,7 +721,7 @@ function hdmiReceiverMap(cb) {
     if (r) hdmiReceivers = r.returnValue !== false && r.configs ? parseInputMap(r.configs[HDMI_INPUT_MAP_KEY]) : null;
     var waiting = hdmiReceiverWaiters;
     hdmiReceiverWaiters = null;
-    for (var i = 0; i < waiting.length; i++) waiting[i](hdmiReceivers || null);
+    for (var i = 0; i < waiting.length; i++) waiting[i](hdmiReceivers || HDMI_BASE_MAP);
   });
 }
 
@@ -739,22 +740,17 @@ function parseInputMap(table) {
 
 /*
  * The signal on HDMI input hdmiNum, from its own receiver only: another
- * receiver's link belongs to another input. Without a map from the TV, input
- * n is looked for on receiver n - 1, then n, as a B8 has HDMI 2.
+ * receiver's link belongs to another input.
  */
 function getHdmiSignal(hdmiNum, map, status) {
   if (typeof hdmiNum !== 'number' || hdmiNum < 1 || hdmiNum > 4) return null;
-  var candidates = map ? [map[hdmiNum]] : [hdmiNum - 1, hdmiNum];
-  for (var c = 0; c < candidates.length; c++) {
-    var p = candidates[c];
-    if (typeof p !== 'number' || p < 0 || p >= 4) continue;
-    var raw = status ? status[p] : readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
-    if (!raw) continue;
-    var t = parseTiming(raw);
-    if (!t.connected) continue;
-    return hdmiSignal({ width: t.width, height: t.height, refresh_hz: t.refreshHz }, hdmiDiagnostics(raw, p));
-  }
-  return null;
+  var p = map[hdmiNum];
+  if (typeof p !== 'number' || p < 0 || p >= 4) return null;
+  var raw = status ? status[p] : readTrimmed('/proc/lg/hdmi20/port' + p + '/status');
+  if (!raw) return null;
+  var t = parseTiming(raw);
+  if (!t.connected) return null;
+  return hdmiSignal({ width: t.width, height: t.height, refresh_hz: t.refreshHz }, hdmiDiagnostics(raw, p));
 }
 
 function hdmiSignal(timing, diag) {
@@ -1085,10 +1081,8 @@ function hdmiInputs(cb) {
       for (var p = 0; p < ports.length; p++) if (ports[p].connected) signalling.push(ports[p]);
 
       var inputs = [];
-      var selectedIdx = -1;
       for (var d = 0; d < devs.length; d++) {
         if (!devs[d].id || String(devs[d].id).indexOf('HDMI') !== 0) continue;
-        if (devs[d].activate) selectedIdx = inputs.length;
         var hasCec = devs[d].lastUniqueId !== undefined &&
                      devs[d].lastUniqueId !== 255 &&
                      devs[d].lastUniqueId !== -1;
@@ -1105,21 +1099,13 @@ function hdmiInputs(cb) {
           signal: null
         });
       }
-      if (receiverMap) {
-        for (var k = 0; k < inputs.length; k++) {
-          var receiver = receiverMap[parseInt(String(inputs[k].id).replace('HDMI_', ''), 10)];
-          for (var r = 0; r < signalling.length; r++) {
-            if (signalling[r].port === receiver) inputs[k].signal = signalling[r];
-          }
+      for (var k = 0; k < inputs.length; k++) {
+        var receiver = receiverMap[parseInt(String(inputs[k].id).replace('HDMI_', ''), 10)];
+        for (var r = 0; r < signalling.length; r++) {
+          if (signalling[r].port === receiver) inputs[k].signal = signalling[r];
         }
-        return cb({ ok: true, inputs: inputs, ports: ports, pairedUnambiguously: true });
       }
-      // The selected input keeps its signal behind another app, so the pairing
-      // does not depend on it being on screen.
-      if (selectedIdx !== -1 && signalling.length === 1) {
-        inputs[selectedIdx].signal = signalling[0];
-      }
-      cb({ ok: true, inputs: inputs, ports: ports, pairedUnambiguously: (selectedIdx !== -1 && signalling.length === 1) });
+      cb({ ok: true, inputs: inputs, ports: ports });
     });
   });
   });
