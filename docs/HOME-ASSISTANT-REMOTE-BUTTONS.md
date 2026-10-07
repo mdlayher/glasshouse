@@ -43,6 +43,7 @@ Then restart the server or re-run `./deploy.sh <tv-ip>`.
 > - **Server Must Be Running**: Remote button event detection requires the Glasshouse background server to be running on the TV. It does not run while the TV is powered off or in deep standby.
 > - **Cold-Boot / Start-up Delay**: Following a cold-boot or power-on, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the server completes its start-up sequence will not be captured.
 > - **Standby with Quick Start+**: When Quick Start+ is enabled in LG settings, the TV enters a low-power suspend state rather than a full system shutdown, allowing the background service to be ready immediately when the TV wakes.
+> - **Preventing Power-On Ghost Triggers**: When the TV powers off, the event entity transitions to `unavailable`. In Home Assistant automations, always add `not_from: [unknown, unavailable]` and `not_to: [unknown, unavailable]` to state triggers so the transition back to available does not re-fire the last recorded event.
 
 ---
 
@@ -85,13 +86,19 @@ description: "Toggle living room lights when the red button is pressed on the TV
 trigger:
   - platform: state
     entity_id: event.lg_tv_remote_button
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
     attribute: event_type
     to: "red"
 action:
   - action: light.toggle
     target:
       entity_id: light.living_room
-mode: single
+mode: restart
 ```
 
 #### Example 2: Cinema Mode with the Blue Button
@@ -102,13 +109,19 @@ description: "Dim lights and set cinema scene"
 trigger:
   - platform: state
     entity_id: event.lg_tv_remote_button
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
     attribute: event_type
     to: "blue"
 action:
   - action: scene.turn_on
     target:
       entity_id: scene.movie_night
-mode: single
+mode: restart
 ```
 
 #### Example 3: Handling All Four Buttons in a Single Automation
@@ -121,6 +134,12 @@ description: "Actions for red, green, yellow, and blue remote buttons"
 trigger:
   - platform: state
     entity_id: event.lg_tv_remote_button
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
 action:
   - choose:
       # Red Button
@@ -160,7 +179,58 @@ action:
           - action: scene.turn_on
             target:
               entity_id: scene.movie_night
-mode: queued
+mode: restart
+```
+
+---
+
+## Automation Tips & Gotchas
+
+### 1. Preventing Power-On Ghost Triggers
+When the TV powers off or enters deep standby, the Glasshouse background server stops and Home Assistant marks `event.lg_tv_remote_button` as `unavailable`.
+
+When the TV powers back on, Home Assistant transitions the entity from `unavailable` back to its restored state—which still retains the attributes of whichever button was last pressed (even if hours or days ago).
+
+A bare state trigger (`trigger: state` with no filters) treats this recovery as a state change and fires your automation on TV power-on! To prevent ghost triggers, **always filter out `unknown` and `unavailable` states** in your triggers:
+
+```yaml
+trigger:
+  - platform: state
+    entity_id: event.lg_tv_remote_button
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
+```
+
+### 2. Improving Responsiveness (`mode: restart`)
+Home Assistant automations default to `mode: single`. If you press Red and then quickly press Green while the network call for Red is still in flight (e.g. communicating with smart bulbs over Wi-Fi), Home Assistant silently drops the Green button press.
+
+Always set **`mode: restart`** at the bottom of remote button automations so that subsequent button presses immediately interrupt any in-flight actions and execute the new command:
+
+```yaml
+mode: restart
+```
+
+For smart lights (such as LIFX or Philips Hue), also specify `transition: 0` in the `light.turn_on` action data so colors and brightness snap instantly rather than slowly fading.
+
+### 3. Controlling from Multiple LG TVs
+If you have multiple LG TVs running Glasshouse (e.g. an OLED B8 and an OLED C2), you can list all their remote event entities under a single trigger:
+
+```yaml
+trigger:
+  - platform: state
+    entity_id:
+      - event.lg_tv_remote_button
+      - event.lg_c2_remote_button
+    not_from:
+      - unknown
+      - unavailable
+    not_to:
+      - unknown
+      - unavailable
 ```
 
 ---
