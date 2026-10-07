@@ -37,6 +37,13 @@ Add `"allowRemoteButtons": true` to your `config.json`:
 
 Then restart the server or re-run `./deploy.sh <tv-ip>`.
 
+### Availability & Boot Caveats
+
+> [!NOTE]
+> - **Server Must Be Running**: Remote button event detection requires the Glasshouse background server to be running on the TV. It does not run while the TV is powered off or in deep standby.
+> - **Cold-Boot / Start-up Delay**: Following a cold-boot or power-on, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the server completes its start-up sequence will not be captured.
+> - **Standby with Quick Start+**: When Quick Start+ is enabled in LG settings, the TV enters a low-power suspend state rather than a full system shutdown, allowing the background service to be ready immediately when the TV wakes.
+
 ---
 
 ## Home Assistant Entity
