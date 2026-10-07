@@ -823,16 +823,17 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 /* ---------------------------------------------------------------
    Tools tab: System logs and diagnostic terminal.
    --------------------------------------------------------------- */
-.tools-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:20px 0 24px}
-.tools-stat-card{background:var(--w06);border:1px solid var(--w12);border-radius:8px;padding:16px;
-  display:flex;flex-direction:column;justify-content:space-between;transition:background .15s ease,border-color .15s ease}
-.tools-stat-card.clickable{cursor:pointer}
-.tools-stat-card.clickable:hover{background:var(--w10);border-color:var(--edge)}
-.tools-stat-card .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--w50);margin-bottom:8px}
-.tools-stat-card .num{font-size:32px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
-.tools-stat-card .sub{font-size:12px;color:var(--w50);margin-top:8px}
-.tools-stat-card.has-err .num{color:var(--red)}
-.tools-stat-card.has-warn .num{color:var(--cand)}
+.tools-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:24px;margin:20px 0 28px}
+.tools-stat-card{background:transparent;border:0;padding:0;border-radius:0;
+  display:flex;flex-direction:column;justify-content:flex-start}
+.tools-stat-card.clickable{cursor:pointer;user-select:none}
+.tools-stat-card.clickable:hover .lbl{color:var(--w100)}
+.tools-stat-card .lbl{margin-bottom:6px}
+.tools-stat-card .v{font-family:'Outfit';font-weight:200;font-size:clamp(36px,5vw,52px);color:var(--w100);line-height:1;margin-top:4px}
+.tools-stat-card.has-err .v{color:var(--red)}
+.tools-stat-card.has-warn .v{color:var(--cand)}
+.tools-stat-card.active-filter .lbl{color:var(--w100);font-weight:700}
+.tools-stat-card .sub{margin-top:6px}
 
 .tools-toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:12px}
 .tools-toolbar-grp{display:flex;align-items:center;gap:8px}
@@ -859,7 +860,8 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 .tools-search-count{font-size:12px;color:var(--w60);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tools-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
 
-.live-dot{width:8px;height:8px;border-radius:50%;background:#30DE61;display:inline-block;
+#tools-live-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:96px;padding:0 14px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#30DE61;display:inline-block;flex:none;
   box-shadow:0 0 6px rgba(48,222,97,.6);animation:livePulse 2s infinite}
 .live-dot.paused{background:var(--w40);box-shadow:none;animation:none}
 @keyframes livePulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}

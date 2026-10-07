@@ -139,11 +139,21 @@ function updateToolsStats() {
     q('tools-cnt-sources').textContent = t('tools.activeSources', '{active} active sources', { active: activeSrcs.length });
   }
 
-  // Update error/warning stat card highlights
+  // Update error/warning stat card highlights and active filter
   const errCard = q('tools-card-errors');
-  if (errCard) errCard.classList.toggle('has-err', errCount > 0);
+  if (errCard) {
+    errCard.classList.toggle('has-err', errCount > 0);
+    errCard.classList.toggle('active-filter', toolsLevel === 'error');
+  }
   const warnCard = q('tools-card-warnings');
-  if (warnCard) warnCard.classList.toggle('has-warn', warnCount > 0);
+  if (warnCard) {
+    warnCard.classList.toggle('has-warn', warnCount > 0);
+    warnCard.classList.toggle('active-filter', toolsLevel === 'warning');
+  }
+
+  // Synchronize refresh button visibility with live mode
+  const refBtn = q('tools-refresh-btn');
+  if (refBtn) refBtn.hidden = toolsLive;
 }
 
 function getFilteredEntries() {
@@ -237,9 +247,9 @@ function renderToolsLogs() {
   container.innerHTML = html;
 
   if (toolsAutoScroll) {
-    const term = q('tools-terminal');
-    if (term) term.scrollTop = term.scrollHeight;
+    container.scrollTop = container.scrollHeight;
   }
+  setupToolsScrollListener();
 }
 
 function toggleToolsSource(src) {
@@ -260,11 +270,16 @@ function setToolsLimit(lim) {
 }
 
 function setToolsLevelFilter(lvl) {
-  toolsLevel = lvl;
+  if (toolsLevel === lvl && (lvl === 'error' || lvl === 'warning')) {
+    toolsLevel = 'all';
+  } else {
+    toolsLevel = lvl;
+  }
   document.querySelectorAll('.tools-lvl-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.level === lvl);
+    b.classList.toggle('active', b.dataset.level === toolsLevel);
   });
   toolsExpandedIdx = null;
+  updateToolsStats();
   renderToolsLogs();
 }
 
@@ -298,17 +313,23 @@ function toggleToolsLive() {
   const btn = q('tools-live-btn');
   const dot = q('tools-live-dot');
   const txt = q('tools-live-text');
+  const refBtn = q('tools-refresh-btn');
   if (btn) btn.classList.toggle('paused', !toolsLive);
   if (dot) dot.classList.toggle('paused', !toolsLive);
   if (txt) txt.textContent = toolsLive ? t('tools.live', 'Live') : t('tools.paused', 'Paused');
+  if (refBtn) refBtn.hidden = toolsLive;
   scheduleToolsPoll();
 }
 
 function scrollToolsToBottom() {
-  const term = q('tools-terminal');
-  if (term) {
-    term.scrollTop = term.scrollHeight;
+  const container = q('tools-log-entries');
+  if (container) {
     toolsAutoScroll = true;
+    try {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    } catch (_) {
+      container.scrollTop = container.scrollHeight;
+    }
   }
 }
 
@@ -317,13 +338,38 @@ function toggleToolsLogDetail(idx) {
   renderToolsLogs();
 }
 
+function copyToClipboard(text) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.left = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) resolve();
+      else reject(new Error('Copy failed'));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 async function copyToolsLogs() {
   const filtered = getFilteredEntries();
   if (!filtered.length) return;
   const lines = filtered.map(e => `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${e.proc}] ${e.msg}`);
   const text = lines.join('\n');
   try {
-    await navigator.clipboard.writeText(text);
+    await copyToClipboard(text);
     const btn = q('tools-copy-btn');
     if (btn) {
       const orig = btn.textContent;
@@ -335,7 +381,7 @@ async function copyToolsLogs() {
       }, 2000);
     }
   } catch (e) {
-    showErr(e.message);
+    showErr(e.message || 'Copy failed');
   }
 }
 
@@ -344,7 +390,7 @@ async function copyToolsRaw(idx, btn) {
   const e = filtered[idx];
   if (!e) return;
   try {
-    await navigator.clipboard.writeText(e.raw);
+    await copyToClipboard(e.raw);
     if (btn) {
       const orig = btn.textContent;
       btn.textContent = t('tools.copied', 'Copied!');
@@ -355,7 +401,7 @@ async function copyToolsRaw(idx, btn) {
       }, 1500);
     }
   } catch (err) {
-    showErr(err.message);
+    showErr(err.message || 'Copy failed');
   }
 }
 
@@ -388,12 +434,15 @@ function scheduleToolsPoll() {
 }
 
 // Track user scroll on terminal to decouple auto-scroll if scrolled up
-document.addEventListener('DOMContentLoaded', () => {
-  const term = q('tools-terminal');
-  if (term) {
-    term.addEventListener('scroll', () => {
-      const atBottom = term.scrollHeight - term.scrollTop - term.clientHeight < 30;
+function setupToolsScrollListener() {
+  const container = q('tools-log-entries');
+  if (container && !container._toolsScrollBound) {
+    container._toolsScrollBound = true;
+    container.addEventListener('scroll', () => {
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 35;
       toolsAutoScroll = atBottom;
     });
   }
-});
+}
+
+document.addEventListener('DOMContentLoaded', setupToolsScrollListener);

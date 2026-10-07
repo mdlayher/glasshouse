@@ -29,7 +29,7 @@ function readTail(filePath, maxBytes) {
     if (size === 0) return '';
     var fd = fs.openSync(filePath, 'r');
     var toRead = Math.min(size, maxBytes);
-    var buf = new Buffer(toRead);
+    var buf = typeof Buffer.alloc === 'function' ? Buffer.alloc(toRead) : new Buffer(toRead);
     var pos = Math.max(0, size - toRead);
     var bytesRead = fs.readSync(fd, buf, 0, toRead, pos);
     fs.closeSync(fd);
