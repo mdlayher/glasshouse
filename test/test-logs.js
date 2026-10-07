@@ -118,6 +118,24 @@ test('parseGlasshouseLogs handles legacy unstamped lines at start without claimi
   assert.strictEqual(parsed[2].ts, '2026-10-07T15:59:30.123Z');
 });
 
+test('parseGlasshouseLogs parses explicit level tags [INFO], [WARN], [ERR]', function () {
+  var bootTime = 1760000000000;
+  var raw = [
+    '2026-10-07T15:59:30.123Z [13641.123] [INFO] tvweb listening on 0.0.0.0:8080',
+    '2026-10-07T15:59:31.000Z [13642.000] [WARN] warning: stats collection safety timeout reached',
+    '2026-10-07T15:59:32.000Z [13643.000] [ERR] luna bus transport failed'
+  ].join('\n');
+
+  var parsed = logs.parseGlasshouseLogs(raw, bootTime, 13640.0);
+  assert.strictEqual(parsed.length, 3);
+  assert.strictEqual(parsed[0].level, 'info');
+  assert.strictEqual(parsed[0].msg, 'tvweb listening on 0.0.0.0:8080');
+  assert.strictEqual(parsed[1].level, 'warning');
+  assert.strictEqual(parsed[1].msg, 'warning: stats collection safety timeout reached');
+  assert.strictEqual(parsed[2].level, 'error');
+  assert.strictEqual(parsed[2].msg, 'luna bus transport failed');
+});
+
 test('parseKernelLogs parses dmesg monotonic timestamps and process tags', function () {
   var bootTime = 1760000000000;
   var raw = [
@@ -205,12 +223,12 @@ test('a poll with the cursor gets only what was added, in whole lines', function
   }
 });
 
-test('an error the server marked is an error, whatever its words', function () {
+test('an error the server tagged is an error, whatever its words', function () {
   var parsed = logs.parseGlasshouseLogs(
-    '2026-10-08T10:00:00.000Z [5.0] ERROR adblock: could not close port 9998\n' +
-    '2026-10-08T10:00:01.000Z [6.0] adblock: port 9998 answers on the TV only\n', Date.now() - 10000, 0);
+    '2026-10-08T10:00:00.000Z [5.0] [ERR] adblock: could not close port 9998\n' +
+    '2026-10-08T10:00:01.000Z [6.0] [INFO] adblock: port 9998 answers on the TV only\n', Date.now() - 10000, 0);
   assert.strictEqual(parsed[0].level, 'error');
-  assert.strictEqual(parsed[0].proc, 'adblock', 'the mark is not taken for the process');
+  assert.strictEqual(parsed[0].proc, 'adblock', 'the tag is not taken for the process');
   assert.strictEqual(parsed[0].msg, 'adblock: could not close port 9998');
   assert.strictEqual(parsed[1].level, 'info');
 });

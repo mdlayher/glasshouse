@@ -121,7 +121,7 @@ function parseSystemLogs(raw, bootTimeMs) {
   return out;
 }
 
-var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?\s+(.*)$/;
+var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?(?:\s+\[(INFO|WARN|WARNING|ERR|ERROR|DEBUG)\])?(?:\s+(.*))?$/i;
 
 /**
  * Parse Glasshouse server log lines.
@@ -142,15 +142,20 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
     if (!line) continue;
     var m = TVWEB_RE.exec(line);
     var ts, mono, msg;
-    var marked = false;
+    var explicitLvl = null;
     if (m) {
       ts = m[1];
       mono = m[2] ? parseFloat(m[2]) : (Date.parse(ts) - bootTimeMs) / 1000;
-      msg = m[3];
+      if (m[3]) {
+        var tagUpper = m[3].toUpperCase();
+        if (tagUpper === 'WARN' || tagUpper === 'WARNING') explicitLvl = 'warning';
+        else if (tagUpper === 'ERR' || tagUpper === 'ERROR') explicitLvl = 'error';
+        else if (tagUpper === 'DEBUG') explicitLvl = 'debug';
+        else explicitLvl = 'info';
+      }
+      msg = m[4] || '';
       lastMono = mono;
       lastTs = ts;
-      // console.error's mark (tvweb.js); lines from before it are guessed.
-      if (msg.indexOf('ERROR ') === 0) { marked = true; msg = msg.substring(6); }
     } else if (lastMono !== null) {
       ts = lastTs;
       mono = lastMono;
@@ -173,7 +178,7 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
       ts: ts,
       mono: mono,
       source: 'glasshouse',
-      level: marked ? 'error' : detectLevel(msg),
+      level: explicitLvl || detectLevel(msg),
       proc: proc,
       msg: msg,
       raw: line
