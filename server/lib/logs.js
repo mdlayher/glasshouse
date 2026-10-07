@@ -151,7 +151,11 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
     var proc = 'tvweb';
     var tagMatch = /^([a-zA-Z0-9_-]+):\s*(.*)$/.exec(msg);
     if (tagMatch) {
-      proc = tagMatch[1];
+      var cand = tagMatch[1];
+      var candLower = cand.toLowerCase();
+      if (candLower !== 'warning' && candLower !== 'warn' && candLower !== 'error' && candLower !== 'info' && candLower !== 'debug') {
+        proc = cand;
+      }
     }
     out.push({
       ts: ts,

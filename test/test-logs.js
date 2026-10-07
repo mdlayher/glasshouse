@@ -71,11 +71,12 @@ test('parseGlasshouseLogs parses stamped lines and multi-line continuations', fu
   var raw = [
     '2026-10-07T15:59:30.123Z [13641.123] mqtt: connected to broker at 192.168.1.100',
     '2026-10-07T15:59:31.000Z [13642.000] ha: discovery published for 109 entities',
-    '    additional stack trace line'
+    '    additional stack trace line',
+    '2026-10-07T15:59:32.000Z [13643.000] warning: stats collection safety timeout reached'
   ].join('\n');
 
   var parsed = logs.parseGlasshouseLogs(raw, bootTime, 13640.0);
-  assert.strictEqual(parsed.length, 3);
+  assert.strictEqual(parsed.length, 4);
 
   assert.strictEqual(parsed[0].source, 'glasshouse');
   assert.strictEqual(parsed[0].ts, '2026-10-07T15:59:30.123Z');
@@ -90,6 +91,10 @@ test('parseGlasshouseLogs parses stamped lines and multi-line continuations', fu
   assert.strictEqual(parsed[2].ts, '2026-10-07T15:59:31.000Z');
   assert.strictEqual(parsed[2].proc, 'tvweb');
   assert.strictEqual(parsed[2].msg, 'additional stack trace line');
+
+  // Warning line sets level to warning and proc to tvweb (not 'warning')
+  assert.strictEqual(parsed[3].level, 'warning');
+  assert.strictEqual(parsed[3].proc, 'tvweb');
 });
 
 test('parseKernelLogs parses dmesg monotonic timestamps and process tags', function () {
