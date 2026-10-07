@@ -10,19 +10,9 @@ Most LG remotes include dedicated colored buttons (traditionally used for telete
 
 Because it is exposed as an `event` entity rather than a `sensor`, every press fires an event in Home Assistant—even if you press the same button multiple times in succession.
 
----
-
-## Automatic Availability
-
-Remote button event capture is **automatically enabled** whenever Home Assistant MQTT integration is configured and the TV hardware supports remote input capture.
-
-No manual toggle or configuration flag is needed:
-
-- **Enabled with MQTT**: When MQTT is enabled in your configuration (**Server** → **Home Assistant**), Glasshouse checks whether your TV model exposes remote control input devices (RCU event devices in `/proc/bus/input/devices` or input log).
-- **Zero Overhead when MQTT is Off**: If MQTT is disabled or not configured, the remote button listener process is not spawned and uses zero CPU or memory.
-- **Hardware-Supported**: On supported hardware (such as LG B8, C2, and other webOS 4+ TVs), the `event.lg_tv_remote_button` entity is automatically discovered in Home Assistant. On unsupported platforms (such as emulators), the entity is automatically withheld from discovery.
-
-### Availability & Boot Caveats
+<div style="text-align: center; margin: 1.5rem 0;">
+  <iframe width="315" height="560" src="https://www.youtube.com/embed/G1o166aweb0" title="Remote button events demonstration" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="max-width: 100%; border-radius: 8px;"></iframe>
+</div>
 
 > [!NOTE]
 > - **Server Must Be Running**: Remote button event detection requires the Glasshouse background server to be running on the TV. It does not run while the TV is powered off or in deep standby.
