@@ -301,6 +301,23 @@ console.log('Running test-telemetry.js ...');
   console.log('  ✓ a sleeping source\'s leftover timing is not a signal');
 })();
 
+// 6a1d. A powered source on each input's cable, linked or not, by the input map.
+(function testHdmiSources() {
+  function fixture(name) {
+    return fs.readFileSync(path.join(__dirname, 'fixtures', 'hdmi20-c4', name + '.status'), 'utf8');
+  }
+  var status = [fixture('port0'), fixture('port1'), null, fixture('port3-asleep')];
+  assert.deepEqual(telemetry.hdmiSources(status, { 1: 3, 2: 2, 3: 1, 4: 0 }), [
+    { input: 1, receiver: 3, powered: true },
+    { input: 3, receiver: 1, powered: false },
+    { input: 4, receiver: 0, powered: true }
+  ], 'asleep without a lock is still powered; an unread receiver is left out');
+  assert.deepEqual(telemetry.hdmiSources(['connected: on\n', null, null, null], { 1: 0 }), [],
+    'the HDMI 2.0 driver\'s files have no 5V field');
+  assert.strictEqual(telemetry.hdmiSources(status, null), null);
+  console.log('  ✓ a powered source is told from a link, by the input map');
+})();
+
 // 6a2. isFreeSync is a mode: G-SYNC over HDMI reads 2, and is VRR
 (function testVrrMode() {
   function vrrWith(mode) {
