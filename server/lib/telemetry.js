@@ -790,6 +790,49 @@ function getPictureEngineInfo() {
   };
 }
 
+// CTA-861-G's EOTF codes in the HDR static metadata; 4 to 7 are reserved.
+var HDR_EOTFS = ['sdr', 'hdr', 'pq', 'hlg'];
+
+/*
+ * The format and HDR metadata of the connected sink in videooutput's
+ * getStatus, or null with none connected or no videoInfo, as in standby.
+ * Luminances are in cd/m²: the minimum arrives in units of 0.0001. A MaxCLL
+ * or MaxFALL of 0 means the source gave none, and is kept for the reader to
+ * tell apart. colormetry "FUTURE" says the colorimetry is in
+ * extendedColormetry.
+ */
+function signalFormat(reply) {
+  var sinks = reply && Array.isArray(reply.video) ? reply.video : [];
+  var vi = null;
+  for (var i = 0; i < sinks.length && !vi; i++) {
+    if (sinks[i] && sinks[i].connected === true && sinks[i].videoInfo && typeof sinks[i].videoInfo === 'object') {
+      vi = sinks[i].videoInfo;
+    }
+  }
+  if (!vi) return null;
+  var meta = vi.HDMIHDRInfo && typeof vi.HDMIHDRInfo === 'object' ? vi.HDMIHDRInfo : null;
+  function luminance(key, scale) {
+    return meta && typeof meta[key] === 'number' ? meta[key] / scale : null;
+  }
+  function flag(v) {
+    return typeof v === 'number' || typeof v === 'boolean' ? !!v : null;
+  }
+  var colorimetry = vi.colormetry === 'FUTURE' ? vi.extendedColormetry : vi.colormetry;
+  return {
+    type: typeof vi.hdrType === 'string' && vi.hdrType ?
+      vi.hdrType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase() : null,
+    eotf: meta && typeof meta.EOTFtype === 'number' ? (HDR_EOTFS[meta.EOTFtype] || null) : null,
+    colorimetry: typeof colorimetry === 'string' && colorimetry ? colorimetry : null,
+    encoding: typeof vi.pixelEncoding === 'string' && vi.pixelEncoding ? vi.pixelEncoding : null,
+    max_luminance: luminance('maxDisplayMasteringLuminance', 1),
+    min_luminance: luminance('minDisplayMasteringLuminance', 10000),
+    max_cll: luminance('maximumContentLightLevel', 1),
+    max_fall: luminance('maximumFrameAverageLightLevel', 1),
+    game_mode: flag(vi.isGameMode),
+    freesync: flag(vi.freesyncEnabled)
+  };
+}
+
 
 /*
  * How the volume can be changed with the sound going where it is now: 'level'
@@ -1454,6 +1497,7 @@ function collectStats(cb) {
     signal_timing: null,
     hdmi_diag: null,
     source_frame_rate: null,
+    signal_format: null,
     hdmi_links: null,
     hdmi_sources: null,
     picture_engine: peInfo,
@@ -1694,6 +1738,8 @@ function collectStats(cb) {
 
           sourceFrameRate(app, inputShown, function (fr) {
           out.source_frame_rate = fr;
+          lunaCachedFn('com.webos.service.videooutput/getStatus', {}, 4000, function (vo) {
+          out.signal_format = signalFormat(vo);
           lunaCachedFn('com.webos.service.settings/getSystemSettings',
             { category: 'picture', keys: ['backlight', 'pictureMode', 'energySaving', 'screenShift', 'logoLuminanceAdjust'] },
             10000, function (pic) {
@@ -1754,6 +1800,7 @@ function collectStats(cb) {
               });
             }
           );
+          });
           });
         });
         });
@@ -1903,6 +1950,7 @@ module.exports = {
   hdmiSources: hdmiSources,
   readHdmiStatus: readHdmiStatus,
   getPictureEngineInfo: getPictureEngineInfo,
+  signalFormat: signalFormat,
   formatSoundOutput: formatSoundOutput,
   volumeControl: volumeControl,
   formatPicMode: formatPicMode,

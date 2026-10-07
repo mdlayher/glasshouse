@@ -114,6 +114,13 @@ receiver number, or `none` for an input the board does not have. An input's
 signal is read from its own receiver only; where configd has no map, from
 receiver n − 1, then n.
 
+The format and HDR metadata of the source on screen come from
+`com.webos.service.videooutput/getStatus`, in the `videoInfo` of the connected
+sink: `hdrType`, the colorimetry, `pixelEncoding`, and for HDR10 the CTA-861
+static metadata in `HDMIHDRInfo`. Its mastering maximum, MaxCLL, and MaxFALL are in cd/m², and its
+mastering minimum in units of 0.0001 cd/m²; a MaxCLL or MaxFALL of 0 means the
+source gave none.
+
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is
 empty, there is no `hwmon`, and `systemproperty` rejects every temperature key. The
