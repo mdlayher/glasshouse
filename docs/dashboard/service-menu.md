@@ -4,6 +4,11 @@ The **Service menu** tab, `/?tab=servicemenu`, opens LG's engineering menu on th
 
 Newer firmware shows a cut-down version until it is unlocked, and the dashboard can unlock it. The TV has to be switched off and on again before that takes effect. TVs old enough not to lock it say so.
 
+### EZ Adjust vs In Start
+
+* **EZ Adjust**: The hardware and picture configuration menu. Used for Tool Option tweaks, audio and display calibration parameters, and feature toggles (such as disabling TPC and GSR auto-dimming protections on OLED panels).
+* **In Start**: The factory diagnostic and telemetry menu. Used for inspecting system status, total power-on hours (UTT), firmware and SoC revisions, eMMC storage health, and internal error logs.
+
 > [!WARNING]
 > The service menu provides low-level hardware and calibration control. Changing unfamiliar values in EZ Adjust or In Start can cause permanent display corruption or render the TV unbootable.
 
