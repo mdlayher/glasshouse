@@ -11,6 +11,7 @@
  */
 
 var fs = require('fs');
+var path = require('path');
 var child_process = require('child_process');
 
 // Linux EV_KEY event type and button keycodes
@@ -21,7 +22,11 @@ var BUTTON_CODES = {
   398: 'red',
   399: 'green',
   400: 'yellow',
-  401: 'blue'
+  401: 'blue',
+  18874385: 'red',
+  18874386: 'green',
+  18874387: 'yellow',
+  18874388: 'blue'
 };
 
 var configObj = null;
@@ -165,22 +170,36 @@ function stop() {
   activeDevices = [];
 }
 
+function getPythonBin() {
+  if (fs.existsSync('/usr/bin/python3')) return '/usr/bin/python3';
+  if (fs.existsSync('/usr/bin/python')) return '/usr/bin/python';
+  return null;
+}
+
 function start() {
   stop();
   activeDevices = findRcuDevices();
   if (!activeDevices.length) return;
 
-  /** @type {any} */
-  var env = {};
-  for (var k in process.env) env[k] = process.env[k];
-  env.UV_THREADPOOL_SIZE = '16';
-
+  var pyBin = getPythonBin();
+  var pyScript = path.join(__dirname, 'remotebuttons.py');
   var child;
+
   try {
-    child = child_process.spawn(process.execPath, [__filename, '--worker'], {
-      env: env,
-      stdio: ['pipe', 'pipe', 'inherit']
-    });
+    if (pyBin && fs.existsSync(pyScript)) {
+      child = child_process.spawn(pyBin, [pyScript], {
+        stdio: ['pipe', 'pipe', 'inherit']
+      });
+    } else {
+      /** @type {any} */
+      var env = {};
+      for (var k in process.env) env[k] = process.env[k];
+      env.UV_THREADPOOL_SIZE = '16';
+      child = child_process.spawn(process.execPath, [__filename, '--worker'], {
+        env: env,
+        stdio: ['pipe', 'pipe', 'inherit']
+      });
+    }
   } catch (e) {
     console.error('remotebuttons: failed to spawn worker: ' + e.message);
     return;
