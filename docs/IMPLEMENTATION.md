@@ -122,6 +122,12 @@ sink: `hdrType`, the colorimetry, `pixelEncoding`, and for HDR10 the CTA-861
 static metadata in `HDMIHDRInfo`. Its mastering maximum, MaxCLL, and MaxFALL are in cd/m², and its
 mastering minimum in units of 0.0001 cd/m²; a MaxCLL or MaxFALL of 0 means the
 source gave none.
+`hdrType` snake-cases to `dolby_ll`, named `dolby_vision_low_latency`, when the
+source does the Dolby Vision mapping (player-led) and sends a BT.2020 signal,
+and to `dolby_vision` when the TV maps it from a BT.709 RGB 4:4:4 carrier. The
+picture settings' `dynamicRange` is `dolbyHdr` in both. Its `ALLM` suffix, like
+`isAllm` in the receiver's status file, is the source asking for low-latency
+processing in any format, and is independent of either.
 
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is

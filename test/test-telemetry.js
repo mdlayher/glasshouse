@@ -91,6 +91,9 @@ console.log('Running test-telemetry.js ...');
   assert.strictEqual(telemetry.signalFormat({ video: [
     { sink: 'MAIN', connected: true, videoInfo: { hdrType: 'NONE', colormetry: 'BT709' } }
   ] }).type, 'sdr', 'an SDR source is sdr, not none');
+  assert.strictEqual(telemetry.signalFormat({ video: [
+    { sink: 'MAIN', connected: true, videoInfo: { hdrType: 'DOLBY_LL' } }
+  ] }).type, 'dolby_vision_low_latency', 'player-led Dolby Vision');
   console.log('  ✓ signalFormat reads the connected sink\'s format and HDR metadata');
 })();
 

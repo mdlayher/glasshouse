@@ -451,7 +451,7 @@ var FAMILIES = [
   },
   {
     name: 'glasshouse_signal_low_latency', type: 'gauge',
-    help: '1 while the picture settings are in low-latency mode (ALLM), 0 otherwise.',
+    help: '1 while the TV\'s picture settings are in their low-latency mode, which an HDMI source requests with the ALLM flag in any format, 0 otherwise.',
     samples: function (s) {
       var dr = dynamicRange(s);
       return one(dr ? (dr.lowLatency ? 1 : 0) : null);
