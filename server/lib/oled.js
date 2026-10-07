@@ -221,8 +221,7 @@ function refreshOledStats(picSettings, pState, cb) {
     var pnStateCached = readTrimmed('/mnt/lg/cmn_data/pnwash/state');
     var jobScopeCached = readTrimmed('/mnt/lg/cmn_data/pnwash/jobScope');
     var isPnwashRunningCached = (pnStateCached && pnStateCached.indexOf('2') === 0) || (jobScopeCached === '1');
-    var isCompRunningCached = isPnwashRunningCached ||
-      (pState && pState.raw === 'Active Standby' && cachedOled.hours_until_comp === 0);
+    var isCompRunningCached = isPnwashRunningCached;
     cachedOled.comp_status = isCompRunningCached ? 'Running' : 'Idle';
     cachedOled.comp_status_label = isCompRunningCached ? 'Completing Panel Maintenance (Short Cycle)' : 'Idle';
     return cb(cachedOled);
@@ -307,8 +306,7 @@ function refreshOledStats(picSettings, pState, cb) {
     var pnStateRaw = readTrimmed('/mnt/lg/cmn_data/pnwash/state');
     var jobScopeRaw = readTrimmed('/mnt/lg/cmn_data/pnwash/jobScope');
     var isPnwashRunning = (pnStateRaw && pnStateRaw.indexOf('2') === 0) || (jobScopeRaw === '1');
-    var isCompRunning = isPnwashRunning ||
-      (pState && pState.raw === 'Active Standby' && hoursUntilComp === 0);
+    var isCompRunning = isPnwashRunning;
     var compStatus = isCompRunning ? 'Running' : 'Idle';
     var compStatusLabel = isCompRunning ? 'Completing Panel Maintenance (Short Cycle)' : 'Idle';
 
