@@ -10,6 +10,12 @@ Most LG remotes include dedicated colored buttons (traditionally used for telete
 
 Because it is exposed as an `event` entity rather than a `sensor`, every press fires an event in Home Assistant—even if you press the same button multiple times in succession.
 
+<div style="text-align: center; margin: 1.5rem 0;">
+  <iframe width="315" height="560" src="https://www.youtube.com/embed/G1o166aweb0" title="Remote button events demonstration" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="max-width: 100%; border-radius: 8px;"></iframe>
+</div>
+
+---
+
 ## Home Assistant Entity
 
 | Entity | Type | Event Types | Topic |
