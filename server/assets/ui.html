@@ -56,6 +56,7 @@
   <button type="button" role="tab" data-tab="advanced" data-t="tab.advanced">Advanced</button>
   <button type="button" role="tab" data-tab="mqtt" translate="no">MQTT</button>
   <button type="button" role="tab" data-tab="server" data-t="tab.server">Server</button>
+  <button type="button" role="tab" data-tab="tools" data-t="tab.tools">Tools</button>
   </nav>
   <button type="button" class="tabs-arrow right" id="tabs-next" hidden aria-label="Scroll tabs right" data-t-aria-label="tabs.scrollRight" onclick="scrollTabs(1)">&#8250;</button>
 </div>
@@ -999,6 +1000,102 @@
     </div>
   </div>
 </section>
+
+<section class="panel" id="toolspane" role="tabpanel" hidden>
+  <div class="pv-sec" data-t="tools.title">System logs</div>
+  <div class="pv-sub" data-t="tools.desc">Inspect and debug live webOS system logs, Glasshouse service activity, and kernel ring buffer.</div>
+
+  <div class="tools-stats">
+    <div class="tools-stat-card">
+      <div class="lbl" data-t="tools.stats.loaded">Loaded entries</div>
+      <div class="v num" id="tools-cnt-total">&mdash;</div>
+      <div class="sub" id="tools-cnt-sources">&mdash;</div>
+    </div>
+    <div class="tools-stat-card clickable" id="tools-card-errors" onclick="setToolsLevelFilter('error')">
+      <div class="lbl" data-t="tools.stats.errors">Errors</div>
+      <div class="v num" id="tools-cnt-errors">&mdash;</div>
+      <div class="sub" data-t="tools.stats.clickFilter">Click to filter</div>
+    </div>
+    <div class="tools-stat-card clickable" id="tools-card-warnings" onclick="setToolsLevelFilter('warning')">
+      <div class="lbl" data-t="tools.stats.warnings">Warnings</div>
+      <div class="v num" id="tools-cnt-warnings">&mdash;</div>
+      <div class="sub" data-t="tools.stats.clickFilter">Click to filter</div>
+    </div>
+    <div class="tools-stat-card">
+      <div class="lbl" data-t="tools.stats.uptime">System uptime</div>
+      <div class="v num" id="tools-uptime">&mdash;</div>
+      <div class="sub" id="tools-boottime">&mdash;</div>
+    </div>
+  </div>
+
+  <div class="tools-toolbar">
+    <div class="tools-toolbar-grp">
+      <span class="tools-toolbar-lbl" data-t="tools.sources">Sources</span>
+      <div class="tools-seg" role="group">
+        <button type="button" class="tools-src-btn on active" data-src="system" onclick="toggleToolsSource('system')">
+          <span class="src-dot src-system"></span><span data-t="tools.src.system">System</span>
+        </button>
+        <button type="button" class="tools-src-btn on active" data-src="glasshouse" onclick="toggleToolsSource('glasshouse')">
+          <span class="src-dot src-glasshouse"></span><span data-t="tools.src.glasshouse">Glasshouse</span>
+        </button>
+        <button type="button" class="tools-src-btn" data-src="kernel" onclick="toggleToolsSource('kernel')">
+          <span class="src-dot src-kernel"></span><span data-t="tools.src.kernel">Kernel</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tools-toolbar-grp">
+      <span class="tools-toolbar-lbl" data-t="tools.limit">Lines</span>
+      <div class="tools-seg" role="group">
+        <button type="button" class="tools-lim-btn on active" data-limit="100" onclick="setToolsLimit(100)">100</button>
+        <button type="button" class="tools-lim-btn" data-limit="500" onclick="setToolsLimit(500)">500</button>
+        <button type="button" class="tools-lim-btn" data-limit="1000" onclick="setToolsLimit(1000)">1000</button>
+      </div>
+    </div>
+
+    <div class="tools-toolbar-grp">
+      <span class="tools-toolbar-lbl" data-t="tools.level">Level</span>
+      <div class="tools-seg" role="group">
+        <button type="button" class="tools-lvl-btn on active" data-level="all" onclick="setToolsLevelFilter('all')" data-t="tools.lvl.all">All</button>
+        <button type="button" class="tools-lvl-btn" data-level="error" onclick="setToolsLevelFilter('error')" data-t="tools.lvl.errors">Errors</button>
+        <button type="button" class="tools-lvl-btn" data-level="warning" onclick="setToolsLevelFilter('warning')" data-t="tools.lvl.warnings">Warnings</button>
+        <button type="button" class="tools-lvl-btn" data-level="info" onclick="setToolsLevelFilter('info')" data-t="tools.lvl.info">Info</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tools-subbar">
+    <div class="tools-search-wrap">
+      <span class="tools-search-icon" aria-hidden="true">&#9906;</span>
+      <input type="text" id="tools-search-input" class="tools-search-input" placeholder="Filter log text or process..." data-t-placeholder="tools.searchPlaceholder" autocomplete="off" spellcheck="false" oninput="onToolsSearchInput(this.value)">
+      <button type="button" id="tools-search-clear" class="tools-search-clear" onclick="clearToolsSearch()" hidden aria-label="Clear search" data-t-aria-label="tools.clearSearch">&times;</button>
+    </div>
+    <div class="tools-search-count" id="tools-search-count">&mdash;</div>
+
+    <div class="tools-actions">
+      <button type="button" class="pill" id="tools-live-btn" onclick="toggleToolsLive()">
+        <span class="live-dot" id="tools-live-dot"></span><span id="tools-live-text" data-t="tools.live">Live</span>
+      </button>
+      <button type="button" class="pill" id="tools-refresh-btn" onclick="loadLogs(false)" data-t="tools.refresh" hidden>Refresh</button>
+      <button type="button" class="pill" id="tools-copy-btn" onclick="copyToolsLogs()" data-t="tools.copy">Copy</button>
+      <button type="button" class="pill" id="tools-download-btn" onclick="downloadToolsLogs()" data-t="tools.download">Export</button>
+      <button type="button" class="pill" id="tools-scroll-btn" onclick="scrollToolsToBottom()" data-t="tools.bottom">Bottom</button>
+    </div>
+  </div>
+
+  <div class="tools-terminal" id="tools-terminal">
+    <div class="tools-term-header">
+      <div class="term-col term-col-time" data-t="tools.col.time">Time</div>
+      <div class="term-col term-col-src" data-t="tools.col.source">Source</div>
+      <div class="term-col term-col-lvl" data-t="tools.col.level">Level</div>
+      <div class="term-col term-col-proc" data-t="tools.col.process">Process</div>
+      <div class="term-col term-col-msg" data-t="tools.col.message">Message</div>
+    </div>
+    <div class="tools-term-body" id="tools-log-entries">
+      <div class="tools-term-empty" data-t="tools.loading">Loading system logs...</div>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
@@ -1025,6 +1122,7 @@
 <script src="/assets/ui/oled.js"></script>
 <script src="/assets/ui/screensavers.js"></script>
 <script src="/assets/ui/mqtt.js"></script>
+<script src="/assets/ui/tools.js"></script>
 <script src="/assets/ui/main.js"></script>
 </body>
 </html>

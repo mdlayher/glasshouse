@@ -13,6 +13,7 @@ Each of these has a tab of its own in the dashboard, and a deep link to it. OLED
 * [Screen savers](screen-savers.md): replacements for LG's
 * [On the TV](tv-app.md): the dashboard as an app on the home screen
 * [Server](server.md): updates and the home screen app
+* [Tools](tools.md): live webOS system logs, Glasshouse activity and kernel ring buffer diagnostics
 
 The page works with no internet access, and has a dark/light mode toggle (via the UI or `/?theme=light`).
 

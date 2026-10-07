@@ -14,9 +14,10 @@ const TABS = {
   servicemenu: 'svcpane',
   screensaver: 'sspane',
   privacy:     'privpane',
+  advanced:    'advpane',
   mqtt:        'mqttpane',
   server:      'serverpane',
-  advanced:    'advpane'
+  tools:       'toolspane'
 };
 let activeTab = null;
 let ssHeld = false;   // see checkScreensaverTab
@@ -65,6 +66,8 @@ function showTab(name) {
   if (name === 'screensaver') loadScreensavers();
   if (name === 'privacy') loadPrivacy();
   if (name === 'mqtt') loadSettings();
+  if (name === 'tools') { loadLogs(); scheduleToolsPoll(); }
+  else if (typeof scheduleToolsPoll === 'function') { scheduleToolsPoll(); }
 }
 
 document.querySelectorAll('#tabs button').forEach(b =>
