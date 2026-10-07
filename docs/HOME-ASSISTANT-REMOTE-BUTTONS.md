@@ -10,28 +10,6 @@ Most LG remotes include dedicated colored buttons (traditionally used for telete
 
 Because it is exposed as an `event` entity rather than a `sensor`, every press fires an event in Home Assistant—even if you press the same button multiple times in succession.
 
----
-
-## Automatic Availability
-
-Remote button event capture is **automatically enabled** whenever Home Assistant MQTT integration is configured and the TV hardware supports remote input capture.
-
-No manual toggle or configuration flag is needed:
-
-- **Enabled with MQTT**: When MQTT is enabled in your configuration (**Server** → **Home Assistant**), Glasshouse checks whether your TV model exposes remote control input devices (RCU event devices in `/proc/bus/input/devices` or input log).
-- **Zero Overhead when MQTT is Off**: If MQTT is disabled or not configured, the remote button listener process is not spawned and uses zero CPU or memory.
-- **Hardware-Supported**: On supported hardware (such as LG B8, C2, and other webOS 4+ TVs), the `event.lg_tv_remote_button` entity is automatically discovered in Home Assistant. On unsupported platforms (such as emulators), the entity is automatically withheld from discovery.
-
-### Availability & Boot Caveats
-
-> [!NOTE]
-> - **Server Must Be Running**: Remote button event detection requires the Glasshouse background server to be running on the TV. It does not run while the TV is powered off or in deep standby.
-> - **Cold-Boot / Start-up Delay**: Following a cold-boot or power-on, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the server completes its start-up sequence will not be captured.
-> - **Standby with Quick Start+**: When Quick Start+ is enabled in LG settings, the TV enters a low-power suspend state rather than a full system shutdown, allowing the background service to be ready immediately when the TV wakes.
-> - **Preventing Power-On Ghost Triggers**: When the TV powers off, the event entity transitions to `unavailable`. In Home Assistant automations, always add `not_from: [unknown, unavailable]` and `not_to: [unknown, unavailable]` to state triggers so the transition back to available does not re-fire the last recorded event.
-
----
-
 ## Home Assistant Entity
 
 | Entity | Type | Event Types | Topic |
@@ -217,6 +195,9 @@ trigger:
       - unknown
       - unavailable
 ```
+
+### 4. Cold-Boot Delay
+Following a cold boot, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the service initializes are not captured. On TVs with Quick Start+ enabled, the background service stays resident across standby and responds immediately when switched on.
 
 ---
 
