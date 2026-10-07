@@ -14,6 +14,12 @@ Because it is exposed as an `event` entity rather than a `sensor`, every press f
   <iframe width="315" height="560" src="https://www.youtube.com/embed/G1o166aweb0" title="Remote button events demonstration" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="max-width: 100%; border-radius: 8px;"></iframe>
 </div>
 
+> [!NOTE]
+> - **Server Must Be Running**: Remote button event detection requires the Glasshouse background server to be running on the TV. It does not run while the TV is powered off or in deep standby.
+> - **Cold-Boot / Start-up Delay**: Following a cold-boot or power-on, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the server completes its start-up sequence will not be captured.
+> - **Standby with Quick Start+**: When Quick Start+ is enabled in LG settings, the TV enters a low-power suspend state rather than a full system shutdown, allowing the background service to be ready immediately when the TV wakes.
+> - **Preventing Power-On Ghost Triggers**: When the TV powers off, the event entity transitions to `unavailable`. In Home Assistant automations, always add `not_from: [unknown, unavailable]` and `not_to: [unknown, unavailable]` to state triggers so the transition back to available does not re-fire the last recorded event.
+
 ---
 
 ## Home Assistant Entity
@@ -201,9 +207,6 @@ trigger:
       - unknown
       - unavailable
 ```
-
-### 4. Cold-Boot Delay
-Following a cold boot, the server starts up via the webosbrew `init.d` script (`50-tvweb`). Remote button presses sent before the service initializes are not captured. On TVs with Quick Start+ enabled, the background service stays resident across standby and responds immediately when switched on.
 
 ---
 
