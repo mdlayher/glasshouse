@@ -58,6 +58,8 @@ The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Tempor
 
 The signal gauges describe the HDMI source on screen and have no sample otherwise. The refresh rate is the rate the source sends, not the content's frame rate. `glasshouse_signal_frame_rate_hertz` is the rate the game is running at while VRR is in use, and the same as the refresh rate otherwise. Its `vrr_type` label is the kind of VRR, such as `gsync`, or `off`.
 
+`glasshouse_signal_format_info` and the HDR families describe the source on the TV's connected video sink and have no sample without one. `type` is the source's HDR type, such as `hdr10`; `eotf` is `sdr`, `hdr`, `pq`, or `hlg`, from the source's HDR static metadata, and empty without it; `colorimetry` is the colorimetry the source signals, such as `bt2020_rgb_or_ycbcr`; and `encoding` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`, named as the HDMI link's `chroma` is. A value the TV adds later keeps its own name in snake case. The HDR luminance gauges are in nits (cd/m²), from HDR10 static metadata, and the content and frame-average light levels have no sample while the source gives none.
+
 The HDMI link families describe every input with a source linked to it, whichever input is on screen, and have no sample for an input without one; `glasshouse_hdmi_source_powered` has a sample for every input, linked or not. `input` is `hdmi1` to `hdmi4`, as the TV numbers its inputs. `phy_mode` is `frl_48`, `frl_40`, `frl_32`, `frl_24`, `frl_18`, `frl_9`, `tmds_6g`, or `tmds_3g`, and `other` for a mode outside these, which has no rate; `chroma` is `rgb_444`, `ycbcr_444`, `ycbcr_422`, or `ycbcr_420`; and `hdcp` is `2_3`, `2_2`, `1_4`, or `none`. A chroma format or HDCP version outside these keeps its own name in snake case.
 
 `glasshouse_foreground_app_info` has a sample while an app is in the foreground, including with the screen off, and none in standby: `app_id` is the app's id, such as `com.webos.app.hdmi4` or `netflix`, and `app_name` is the name given an input in the TV's settings, an app's title, or the short id. `glasshouse_hdmi_input_info` has a sample for every HDMI input, labelled with `input`, its `app_id`, and the `name` given it in the TV's settings, so the foreground app joins it on `app_id` and the input then joins the HDMI link families on `input`.
@@ -110,6 +112,12 @@ The HDMI link families describe every input with a source linked to it, whicheve
 | `glasshouse_signal_height_pixels`                 | gauge   |                                         | Height of the HDMI source's picture                         |
 | `glasshouse_signal_refresh_hertz`                 | gauge   |                                         | Refresh rate of the HDMI signal                             |
 | `glasshouse_signal_frame_rate_hertz`              | gauge   | `vrr_type`                              | Frame rate the HDMI source presents                         |
+| `glasshouse_signal_format_info`                   | gauge   | `type`, `eotf`, `colorimetry`, `encoding` | 1                                                         |
+| `glasshouse_signal_hdr_mastering_luminance_max_nits` | gauge | | Peak luminance of the mastering display |
+| `glasshouse_signal_hdr_mastering_luminance_min_nits` | gauge | | Black level of the mastering display |
+| `glasshouse_signal_hdr_content_light_level_max_nits` | gauge | | Brightest pixel in the content (MaxCLL) |
+| `glasshouse_signal_hdr_frame_average_light_level_max_nits` | gauge | | Brightest frame average in the content (MaxFALL) |
+| `glasshouse_signal_game_mode`                     | gauge   |                                         | 1 while the source is in game mode                          |
 | `glasshouse_hdmi_input_info`                      | gauge   | `input`, `app_id`, `name`               | 1                                                           |
 | `glasshouse_hdmi_link_info`                       | gauge   | `input`, `phy_mode`, `chroma`, `hdcp`   | 1                                                           |
 | `glasshouse_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |

@@ -135,6 +135,15 @@ function hdmiPhyMode(link) {
   return { label: 'other', bitsPerSecond: null };
 }
 
+/*
+ * The video output service's colorimetry names: BT.2020 in RGB or YCbCr, one
+ * name for either.
+ */
+var SIGNAL_COLORIMETRY = { BT2020_RGBORYCbCr: 'bt2020_rgb_or_ycbcr' };
+
+// Its pixel encodings, named as the HDMI link's chroma is.
+var SIGNAL_ENCODING = { RGB: 'rgb_444', YCbCr444: 'ycbcr_444', YCbCr422: 'ycbcr_422', YCbCr420: 'ycbcr_420' };
+
 function hdmiLinks(s) {
   return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
 }
@@ -476,6 +485,45 @@ var FAMILIES = [
       var type = path(s, ['source_frame_rate', 'vrr_type']);
       return hz === null ? [] : [[{ vrr_type: typeof type === 'string' && type ? snakeCase(type) : 'off' }, hz]];
     }
+  },
+  {
+    name: 'glasshouse_signal_format_info', type: 'gauge',
+    help: 'Always 1 while a video sink is connected, labelled with the source\'s HDR type, such as hdr10, the EOTF its HDR metadata names (sdr, hdr, pq, or hlg), its colorimetry, and its pixel encoding (rgb_444, ycbcr_444, ycbcr_422, or ycbcr_420).',
+    samples: function (s) {
+      var format = s.signal_format;
+      if (!format || typeof format !== 'object') return [];
+      return [[{
+        type: typeof format.type === 'string' ? format.type : '',
+        eotf: typeof format.eotf === 'string' ? format.eotf : '',
+        colorimetry: typeof format.colorimetry === 'string' ? mapped(SIGNAL_COLORIMETRY, format.colorimetry) : '',
+        encoding: typeof format.encoding === 'string' ? mapped(SIGNAL_ENCODING, format.encoding) : ''
+      }, 1]];
+    }
+  },
+  {
+    name: 'glasshouse_signal_hdr_mastering_luminance_max_nits', type: 'gauge',
+    help: 'Peak luminance of the display the content was mastered on, in nits, from the source\'s HDR10 static metadata.',
+    samples: function (s) { return one(num(path(s, ['signal_format', 'max_luminance']))); }
+  },
+  {
+    name: 'glasshouse_signal_hdr_mastering_luminance_min_nits', type: 'gauge',
+    help: 'Black level of the display the content was mastered on, in nits, from the source\'s HDR10 static metadata.',
+    samples: function (s) { return one(num(path(s, ['signal_format', 'min_luminance']))); }
+  },
+  {
+    name: 'glasshouse_signal_hdr_content_light_level_max_nits', type: 'gauge',
+    help: 'Brightest pixel in the content (MaxCLL) in nits, from the source\'s HDR10 static metadata, while the source gives one.',
+    samples: function (s) { return one(positive(path(s, ['signal_format', 'max_cll']))); }
+  },
+  {
+    name: 'glasshouse_signal_hdr_frame_average_light_level_max_nits', type: 'gauge',
+    help: 'Brightest frame average in the content (MaxFALL) in nits, from the source\'s HDR10 static metadata, while the source gives one.',
+    samples: function (s) { return one(positive(path(s, ['signal_format', 'max_fall']))); }
+  },
+  {
+    name: 'glasshouse_signal_game_mode', type: 'gauge',
+    help: '1 while the video output service has the connected source in game mode, 0 otherwise.',
+    samples: function (s) { return one(bool(path(s, ['signal_format', 'game_mode']))); }
   },
   {
     name: 'glasshouse_hdmi_input_info', type: 'gauge',

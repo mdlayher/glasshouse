@@ -7,6 +7,7 @@ var path = require('path');
 var controls = require('../server/lib/controls');
 var prometheus = require('../server/lib/prometheus');
 var routes = require('../server/lib/routes');
+var telemetry = require('../server/lib/telemetry');
 
 console.log('Running test-prometheus.js ...');
 
@@ -79,6 +80,12 @@ function sampleLines(text) {
     'glasshouse_signal_height_pixels',
     'glasshouse_signal_refresh_hertz',
     'glasshouse_signal_frame_rate_hertz',
+    'glasshouse_signal_format_info',
+    'glasshouse_signal_hdr_mastering_luminance_max_nits',
+    'glasshouse_signal_hdr_mastering_luminance_min_nits',
+    'glasshouse_signal_hdr_content_light_level_max_nits',
+    'glasshouse_signal_hdr_frame_average_light_level_max_nits',
+    'glasshouse_signal_game_mode',
     'glasshouse_hdmi_input_info',
     'glasshouse_hdmi_link_info',
     'glasshouse_hdmi_link_bits_per_second',
@@ -342,6 +349,21 @@ function sampleLines(text) {
     var lines = sampleLines(prometheus.render({ source_frame_rate: c[0] }, ''));
     assert.strictEqual(lines[1], c[1], JSON.stringify(c[0]));
   });
+
+  // The HDR metadata from videooutput's getStatus: the CX with an HDR10 source
+  // on HDMI 4, whose MaxCLL and MaxFALL of 0 are unknown and have no sample,
+  // and the C4 in standby, with no sink connected.
+  function formatLines(capture) {
+    var lines = sampleLines(prometheus.render({ signal_format: telemetry.signalFormat(require(capture)) }, ''));
+    return lines.filter(function (l) { return /^glasshouse_signal_(format|hdr|game)_/.test(l); });
+  }
+  assert.deepEqual(formatLines('./fixtures/videooutput-cx-webos5-hdr.json'), [
+    'glasshouse_signal_format_info{type="hdr10",eotf="pq",colorimetry="bt2020_rgb_or_ycbcr",encoding="ycbcr_422"} 1',
+    'glasshouse_signal_hdr_mastering_luminance_max_nits 400',
+    'glasshouse_signal_hdr_mastering_luminance_min_nits 0.0049',
+    'glasshouse_signal_game_mode 0'
+  ]);
+  assert.deepEqual(formatLines('./fixtures/videooutput-c4-webos9-standby.json'), []);
 
   // Readings no fixture has.
   var more = sampleLines(prometheus.render({

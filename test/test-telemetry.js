@@ -70,6 +70,27 @@ console.log('Running test-telemetry.js ...');
   console.log('  dynamic range names are readable');
 })();
 
+(function testSignalHdr() {
+  assert.deepEqual(telemetry.signalFormat(require('./fixtures/videooutput-cx-webos5-hdr.json')), {
+    type: 'hdr10', eotf: 'pq', colorimetry: 'BT2020_RGBORYCbCr', encoding: 'YCbCr422',
+    max_luminance: 400, min_luminance: 0.0049, max_cll: 0, max_fall: 0,
+    game_mode: false, freesync: false
+  });
+  assert.strictEqual(telemetry.signalFormat(require('./fixtures/videooutput-c4-webos9-standby.json')), null);
+  assert.strictEqual(telemetry.signalFormat({ returnValue: false }), null);
+  // Without static metadata there is no EOTF or luminance, and colormetry
+  // other than FUTURE is the colorimetry itself.
+  assert.deepEqual(telemetry.signalFormat({ video: [
+    { sink: 'MAIN', connected: false, videoInfo: null },
+    { sink: 'SUB0', connected: true, videoInfo: { hdrType: 'DOLBY_VISION', colormetry: 'BT709', isGameMode: 1, freesyncEnabled: 1 } }
+  ] }), {
+    type: 'dolby_vision', eotf: null, colorimetry: 'BT709', encoding: null,
+    max_luminance: null, min_luminance: null, max_cll: null, max_fall: null,
+    game_mode: true, freesync: true
+  });
+  console.log('  ✓ signalFormat reads the connected sink\'s format and HDR metadata');
+})();
+
 (function testEmmc() {
   var info = telemetry.emmcInfo();
   assert.strictEqual(info.wear, '0-10%', 'Expected 0-10% wear');
@@ -558,6 +579,7 @@ telemetry.refreshInstalledApps(function (apps) {
         assert.deepEqual(gameAsked, ['com.webos.app.hdmi2']);
         assert.deepEqual(stats.picture_engine, { colorimetry: 'BT.709', hdr_mode: 'sdr' });
         assert.strictEqual(stats.colorimetry, 'BT.709');
+        assert.strictEqual(stats.signal_format, null, 'no videooutput reply, no signal format');
         // The mock's picture settings have no dimension: shown as SDR, but not
         // reported as the TV's own value.
         assert.strictEqual(stats.picture.dynamicRange, 'SDR');
