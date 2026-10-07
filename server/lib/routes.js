@@ -63,6 +63,8 @@ var servicesModule = null;
 var screensaversModule = null;
 /** @type {typeof import('./updater')} */
 var updaterModule = null;
+/** @type {typeof import('./logs')} */
+var logsModule = null;
 var tvAppFn = null;
 var restartSelfFn = null;
 /** @type {typeof import('./repo')} */
@@ -968,6 +970,21 @@ function handleRequest(req, res) {
     return oledModule.serviceMenuState(function (r) { send(res, 200, JSON.stringify(r)); });
   }
 
+  if (pathname === '/api/logs') {
+    if (!logsModule) return send(res, 503, JSON.stringify({ ok: false, error: 'logs module unavailable' }));
+    var sourcesParam = u.query.sources ? String(u.query.sources).split(',') : null;
+    var limitParam = u.query.limit ? parseInt(u.query.limit, 10) : 100;
+    var filterParam = u.query.filter ? String(u.query.filter) : '';
+    return logsModule.getLogs({
+      sources: sourcesParam,
+      limit: limitParam,
+      filter: filterParam
+    }, function (err, result) {
+      if (err) return send(res, 500, JSON.stringify({ ok: false, error: err.message }));
+      send(res, 200, JSON.stringify(result));
+    });
+  }
+
   // First-run setup and the TV's own settings. The TV only: see fromTV.
   if (pathname === '/api/setup') {
     if (!fromTV(req)) return send(res, 403, JSON.stringify({ ok: false, error: 'only from the TV itself' }));
@@ -1423,6 +1440,7 @@ function init(opts) {
   if (opts.services) servicesModule = opts.services;
   if (opts.screensavers) screensaversModule = opts.screensavers;
   if (opts.updater) updaterModule = opts.updater;
+  if (opts.logs) logsModule = opts.logs;
   if (opts.tvApp) tvAppFn = opts.tvApp;
   if (opts.restartSelf) restartSelfFn = opts.restartSelf;
   if (opts.piccapStatus) piccapStatusFn = opts.piccapStatus;

@@ -48,8 +48,26 @@ var lgSettings = require('./lib/lgsettings');
 var game = require('./lib/game');
 var piccapTransport = require('./lib/piccap');
 var remotebuttons = require('./lib/remotebuttons');
+var logsModule = require('./lib/logs');
 var msg = say.msg;
 var luna = lunaTransport.call;
+
+var _origLog = console.log;
+var _origErr = console.error;
+function logStamp(fn, args) {
+  var iso = new Date().toISOString();
+  var up = typeof os.uptime === 'function' ? os.uptime().toFixed(3) : null;
+  var pfx = iso + (up !== null ? ' [' + up + ']' : '');
+  var a = Array.prototype.slice.call(args);
+  if (a.length > 0 && typeof a[0] === 'string') {
+    a[0] = pfx + ' ' + a[0];
+  } else {
+    a.unshift(pfx);
+  }
+  fn.apply(console, a);
+}
+console.log = function () { logStamp(_origLog, arguments); };
+console.error = function () { logStamp(_origErr, arguments); };
 
 /*
  * Bump on release, and tag the release to match: the dashboard turns this into
@@ -708,6 +726,7 @@ routes.init({
   luna: luna,
   getMqttStatus: function () { return MQTT_STATUS; },
   appsChanged: appsChanged,
+  logs: logsModule,
   version: TVWEB_VERSION,
   displayVersion: TVWEB_DISPLAY_VERSION
 });

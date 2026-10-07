@@ -4011,6 +4011,10 @@
   "text": "Menú de servicio",
   "from": "Service menu"
  },
+ "tab.tools": {
+  "text": "Herramientas",
+  "from": "Tools"
+ },
  "tabs.scrollLeft": {
   "text": "Desplazar pestañas a la izquierda",
   "from": "Scroll tabs left"
@@ -4038,6 +4042,166 @@
  "theme.toggle": {
   "text": "Tema: {setting} (pulsa para {next})",
   "from": "Theme: {setting} (click for {next})"
+ },
+ "tools.activeSources": {
+  "text": "{active} fuentes activas",
+  "from": "{active} active sources"
+ },
+ "tools.bottom": {
+  "text": "Abajo",
+  "from": "Bottom"
+ },
+ "tools.clearFilter": {
+  "text": "Borrar filtro",
+  "from": "Clear filter"
+ },
+ "tools.clearSearch": {
+  "text": "Borrar búsqueda",
+  "from": "Clear search"
+ },
+ "tools.col.level": {
+  "text": "Nivel",
+  "from": "Level"
+ },
+ "tools.col.message": {
+  "text": "Mensaje",
+  "from": "Message"
+ },
+ "tools.col.process": {
+  "text": "Proceso",
+  "from": "Process"
+ },
+ "tools.col.source": {
+  "text": "Fuente",
+  "from": "Source"
+ },
+ "tools.col.time": {
+  "text": "Hora",
+  "from": "Time"
+ },
+ "tools.copied": {
+  "text": "¡Copiado!",
+  "from": "Copied!"
+ },
+ "tools.copy": {
+  "text": "Copiar",
+  "from": "Copy"
+ },
+ "tools.copyRaw": {
+  "text": "Copiar original",
+  "from": "Copy raw"
+ },
+ "tools.desc": {
+  "text": "Inspecciona y depura registros del sistema webOS en vivo, actividad del servicio Glasshouse y el búfer del kernel.",
+  "from": "Inspect and debug live webOS system logs, Glasshouse service activity, and kernel ring buffer."
+ },
+ "tools.download": {
+  "text": "Exportar",
+  "from": "Export"
+ },
+ "tools.empty": {
+  "text": "No se encontraron entradas de registro que coincidan con el filtro.",
+  "from": "No log entries found matching the filter."
+ },
+ "tools.level": {
+  "text": "Nivel",
+  "from": "Level"
+ },
+ "tools.limit": {
+  "text": "Líneas",
+  "from": "Lines"
+ },
+ "tools.live": {
+  "text": "En vivo",
+  "from": "Live"
+ },
+ "tools.loading": {
+  "text": "Cargando registros del sistema...",
+  "from": "Loading system logs..."
+ },
+ "tools.lvl.all": {
+  "text": "Todos",
+  "from": "All"
+ },
+ "tools.lvl.errors": {
+  "text": "Errores",
+  "from": "Errors"
+ },
+ "tools.lvl.info": {
+  "text": "Info",
+  "from": "Info"
+ },
+ "tools.lvl.warnings": {
+  "text": "Avisos",
+  "from": "Warnings"
+ },
+ "tools.paused": {
+  "text": "En pausa",
+  "from": "Paused"
+ },
+ "tools.rawLine": {
+  "text": "Línea de registro original",
+  "from": "Raw log line"
+ },
+ "tools.refresh": {
+  "text": "Actualizar",
+  "from": "Refresh"
+ },
+ "tools.searchPlaceholder": {
+  "text": "Filtrar texto de registro o proceso...",
+  "from": "Filter log text or process..."
+ },
+ "tools.showingCount": {
+  "text": "Mostrando {visible} de {total} entradas",
+  "from": "Showing {visible} of {total} entries"
+ },
+ "tools.sources": {
+  "text": "Fuentes",
+  "from": "Sources"
+ },
+ "tools.src.glasshouse": {
+  "text": "Glasshouse",
+  "from": "Glasshouse"
+ },
+ "tools.src.kernel": {
+  "text": "Kernel",
+  "from": "Kernel"
+ },
+ "tools.src.system": {
+  "text": "Sistema",
+  "from": "System"
+ },
+ "tools.stats.clickFilter": {
+  "text": "Pulsa para filtrar",
+  "from": "Click to filter"
+ },
+ "tools.stats.errors": {
+  "text": "Errores",
+  "from": "Errors"
+ },
+ "tools.stats.loaded": {
+  "text": "Entradas cargadas",
+  "from": "Loaded entries"
+ },
+ "tools.stats.uptime": {
+  "text": "Tiempo activo del sistema",
+  "from": "System uptime"
+ },
+ "tools.stats.warnings": {
+  "text": "Avisos",
+  "from": "Warnings"
+ },
+ "tools.structuredJson": {
+  "text": "Carga útil estructurada del evento",
+  "from": "Structured event payload"
+ },
+ "tools.title": {
+  "text": "Registros del sistema",
+  "from": "System logs"
+ },
+ "tools.uptimeOffset": {
+  "text": "+{sec}s de actividad",
+  "from": "+{sec}s uptime"
  },
  "tv.appearance.head.appearance": {
   "text": "Apariencia",
