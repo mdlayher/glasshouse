@@ -66,7 +66,8 @@ function showTab(name) {
   if (name === 'screensaver') loadScreensavers();
   if (name === 'privacy') loadPrivacy();
   if (name === 'mqtt') loadSettings();
-  if (name === 'tools') { loadLogs(); scheduleToolsPoll(); }
+  // Opened at the newest line, wherever it was left scrolled.
+  if (name === 'tools') { toolsAutoScroll = true; loadLogs(); scheduleToolsPoll(); }
   else if (typeof scheduleToolsPoll === 'function') { scheduleToolsPoll(); }
 }
 

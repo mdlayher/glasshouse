@@ -978,7 +978,8 @@ function handleRequest(req, res) {
     return logsModule.getLogs({
       sources: sourcesParam,
       limit: limitParam,
-      filter: filterParam
+      filter: filterParam,
+      since: u.query.since ? String(u.query.since) : ''
     }, function (err, result) {
       if (err) return send(res, 500, JSON.stringify({ ok: false, error: err.message }));
       send(res, 200, JSON.stringify(result));

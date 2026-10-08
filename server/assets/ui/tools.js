@@ -7,10 +7,17 @@ let toolsQuery = '';
 let toolsLive = true;
 let toolsAutoScroll = true;
 let toolsEntries = [];
-let toolsExpandedIdx = null;
+// The open row, by what it is rather than where: new lines on a live tab move
+// every row, so a position would drift onto another entry.
+let toolsExpandedKey = null;
+const entryKey = e => e.source + '|' + e.ts + '|' + e.raw;
 let toolsPollTimer = null;
 let toolsInFlight = false;
 let toolsMeta = null;
+// Where the last read ended, so a poll is sent only what is new. Valid only
+// for the sources and line limit it was read with.
+let toolsCursor = '';
+let toolsCursorKey = '';
 
 function formatLogTime(isoStr) {
   if (!isoStr) return '—';
@@ -89,7 +96,10 @@ async function loadLogs(silent = false) {
 
   const activeSrcs = Object.keys(toolsSources).filter(k => toolsSources[k]);
   const srcParam = activeSrcs.length ? activeSrcs.join(',') : 'none';
-  const url = `/api/logs?sources=${encodeURIComponent(srcParam)}&limit=${toolsLimit}`;
+  const key = srcParam + '|' + toolsLimit;
+  const useSince = silent && toolsCursor && toolsCursorKey === key;
+  const url = `/api/logs?sources=${encodeURIComponent(srcParam)}&limit=${toolsLimit}` +
+    (useSince ? `&since=${encodeURIComponent(toolsCursor)}` : '');
 
   try {
     const res = await (await fetch(api(url), { cache: 'no-store' })).json();
@@ -97,9 +107,21 @@ async function loadLogs(silent = false) {
       throw new Error((res && res.error) || 'Failed to fetch logs');
     }
     toolsMeta = res;
-    toolsEntries = res.entries || [];
+    toolsCursor = res.cursor || '';
+    toolsCursorKey = key;
+    const fresh = res.entries || [];
+    if (useSince && res.incremental) {
+      if (fresh.length) {
+        toolsEntries = toolsEntries.concat(fresh)
+          .sort((a, b) => a.mono - b.mono)
+          .slice(-toolsLimit);
+      }
+    } else {
+      toolsEntries = fresh;
+    }
     updateToolsStats();
-    renderToolsLogs();
+    // An incremental poll that brought nothing leaves the list as it is.
+    if (!(useSince && res.incremental && !fresh.length)) renderToolsLogs();
   } catch (e) {
     if (!silent) {
       const list = q('tools-log-entries');
@@ -199,10 +221,10 @@ function renderToolsLogs() {
   let html = '';
   for (let i = 0; i < filtered.length; i++) {
     const e = filtered[i];
-    const isExpanded = toolsExpandedIdx === i;
+    const isExpanded = toolsExpandedKey === entryKey(e);
     const timeFormatted = formatLogTime(e.ts);
-    const monoTip = e.mono != null ? ' (' + t('tools.uptimeOffset', '+{sec}s uptime', { sec: e.mono.toFixed(1) }) + ')' : '';
-    const fullTimeTip = esc(e.ts + monoTip);
+    const uptime = e.mono != null ? t('tools.uptimeOffset', '+{sec}s uptime', { sec: e.mono.toFixed(1) }) : '';
+    const fullTimeTip = esc(e.ts + (uptime ? ' (' + uptime + ')' : ''));
     const lvl = levelShort(e.level);
 
     let detailHtml = '';
@@ -211,7 +233,7 @@ function renderToolsLogs() {
       detailHtml = `
         <div class="log-detail" onclick="event.stopPropagation()">
           <div class="log-detail-meta">
-            <div><span class="lbl">${esc(t('tools.col.time', 'Time'))}:</span> <code>${esc(e.ts)}</code> (${monoTip.trim()})</div>
+            <div><span class="lbl">${esc(t('tools.col.time', 'Time'))}:</span> <code>${esc(e.ts)}</code>${uptime ? ' (' + esc(uptime) + ')' : ''}</div>
             <div><span class="lbl">${esc(t('tools.col.source', 'Source'))}:</span> <code>${esc(e.source)}</code></div>
             <div><span class="lbl">${esc(t('tools.col.process', 'Process'))}:</span> <code>${esc(e.proc)}</code></div>
             <div><span class="lbl">${esc(t('tools.col.level', 'Level'))}:</span> <span class="log-lvl lvl-${lvl}">${lvl}</span></div>
@@ -259,7 +281,7 @@ function toggleToolsSource(src) {
     btn.classList.toggle('active', toolsSources[src]);
     btn.classList.toggle('on', toolsSources[src]);
   }
-  toolsExpandedIdx = null;
+  toolsExpandedKey = null;
   loadLogs(false);
 }
 
@@ -270,7 +292,7 @@ function setToolsLimit(lim) {
     b.classList.toggle('active', isAct);
     b.classList.toggle('on', isAct);
   });
-  toolsExpandedIdx = null;
+  toolsExpandedKey = null;
   loadLogs(false);
 }
 
@@ -285,7 +307,7 @@ function setToolsLevelFilter(lvl) {
     b.classList.toggle('active', isAct);
     b.classList.toggle('on', isAct);
   });
-  toolsExpandedIdx = null;
+  toolsExpandedKey = null;
   updateToolsStats();
   renderToolsLogs();
 }
@@ -294,7 +316,7 @@ function onToolsSearchInput(val) {
   toolsQuery = val || '';
   const clearBtn = q('tools-search-clear');
   if (clearBtn) clearBtn.hidden = !toolsQuery;
-  toolsExpandedIdx = null;
+  toolsExpandedKey = null;
   renderToolsLogs();
 }
 
@@ -341,8 +363,15 @@ function scrollToolsToBottom() {
 }
 
 function toggleToolsLogDetail(idx) {
-  toolsExpandedIdx = toolsExpandedIdx === idx ? null : idx;
+  const e = getFilteredEntries()[idx];
+  const key = e ? entryKey(e) : null;
+  toolsExpandedKey = toolsExpandedKey === key ? null : key;
   renderToolsLogs();
+}
+
+// One line per entry, as Copy and Export both give it.
+function logLine(e) {
+  return `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${e.proc}] ${e.msg}`;
 }
 
 function copyToClipboard(text) {
@@ -363,7 +392,7 @@ function copyToClipboard(text) {
       const ok = document.execCommand('copy');
       document.body.removeChild(ta);
       if (ok) resolve();
-      else reject(new Error('Copy failed'));
+      else reject(new Error('copy refused'));
     } catch (err) {
       reject(err);
     }
@@ -373,7 +402,7 @@ function copyToClipboard(text) {
 async function copyToolsLogs() {
   const filtered = getFilteredEntries();
   if (!filtered.length) return;
-  const lines = filtered.map(e => `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${e.proc}] ${e.msg}`);
+  const lines = filtered.map(logLine);
   const text = lines.join('\n');
   try {
     await copyToClipboard(text);
@@ -388,7 +417,7 @@ async function copyToolsLogs() {
       }, 2000);
     }
   } catch (e) {
-    showErr(e.message || 'Copy failed');
+    showErr(t('tools.copyFailed', 'Could not copy the log lines.'));
   }
 }
 
@@ -408,7 +437,7 @@ async function copyToolsRaw(idx, btn) {
       }, 1500);
     }
   } catch (err) {
-    showErr(err.message || 'Copy failed');
+    showErr(t('tools.copyFailed', 'Could not copy the log lines.'));
   }
 }
 
@@ -416,7 +445,7 @@ function downloadToolsLogs() {
   const filtered = getFilteredEntries();
   if (!filtered.length) return;
   const header = `# Glasshouse & webOS System Logs\n# Exported: ${new Date().toISOString()}\n# Entries: ${filtered.length}\n\n`;
-  const lines = filtered.map(e => `[${e.ts}] [${e.source.toUpperCase()}] [${levelShort(e.level)}] [${e.proc}] ${e.raw}`);
+  const lines = filtered.map(logLine);
   const content = header + lines.join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
@@ -431,7 +460,9 @@ function downloadToolsLogs() {
 
 function scheduleToolsPoll() {
   if (toolsPollTimer) clearTimeout(toolsPollTimer);
-  if (!toolsLive || activeTab !== 'tools') return;
+  // Not while the browser tab is hidden: a dashboard left open on this tab in
+  // a background window would otherwise poll the TV indefinitely.
+  if (!toolsLive || activeTab !== 'tools' || document.hidden) return;
   toolsPollTimer = setTimeout(async () => {
     if (activeTab === 'tools' && toolsLive) {
       await loadLogs(true);
@@ -453,3 +484,14 @@ function setupToolsScrollListener() {
 }
 
 document.addEventListener('DOMContentLoaded', setupToolsScrollListener);
+
+// Back in view: catch up at once rather than after the next interval.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (toolsPollTimer) clearTimeout(toolsPollTimer);
+    toolsPollTimer = null;
+  } else if (activeTab === 'tools' && toolsLive) {
+    loadLogs(true);
+    scheduleToolsPoll();
+  }
+});
