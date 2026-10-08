@@ -4087,6 +4087,10 @@
   "text": "Copiar",
   "from": "Copy"
  },
+ "tools.copyFailed": {
+  "text": "No se pudieron copiar las líneas del registro.",
+  "from": "Could not copy the log lines."
+ },
  "tools.copyRaw": {
   "text": "Copiar original",
   "from": "Copy raw"

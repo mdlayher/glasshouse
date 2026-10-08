@@ -11,6 +11,10 @@ it before exposing it more widely.
   the token in the URL; the browser remembers it and the page takes it out of
   the address bar, so it stays out of history and shared links. This gates the HTTP API only &mdash; **MQTT and the Home
   Assistant integration are unaffected**, since they use a separate channel.
+- **The Tools tab shows the TV's logs** - its system log, Glasshouse's own and,
+  if asked, the kernel's - to whoever can reach the dashboard, as `/api/logs`.
+  They name the apps in use, the network and the broker the TV talks to. A
+  token gates them with the rest of the API.
 - **`"allowPower": false`** hides and refuses power off, power on and reboot,
   in the dashboard and in Home Assistant, for a TV that should never be
   switched off over the network. The other controls stay.

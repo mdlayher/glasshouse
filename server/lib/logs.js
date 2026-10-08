@@ -142,12 +142,15 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
     if (!line) continue;
     var m = TVWEB_RE.exec(line);
     var ts, mono, msg;
+    var marked = false;
     if (m) {
       ts = m[1];
       mono = m[2] ? parseFloat(m[2]) : (Date.parse(ts) - bootTimeMs) / 1000;
       msg = m[3];
       lastMono = mono;
       lastTs = ts;
+      // console.error's mark (tvweb.js); lines from before it are guessed.
+      if (msg.indexOf('ERROR ') === 0) { marked = true; msg = msg.substring(6); }
     } else {
       ts = lastTs;
       mono = lastMono;
@@ -166,7 +169,7 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
       ts: ts,
       mono: mono,
       source: 'glasshouse',
-      level: detectLevel(msg),
+      level: marked ? 'error' : detectLevel(msg),
       proc: proc,
       msg: msg,
       raw: line

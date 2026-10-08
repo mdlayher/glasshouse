@@ -184,6 +184,16 @@ test('a poll with the cursor gets only what was added, in whole lines', function
   }
 });
 
+test('an error the server marked is an error, whatever its words', function () {
+  var parsed = logs.parseGlasshouseLogs(
+    '2026-10-08T10:00:00.000Z [5.0] ERROR adblock: could not close port 9998\n' +
+    '2026-10-08T10:00:01.000Z [6.0] adblock: port 9998 answers on the TV only\n', Date.now() - 10000, 0);
+  assert.strictEqual(parsed[0].level, 'error');
+  assert.strictEqual(parsed[0].proc, 'adblock', 'the mark is not taken for the process');
+  assert.strictEqual(parsed[0].msg, 'adblock: could not close port 9998');
+  assert.strictEqual(parsed[1].level, 'info');
+});
+
 test('the cursor is read back as it was written', function () {
   var c = logs.parseCursor('system:120:55,glasshouse:9:7,kernel:13.5');
   assert.deepEqual(c.system, { end: 120, ino: '55' });
