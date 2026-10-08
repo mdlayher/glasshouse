@@ -109,6 +109,8 @@ var bootEpoch = 0;
 
 var lastStats = null;
 var lastStatsTime = 0;
+// Whether a collection has finished since the server started.
+var statsCollected = false;
 var isCollecting = false;
 var statsWaiters = [];
 
@@ -1397,15 +1399,19 @@ function collectStats(cb) {
   if (isCollecting) return;
   isCollecting = true;
 
+  // The first collection after start-up asks every luna service afresh, none
+  // of it cached yet: 4.7-4.8s on a C2 (webOS 22), over the 4.5s limit that
+  // later ones stay well within.
   var safetyTimeout = setTimeout(function () {
     if (isCollecting) {
       console.warn('warning: stats collection safety timeout reached');
-      flushStats(lastStats || { ok: false, error: 'timeout' });
+      flushStats(lastStats || { ok: false, error: 'timeout' }, true);
     }
-  }, 4500);
+  }, statsCollected ? 4500 : 20000);
 
-  function flushStats(result) {
+  function flushStats(result, timedOut) {
     clearTimeout(safetyTimeout);
+    if (!timedOut) statsCollected = true;
     lastStats = result;
     lastStatsTime = Date.now();
     isCollecting = false;
