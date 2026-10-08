@@ -65,6 +65,17 @@ two, not a report.
 Length should track the size of the change, not the effort behind it. A
 one-line fix gets one line.
 
+## PR descriptions: summary first
+
+A PR description must be readable at a glance by someone who has not seen
+the code. Open with a plain-language summary of what changes for the people
+using Glasshouse: short sentences or a few bullets, no file names, function
+names or PR numbers. Put the technical detail - the code changes, related PRs,
+config keys, what was left out - under a `## Technical details` heading after
+it.
+
+A small change can skip the heading: one or two plain sentences are enough.
+
 ## Don't narrate the work
 
 No process commentary: what was tried, what was ruled out, what turned out to
@@ -80,7 +91,8 @@ These are project artefacts, not messages to a reader. Never "you", "your TV",
 
 ## No filler structure
 
-Don't add headings, tables or bullet lists to a short change. Tables are for
+Don't add headings, tables or bullet lists to a short change (the
+`## Technical details` split above is for larger PRs). Tables are for
 genuine matrices - a compatibility list, a unit reference - not for restating
 three sentences.
 
