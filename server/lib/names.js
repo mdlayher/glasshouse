@@ -108,7 +108,13 @@ function dynamicRange(raw) {
 // videooutput's hdrType, snake-cased, renamed where that alone misleads. An
 // SDR source reports none, and a C4 (webOS 9) reports player-led
 // (low-latency) Dolby Vision as dolby_ll.
-var SIGNAL_HDR_TYPES = { none: 'sdr', dolby_ll: 'dolby_vision_low_latency' };
+var SIGNAL_HDR_TYPES = {
+  none: { display: 'SDR', label: 'sdr' },
+  hdr10: { display: 'HDR10', label: 'hdr10' },
+  hlg: { display: 'HLG', label: 'hlg' },
+  dolby_vision: { display: 'Dolby Vision', label: 'dolby_vision' },
+  dolby_ll: { display: 'Dolby Vision (low latency)', label: 'dolby_vision_low_latency' }
+};
 
 // CTA-861-G's EOTF codes in the HDR static metadata; 4 to 7 are reserved.
 var SIGNAL_EOTFS = ['sdr', 'hdr', 'pq', 'hlg'];
@@ -119,8 +125,17 @@ var SIGNAL_COLORIMETRY = { BT2020_RGBORYCbCr: 'bt2020_rgb_or_ycbcr' };
 // Its pixel encodings, named as the HDMI link's chroma is.
 var SIGNAL_ENCODING = { RGB: 'rgb_444', YCbCr444: 'ycbcr_444', YCbCr422: 'ycbcr_422', YCbCr420: 'ycbcr_420' };
 
+// A type outside the table is spelled out from its snake-cased name:
+// hdr10_plus is "HDR10 Plus".
+function spelledHdrType(type) {
+  return type.split('_').map(function (word) {
+    return /^(sdr|hdr\d*|hlg)$/.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
+}
+
 function signalHdrType(raw) {
-  return labelled(SIGNAL_HDR_TYPES, snakeCase(raw));
+  var type = snakeCase(raw);
+  return SIGNAL_HDR_TYPES.hasOwnProperty(type) ? SIGNAL_HDR_TYPES[type] : { display: spelledHdrType(type), label: type };
 }
 
 // A reserved code has no name.

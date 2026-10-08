@@ -65,12 +65,20 @@ assert.deepEqual(range('hdr10Plus'), ['HDR10 Plus', 'hdr10_plus', false]);
 assert.deepEqual(range('hlgALLM'), ['HLG · Low latency', 'hlg', true]);
 console.log('  ✓ an unknown dynamic range is shown readably and keeps its own label');
 
-assert.strictEqual(names.signalHdrType('NONE').label, 'sdr');
-assert.strictEqual(names.signalHdrType('HDR10').label, 'hdr10');
-assert.strictEqual(names.signalHdrType('DOLBY_VISION').label, 'dolby_vision');
-assert.strictEqual(names.signalHdrType('DOLBY_LL').label, 'dolby_vision_low_latency');
-assert.strictEqual(names.signalHdrType('HdrTypeNew').label, 'hdr_type_new');
-console.log('  ✓ HDR type, snake-cased where the table has no name');
+function hdrType(raw) {
+  var n = names.signalHdrType(raw);
+  return [n.display, n.label];
+}
+assert.deepEqual(hdrType('NONE'), ['SDR', 'sdr']);
+assert.deepEqual(hdrType('HDR10'), ['HDR10', 'hdr10']);
+assert.deepEqual(hdrType('DOLBY_VISION'), ['Dolby Vision', 'dolby_vision']);
+assert.deepEqual(hdrType('DOLBY_LL'), ['Dolby Vision (low latency)', 'dolby_vision_low_latency']);
+assert.deepEqual(hdrType('HLG'), ['HLG', 'hlg']);
+console.log('  ✓ HDR type');
+
+assert.deepEqual(hdrType('HDR10_PLUS'), ['HDR10 Plus', 'hdr10_plus']);
+assert.deepEqual(hdrType('HdrTypeNew'), ['HDR Type New', 'hdr_type_new']);
+console.log('  ✓ an unknown HDR type is spelled out and snake-cased');
 
 assert.deepEqual([0, 1, 2, 3].map(function (c) { return names.signalEotf(c).label; }), ['sdr', 'hdr', 'pq', 'hlg']);
 assert.strictEqual(names.signalEotf(4), null);
