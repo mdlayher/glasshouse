@@ -101,4 +101,4 @@ A custom Home Assistant dashboard for an LG TV:
 
 ## License
 
-MIT. See [LICENSE](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/rorygallagher2024/glasshouse/blob/main/LICENSE).

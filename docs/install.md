@@ -28,8 +28,8 @@ The models confirmed so far are listed under [Tested TVs](tested-tvs.md).
 Download the project onto a computer on the same network as the TV.
 
 ```bash
-git clone https://github.com/rorygallagher2024/lg-webos-dashboard.git
-cd lg-webos-dashboard/server
+git clone https://github.com/rorygallagher2024/glasshouse.git
+cd glasshouse/server
 ```
 
 ### 2. Install the dashboard

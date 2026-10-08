@@ -1,8 +1,8 @@
 site_name: Glasshouse
 site_description: A dashboard, privacy controls and Home Assistant bridge for rooted LG webOS TVs.
-site_url: https://rorygallagher2024.github.io/lg-webos-dashboard/
-repo_url: https://github.com/rorygallagher2024/lg-webos-dashboard
-repo_name: lg-webos-dashboard
+site_url: https://rorygallagher2024.github.io/glasshouse/
+repo_url: https://github.com/rorygallagher2024/glasshouse
+repo_name: glasshouse
 edit_uri: edit/main/docs/
 strict: true
 

@@ -20,7 +20,7 @@ const TABS = {
   tools:       'toolspane'
 };
 // Each tab's page on the docs site, for Help.
-const DOCS = 'https://rorygallagher2024.github.io/lg-webos-dashboard/';
+const DOCS = 'https://rorygallagher2024.github.io/glasshouse/';
 const TAB_DOCS = {
   control: 'dashboard/control/', metrics: 'dashboard/metrics/', apps: 'dashboard/apps/',
   oledcare: 'dashboard/oled-care/', game: 'dashboard/game/', servicemenu: 'dashboard/service-menu/',

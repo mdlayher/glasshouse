@@ -4672,8 +4672,8 @@
   "from": "and include the error:"
  },
  "tv.msg.issue": {
-  "text": "Si esto persiste, abre un issue en github.com/rorygallagher2024/lg-webos-tablero",
-  "from": "If this persists, open an issue at github.com/rorygallagher2024/lg-webos-dashboard"
+  "text": "Si esto persiste, abre un issue en github.com/rorygallagher2024/glasshouse",
+  "from": "If this persists, open an issue at github.com/rorygallagher2024/glasshouse"
  },
  "tv.msg.noResponse": {
   "text": "El servidor del panel en esta TV no respondió.",

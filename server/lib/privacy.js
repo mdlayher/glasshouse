@@ -7,6 +7,8 @@ var readTrimmed = require('./util').readTrimmed;
 var execFile = require('child_process').execFile;
 
 var ADBLOCK_HOSTS_FILE = '/var/lib/tvweb/adblock_hosts';
+// The repository's old name, kept: TVs' hosts files already carry this line,
+// and it is how the blocker finds its own entries.
 var ADBLOCK_MARKER = '# LG Ad & Telemetry Blackhole (lg-webos-dashboard)';
 var ADBLOCK_LEGACY_MARKER = '# LG Ad & Telemetry Blackhole (lg-webos-mqtt)';
 var ADBLOCK_FLAG_FILE = '/var/lib/tvweb/adblock_enabled';
