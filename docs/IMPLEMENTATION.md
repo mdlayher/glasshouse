@@ -628,7 +628,7 @@ structured data and no BOM:
 | Field | Value |
 | :--- | :--- |
 | PRI | facility × 8 + severity. System lines carry both as text in their third field, such as `user.info`. Glasshouse lines are `daemon`, with the severity from their `[INFO]`, `[WARN]`, `[ERR]` or `[DBG]` tag. Kernel lines carry the whole priority in the `<6>` that `dmesg -r` puts first: `kern` for the kernel's own, and its own facility for a line userspace wrote to `/dev/kmsg`. |
-| TIMESTAMP | the line's own time. A line dated before 2026, written before the clock synced, is dated by boot time plus its uptime instead. Kernel lines are always dated by their uptime. |
+| TIMESTAMP | the line's own time. A line dated before 2026, written before the clock synced, is dated by boot time plus its uptime instead. A Glasshouse line without a time of its own takes the time of the line before it, or the time it was read when it is the first of a read. Kernel lines are always dated by their uptime. |
 | HOSTNAME | `hostname` from the config, or else the device name the server logs as `device detected`, with spaces as `-`. The system's hostname is not used. |
 | APP-NAME | the process the Tools tab shows for the line; `kernel` for every kernel line |
 | MSGID | the source: `system`, `glasshouse` or `kernel` |

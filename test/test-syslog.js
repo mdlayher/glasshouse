@@ -72,6 +72,21 @@ function format(entry, opts) {
   console.log('  ✓ a line of each source is formatted with its priority, time and names');
 })();
 
+// 1c. An unstamped Glasshouse line at the start of a read is dated at the read
+(function testUnstamped() {
+  var now = Date.UTC(2026, 9, 8, 15, 33, 8);
+  var text = "node: ../deps/uv/src/unix/core.c:117: uv_close: Assertion `!uv__is_closing(handle)' failed.\n" +
+    '2026-10-08T15:33:06.000Z [98721.000] [ERR] luna: luna://com.webos.service.settings/getSystemSettings died (SIGABRT) before answering, trying once more\n' +
+    '    at a continuation line\n';
+  var entries = syslog.dateUnstamped(logs.parseGlasshouseLogs(text, BOOT, 98723), now, 98723);
+  assert.strictEqual(entries[0].ts, '2026-10-08T15:33:08.000Z', 'dated at the read');
+  assert.strictEqual(entries[0].mono, 98723);
+  assert.strictEqual(entries[1].ts, '2026-10-08T15:33:06.000Z', 'a stamped line keeps its own');
+  assert.strictEqual(entries[2].ts, '2026-10-08T15:33:06.000Z', 'later unstamped lines still take the line before them');
+  assert.strictEqual(format(entries[0]).split(' ')[1], '2026-10-08T15:33:08.000Z');
+  console.log('  ✓ an unstamped line at the start of a read is dated at the read, not at boot');
+})();
+
 // 2. A datagram is capped, on a character boundary
 (function testTruncate() {
   var long = new Array(3000).join('é');

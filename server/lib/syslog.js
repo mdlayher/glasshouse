@@ -47,6 +47,8 @@ var SEVERITIES = {
 var LEVEL_SEVERITY = { error: 3, warning: 4, info: 6, debug: 7 };
 
 var SYS_PRIORITY_RE = /^\S+\s+\[[0-9.]+\]\s+([a-z0-9]+)\.([a-z]+)\s/i;
+// The time tvweb.js puts first on each line it writes.
+var GLASSHOUSE_STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/;
 
 var config = null;
 var messagesPath = logs.MESSAGES_LOG;
@@ -252,6 +254,21 @@ function sendEntries(entries, bootTimeMs) {
   for (var i = 0; i < entries.length; i++) send(formatMessage(entries[i], opts), entries[i].source);
 }
 
+/*
+ * Glasshouse lines without a time of their own, such as libuv's assertion from
+ * a child process, take the time of the stamped line before them. The parser
+ * dates those at the start of a read at boot, which Loki rejects as more than
+ * an hour behind the stream; they were written since the last poll, so they
+ * are dated at this one.
+ */
+function dateUnstamped(entries, nowMs, uptime) {
+  for (var i = 0; i < entries.length && !GLASSHOUSE_STAMP_RE.test(entries[i].raw); i++) {
+    entries[i].ts = new Date(nowMs).toISOString();
+    entries[i].mono = uptime;
+  }
+  return entries;
+}
+
 // Whether the read reached the end of the file, or found no file.
 function followFile(name, filePath, parse, bootTimeMs) {
   var at = cursors[name];
@@ -290,7 +307,7 @@ function poll(done) {
   }
   if (want.indexOf('glasshouse') !== -1) {
     followFile('glasshouse', logs.getTvwebLogPath(), function (text) {
-      return logs.parseGlasshouseLogs(text, bootTimeMs, uptime);
+      return dateUnstamped(logs.parseGlasshouseLogs(text, bootTimeMs, uptime), Date.now(), uptime);
     }, bootTimeMs);
   }
   if (want.indexOf('kernel') === -1) {
@@ -397,5 +414,6 @@ module.exports = {
   startCursors: startCursors,
   bootLogsUnsent: bootLogsUnsent,
   formatMessage: formatMessage,
+  dateUnstamped: dateUnstamped,
   MAX_DATAGRAM: MAX_DATAGRAM
 };
