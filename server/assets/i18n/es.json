@@ -1523,6 +1523,18 @@
   "text": "Verificar certificado",
   "from": "Verify certificate"
  },
+ "nav.close": {
+  "text": "Cerrar menú",
+  "from": "Close menu"
+ },
+ "nav.open": {
+  "text": "Abrir menú",
+  "from": "Open menu"
+ },
+ "nav.sections": {
+  "text": "Secciones",
+  "from": "Sections"
+ },
  "offline.body": {
   "text": "Puede estar apagada o en espera. Esta página se vuelve a conectar sola cuando la TV esté disponible.",
   "from": "It may be switched off or in standby. This page reconnects by itself when the TV is back."
@@ -2142,6 +2154,26 @@
  "server.rollbackFailed": {
   "text": "La reversión falló.",
   "from": "The rollback failed."
+ },
+ "server.sidebar": {
+  "text": "Barra lateral (este navegador)",
+  "from": "Sidebar (this browser)"
+ },
+ "server.sidebar.desc": {
+  "text": "En una pantalla ancha las pestañas aparecen a la izquierda. Ocultas, quedan tras el botón de menú, como en un móvil.",
+  "from": "On a wide screen the tabs are listed down the left. Hidden, they are behind the menu button, as on a phone."
+ },
+ "server.sidebar.group": {
+  "text": "Barra lateral",
+  "from": "Sidebar"
+ },
+ "server.sidebar.hide": {
+  "text": "Ocultar",
+  "from": "Hide"
+ },
+ "server.sidebar.show": {
+  "text": "Mostrar",
+  "from": "Show"
  },
  "server.slow": {
   "text": "Está tardando más de lo habitual; puede tardar hasta dos minutos.",
@@ -4014,14 +4046,6 @@
  "tab.tools": {
   "text": "Herramientas",
   "from": "Tools"
- },
- "tabs.scrollLeft": {
-  "text": "Desplazar pestañas a la izquierda",
-  "from": "Scroll tabs left"
- },
- "tabs.scrollRight": {
-  "text": "Desplazar pestañas a la derecha",
-  "from": "Scroll tabs right"
  },
  "theme": {
   "text": "Tema",

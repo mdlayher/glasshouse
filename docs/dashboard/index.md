@@ -2,6 +2,8 @@
 
 Each of these has a tab of its own in the dashboard, and a deep link to it. OLED Care appears on OLED TVs only.
 
+On a wide screen the tabs are listed down the left. On a phone, or wherever the Server tab is set to hide the sidebar, they open from the menu button at the top of the page.
+
 * [Control](control.md): the remote, inputs, volume, playback, picture presets and screen blanking
 * [Advanced Controls](advanced.md): power and standby, sound routing, HDMI, auto device detection and front lights
 * [Metrics](metrics.md): temperatures, load, memory, network and HDMI

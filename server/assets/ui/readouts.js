@@ -499,7 +499,6 @@ async function tick() {
     isOledSet = !!d.oled;
     if (q('tab-btn-servicemenu')) q('tab-btn-servicemenu').hidden = false;
     if (q('tab-btn-oledcare')) q('tab-btn-oledcare').hidden = !isOledSet;
-    updateTabArrows();
     // If it was showing when the set turned out not to be an OLED, leave it.
     if (!isOledSet && activeTab === 'oledcare') showTab('control');
 
