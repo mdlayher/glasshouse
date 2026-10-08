@@ -200,6 +200,36 @@ function pictureMode(raw) {
   return { display: name.display || spelledOut(mode), label: name.label || snakeCase(mode) };
 }
 
+// The sound output's keys. Several are the same output and share its name;
+// each is snake case already, and is its own label.
+var SOUND_OUTPUTS = {
+  tv_speaker: 'TV Speaker',
+  external_arc: 'HDMI ARC',
+  optical: 'Optical',
+  external_optical: 'Optical',
+  ext_speaker_optical: 'Optical',
+  ext_speaker_builtin_lg_optical: 'Optical',
+  ext_speaker_arc: 'HDMI ARC',
+  headphone: 'Headphone / AUX',
+  bt_soundbar: 'Bluetooth',
+  external_speaker: 'External Speaker',
+  lineout: 'Line Out',
+  soundbar: 'LG Sound Sync',
+  tv_speaker_headphone: 'TV Speaker + Headphone',
+  internal: 'TV Speaker'
+};
+
+// An output outside the table is still shown readably: mobile_phone reads as
+// "Mobile Phone" rather than as the raw key.
+function soundOutput(raw) {
+  var output = String(raw);
+  return {
+    display: SOUND_OUTPUTS.hasOwnProperty(output) ? SOUND_OUTPUTS[output] :
+      output.replace(/_/g, ' ').replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }),
+    label: snakeCase(output)
+  };
+}
+
 module.exports = {
   snakeCase: snakeCase,
   mapped: mapped,
@@ -212,5 +242,7 @@ module.exports = {
   signalColorimetry: signalColorimetry,
   signalEncoding: signalEncoding,
   PICTURE_MODES: PICTURE_MODES,
-  pictureMode: pictureMode
+  pictureMode: pictureMode,
+  SOUND_OUTPUTS: SOUND_OUTPUTS,
+  soundOutput: soundOutput
 };
