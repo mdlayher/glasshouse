@@ -17,7 +17,6 @@ var MEBIBYTE = 1024 * 1024;
 
 var names = require('./names');
 var snakeCase = names.snakeCase;
-var mapped = names.mapped;
 
 function num(v) {
   return typeof v === 'number' && isFinite(v) ? v : null;
@@ -68,29 +67,6 @@ function memoryRead(s) {
 
 // The JEDEC eMMC PRE_EOL_INFO states, as telemetry names them.
 var EMMC_EOL_STATES = ['Normal', 'Warning', 'Urgent'];
-
-/*
- * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
- * the label is the base, since the range has its own. LG's display names are
- * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
- * on webOS 5, "FILMMAKER MODE" on webOS 9) and by region. hdrExternal and
- * dolbyHdrDarkAmazon appear only in LG's name tables, named as Standard and
- * Cinema Home. hdrEffect is an SDR mode.
- */
-var PICTURE_MODES = {
-  personalized: 'personalized', hdrPersonalized: 'personalized', dolbyHdrPersonalized: 'personalized',
-  vivid: 'vivid', hdrVivid: 'vivid', dolbyHdrVivid: 'vivid',
-  normal: 'standard', hdrStandard: 'standard', dolbyHdrStandard: 'standard', hdrExternal: 'standard',
-  eco: 'eco', hdrEco: 'eco',
-  cinema: 'cinema', hdrCinema: 'cinema', dolbyHdrCinema: 'cinema',
-  hdrCinemaBright: 'cinema_bright', dolbyHdrCinemaBright: 'cinema_bright', dolbyHdrDarkAmazon: 'cinema_bright',
-  sports: 'sports',
-  game: 'game', hdrGame: 'game', dolbyHdrGame: 'game',
-  photo: 'photo',
-  filmMaker: 'filmmaker', hdrFilmMaker: 'filmmaker',
-  expert1: 'expert_bright', expert2: 'expert_dark',
-  hdrEffect: 'hdr_effect'
-};
 
 function hdmiLinks(s) {
   return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
@@ -391,7 +367,7 @@ var FAMILIES = [
       var mode = path(s, ['picture', 'mode_raw']);
       var labels = {
         dynamic_range: dr ? dr.label : '',
-        picture_mode: typeof mode === 'string' && mode ? mapped(PICTURE_MODES, mode) : ''
+        picture_mode: typeof mode === 'string' && mode ? names.pictureMode(mode).label : ''
       };
       return labels.dynamic_range || labels.picture_mode ? [[labels, 1]] : [];
     }

@@ -84,3 +84,23 @@ assert.strictEqual(names.signalEncoding('YCbCr422').label, 'ycbcr_422');
 assert.strictEqual(names.signalEncoding('YCbCr420').label, 'ycbcr_420');
 assert.strictEqual(names.signalEncoding('YCbCr440').label, 'ycb_cr440');
 console.log('  ✓ colorimetry and pixel encoding, and unknown ones in snake case');
+
+function mode(raw) { return both(names.pictureMode(raw)); }
+
+assert.deepEqual(mode('normal'), ['Standard', 'standard']);
+assert.deepEqual(mode('hdrCinemaBright'), ['HDR Cinema Bright', 'cinema_bright']);
+assert.deepEqual(mode('dolbyHdrCinemaBright'), ['Dolby Vision Cinema Bright', 'cinema_bright']);
+assert.deepEqual(mode('hdrFilmMaker'), ['HDR Filmmaker', 'filmmaker']);
+assert.deepEqual(mode('expert1'), ['ISF Expert (Bright)', 'expert_bright']);
+assert.deepEqual(mode('hdrEffect'), ['HDR Effect', 'hdr_effect']);
+console.log('  ✓ picture mode, labelled by its base mode');
+
+assert.deepEqual(mode('hdrExternal'), ['HDR External', 'standard']);
+assert.deepEqual(mode('dolbyHdrDarkAmazon'), ['Dolby Vision Dark Amazon', 'cinema_bright']);
+assert.deepEqual(mode('dolbyHdrCinemaHome'), ['Dolby Vision Cinema Home', 'dolby_hdr_cinema_home']);
+console.log('  ✓ a picture mode named one way only is named the other as an unknown one');
+
+assert.deepEqual(mode('dolbyHdrSomethingNew'), ['Dolby Vision Something New', 'dolby_hdr_something_new']);
+assert.deepEqual(mode('hdrSomethingNew'), ['HDR Something New', 'hdr_something_new']);
+assert.deepEqual(mode('somethingNew'), ['Something New', 'something_new']);
+console.log('  ✓ an unknown picture mode is spelled out and keeps its own label');
