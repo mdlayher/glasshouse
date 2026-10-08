@@ -14,33 +14,38 @@ function getTvwebLogPath() {
   return process.env.TVWEB_LOG || '/var/lib/tvweb/tvweb.log';
 }
 
-/**
- * Safely read the tail of a file up to maxBytes.
- * @param {string} filePath
- * @param {number} maxBytes
- * @returns {string|null}
+/*
+ * Reads a file's complete lines from `from` to the end, or the last maxBytes
+ * of it when `from` is null, no longer in the file (rotated or truncated), on
+ * another file (ino), or further back than maxBytes. `end` is the offset just
+ * past the last newline, so a line still being written is read whole by the
+ * next call; `whole` says the start was not `from`, so what came before has to
+ * be dropped rather than added to.
  */
-function readTail(filePath, maxBytes) {
+function readLines(filePath, from, ino, maxBytes) {
   try {
     if (!fs.existsSync(filePath)) return null;
     var stat = fs.statSync(filePath);
     if (!stat.isFile()) return null;
     var size = stat.size;
-    if (size === 0) return '';
+    var sameFile = from !== null && (!ino || ino === String(stat.ino));
+    var whole = !sameFile || from > size || size - from > maxBytes;
+    var start = whole ? Math.max(0, size - maxBytes) : from;
+    var toRead = size - start;
+    if (toRead <= 0) return { text: '', end: start, ino: String(stat.ino), whole: whole };
     var fd = fs.openSync(filePath, 'r');
-    var toRead = Math.min(size, maxBytes);
     var buf = typeof Buffer.alloc === 'function' ? Buffer.alloc(toRead) : new Buffer(toRead);
-    var pos = Math.max(0, size - toRead);
-    var bytesRead = fs.readSync(fd, buf, 0, toRead, pos);
+    var bytesRead = fs.readSync(fd, buf, 0, toRead, start);
     fs.closeSync(fd);
-    var content = buf.toString('utf8', 0, bytesRead);
-    if (size > maxBytes) {
-      var firstNewline = content.indexOf('\n');
-      if (firstNewline !== -1) {
-        content = content.substring(firstNewline + 1);
-      }
+    var last = -1;
+    for (var i = bytesRead - 1; i >= 0; i--) { if (buf[i] === 10) { last = i; break; } }
+    var text = last === -1 ? '' : buf.toString('utf8', 0, last + 1);
+    // A read that began part way into the file starts mid-line.
+    if (whole && start > 0) {
+      var firstNewline = text.indexOf('\n');
+      text = firstNewline === -1 ? '' : text.substring(firstNewline + 1);
     }
-    return content;
+    return { text: text, end: start + last + 1, ino: String(stat.ino), whole: whole };
   } catch (e) {
     return null;
   }
@@ -213,12 +218,30 @@ function parseKernelLogs(raw, bootTimeMs) {
   return out;
 }
 
+/*
+ * The cursor a poll sends back to be given only what is new:
+ * "system:<end>:<ino>,glasshouse:<end>:<ino>,kernel:<last uptime>".
+ */
+function parseCursor(since) {
+  var out = {};
+  String(since || '').split(',').forEach(function (part) {
+    var f = part.split(':');
+    if (f[0] === 'kernel' && f[1] && !isNaN(parseFloat(f[1]))) out.kernel = parseFloat(f[1]);
+    else if ((f[0] === 'system' || f[0] === 'glasshouse') && /^\d+$/.test(f[1] || '')) {
+      out[f[0]] = { end: parseInt(f[1], 10), ino: f[2] || '' };
+    }
+  });
+  return out;
+}
+
 /**
  * Fetch and combine logs across requested sources.
  * @param {Object} opts
  * @param {Array.<string>} [opts.sources] 'system', 'glasshouse', 'kernel'
  * @param {number|string} [opts.limit]
  * @param {string} [opts.filter]
+ * @param {string} [opts.since] the cursor from the last call: only what
+ *   came after it is returned, unless `incremental` comes back false
  * @param {function(Error|null, Object=): void} cb
  */
 function getLogs(opts, cb) {
@@ -250,21 +273,28 @@ function getLogs(opts, cb) {
   };
 
   var allEntries = [];
+  var since = opts.since ? parseCursor(opts.since) : null;
+  // False once any source had to be read whole, so the caller replaces its
+  // list rather than adding to it.
+  var incremental = !!since;
+  var cursor = [];
+
+  function readSource(name, file, parse) {
+    var at = since && since[name];
+    var r = readLines(file, at ? at.end : null, at ? at.ino : '', MAX_FILE_READ);
+    if (!r) { if (since) incremental = false; return; }
+    if (r.whole) incremental = false;
+    cursor.push(name + ':' + r.end + ':' + r.ino);
+    var entries = parse(r.text);
+    for (var e = 0; e < entries.length; e++) allEntries.push(entries[e]);
+  }
 
   if (wantSystem && sysAvailable) {
-    var sysRaw = readTail(MESSAGES_LOG, MAX_FILE_READ);
-    if (sysRaw) {
-      var sysEntries = parseSystemLogs(sysRaw, bootTimeMs);
-      for (var s = 0; s < sysEntries.length; s++) allEntries.push(sysEntries[s]);
-    }
+    readSource('system', MESSAGES_LOG, function (text) { return parseSystemLogs(text, bootTimeMs); });
   }
 
   if (wantGlasshouse && ghAvailable) {
-    var ghRaw = readTail(tvwebPath, MAX_FILE_READ);
-    if (ghRaw) {
-      var ghEntries = parseGlasshouseLogs(ghRaw, bootTimeMs, uptime);
-      for (var g = 0; g < ghEntries.length; g++) allEntries.push(ghEntries[g]);
-    }
+    readSource('glasshouse', tvwebPath, function (text) { return parseGlasshouseLogs(text, bootTimeMs, uptime); });
   }
 
   function finish() {
@@ -295,6 +325,8 @@ function getLogs(opts, cb) {
 
     cb(null, {
       ok: true,
+      cursor: cursor.join(','),
+      incremental: incremental,
       sources: meta,
       uptime: uptime,
       bootTime: bootTimeMs,
@@ -307,8 +339,17 @@ function getLogs(opts, cb) {
   if (wantKernel) {
     execFile('dmesg', [], { maxBuffer: 2 * 1024 * 1024 }, function (err, stdout) {
       if (!err && stdout) {
+        // dmesg is a ring buffer, read whole each time: what is new is what
+        // is later than the last entry the caller has.
         var kEntries = parseKernelLogs(stdout, bootTimeMs);
-        for (var k = 0; k < kEntries.length; k++) allEntries.push(kEntries[k]);
+        // All of it when a file was read whole, as the caller starts over.
+        var after = incremental && typeof since.kernel === 'number' ? since.kernel : -1;
+        var lastMono = after;
+        for (var k = 0; k < kEntries.length; k++) {
+          if (kEntries[k].mono > after) allEntries.push(kEntries[k]);
+          if (kEntries[k].mono > lastMono) lastMono = kEntries[k].mono;
+        }
+        if (lastMono >= 0) cursor.push('kernel:' + lastMono);
       } else if (err) {
         meta.kernel.available = false;
         meta.kernel.error = err.message;
@@ -322,6 +363,7 @@ function getLogs(opts, cb) {
 
 module.exports = {
   getLogs: getLogs,
+  parseCursor: parseCursor,
   parseSystemLogs: parseSystemLogs,
   parseGlasshouseLogs: parseGlasshouseLogs,
   parseKernelLogs: parseKernelLogs,

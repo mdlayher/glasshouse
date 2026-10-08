@@ -141,9 +141,62 @@ test('getLogs clamps limits and handles filtering', function (done) {
   });
 });
 
+test('a poll with the cursor gets only what was added, in whole lines', function () {
+  var fs = require('fs'), os = require('os'), path = require('path');
+  var file = path.join(os.tmpdir(), 'glasshouse-logs-' + process.pid + '.log');
+  var saved = process.env.TVWEB_LOG;
+  process.env.TVWEB_LOG = file;
+  function line(n) { return '2026-10-08T10:00:0' + n + '.000Z [' + n + '.0] mqtt: line ' + n + '\n'; }
+  function read(since) {
+    var out = null;
+    logs.getLogs({ sources: ['glasshouse'], since: since }, function (err, r) { assert.ifError(err); out = r; });
+    return out;
+  }
+  try {
+    fs.writeFileSync(file, line(1) + line(2));
+    var first = read('');
+    assert.strictEqual(first.entries.length, 2);
+    assert.strictEqual(first.incremental, false, 'no cursor, a whole read');
+    assert.ok(/^glasshouse:\d+:/.test(first.cursor), 'a cursor to send back: ' + first.cursor);
+
+    var none = read(first.cursor);
+    assert.strictEqual(none.incremental, true);
+    assert.strictEqual(none.entries.length, 0, 'nothing new, nothing sent');
+
+    fs.appendFileSync(file, line(3) + '2026-10-08T10:00:04.000Z [4.0] mqtt: still being wri');
+    var more = read(none.cursor);
+    assert.strictEqual(more.incremental, true);
+    assert.deepEqual(more.entries.map(function (e) { return e.msg; }), ['mqtt: line 3'],
+      'only the new line, and not the one still being written');
+
+    fs.appendFileSync(file, 'tten\n');
+    var rest = read(more.cursor);
+    assert.deepEqual(rest.entries.map(function (e) { return e.msg; }), ['mqtt: still being written'],
+      'the unfinished line once it is whole');
+
+    fs.writeFileSync(file, line(5));
+    var rotated = read(rest.cursor);
+    assert.strictEqual(rotated.incremental, false, 'a file shorter than the cursor was rotated: read whole');
+    assert.deepEqual(rotated.entries.map(function (e) { return e.msg; }), ['mqtt: line 5']);
+  } finally {
+    if (saved === undefined) delete process.env.TVWEB_LOG; else process.env.TVWEB_LOG = saved;
+    try { fs.unlinkSync(file); } catch (e) {}
+  }
+});
+
+test('the cursor is read back as it was written', function () {
+  var c = logs.parseCursor('system:120:55,glasshouse:9:7,kernel:13.5');
+  assert.deepEqual(c.system, { end: 120, ino: '55' });
+  assert.deepEqual(c.glasshouse, { end: 9, ino: '7' });
+  assert.strictEqual(c.kernel, 13.5);
+  assert.deepEqual(logs.parseCursor('rubbish,system:x'), {}, 'anything malformed is ignored');
+});
+
 // Run all tests
 var failures = 0;
-var asyncLeft = 1;
+// Every async test and the synchronous pass, so a test registered after an
+// async one that calls back at once still counts.
+var asyncLeft = 1 + tests.filter(function (t) { return t[1].length > 0; }).length;
 
 function checkDone() {
   if (asyncLeft === 0) {
