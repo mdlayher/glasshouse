@@ -107,6 +107,14 @@ console.log('Running test-ha.js ...');
   assert.strictEqual(picEntity.payload.options.indexOf('Cinema') !== -1, true);
   assert.strictEqual(picEntity.payload.options.indexOf('Game') !== -1, true);
 
+  // TV Speaker + Bluetooth's surround variant adds no option, and
+  // the option sets the setting's key.
+  var outEntity = null;
+  baseEntities.forEach(function (e) { if (e.id === 'sound_output') outEntity = e; });
+  var btOptions = outEntity.payload.options.filter(function (o) { return o === 'TV Speaker + Bluetooth'; });
+  assert.strictEqual(btOptions.length, 1);
+  assert.ok(outEntity.payload.command_template.indexOf('"TV Speaker + Bluetooth":"tv_speaker_bluetooth"') !== -1);
+
   console.log('  ✓ buildEntities generates unique, valid Home Assistant entities and dynamic options');
 })();
 

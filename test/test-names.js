@@ -120,6 +120,7 @@ assert.deepEqual(output('internal'), ['TV Speaker', 'internal']);
 assert.deepEqual(output('external_arc'), ['HDMI ARC', 'external_arc']);
 assert.deepEqual(output('tv_external_speaker'), ['TV Speaker + Optical', 'tv_external_speaker']);
 assert.deepEqual(output('tv_speaker_bluetooth'), ['TV Speaker + Bluetooth', 'tv_speaker_bluetooth']);
+assert.deepEqual(output('tv_speaker_bt_surround'), ['TV Speaker + Bluetooth', 'tv_speaker_bt_surround']);
 assert.deepEqual(output('ext_speaker_builtin_lg_optical'), ['Optical', 'ext_speaker_builtin_lg_optical']);
 assert.deepEqual(output('headphone'), ['Headphone / AUX', 'headphone']);
 assert.deepEqual(output('bt_soundbar'), ['Bluetooth', 'bt_soundbar']);

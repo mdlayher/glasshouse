@@ -229,6 +229,10 @@ var SOUND_OUTPUTS = {
   bt_soundbar: 'Bluetooth',
   tv_external_speaker: 'TV Speaker + Optical',
   tv_speaker_bluetooth: 'TV Speaker + Bluetooth',
+  // tv_speaker_bluetooth with the Bluetooth mode on surround, as the volume
+  // service reports it (C4, webOS 9.2). After the setting key, so a select
+  // offering the name sets the key.
+  tv_speaker_bt_surround: 'TV Speaker + Bluetooth',
   tv_speaker_external_arc: 'TV Speaker + HDMI ARC',
   wow_cast: 'LG WOWCAST',
   mobile_phone: 'Mobile Phone',
