@@ -850,8 +850,7 @@ function formatSoundOutput(so) {
 }
 
 function formatPicMode(mode) {
-  if (!mode) return 'Standard';
-  return ha.picModeName(mode);
+  return mode ? names.pictureMode(mode).display : 'Standard';
 }
 
 // The TV gives no dimension where the picture is SDR.

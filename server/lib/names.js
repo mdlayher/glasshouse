@@ -136,6 +136,70 @@ function signalEncoding(raw) {
   return labelled(SIGNAL_ENCODING, raw);
 }
 
+/*
+ * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
+ * the label is the base, since the range has its own. LG's display names are
+ * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
+ * on webOS 5, "FILMMAKER MODE" on webOS 9) and by region. hdrExternal and
+ * dolbyHdrDarkAmazon appear only in LG's name tables, named as Standard and
+ * Cinema Home. hdrEffect is an SDR mode. A mode named one way only is named
+ * the other way as one outside the table.
+ */
+var PICTURE_MODES = {
+  personalized: { display: 'Personalized', label: 'personalized' },
+  hdrPersonalized: { display: 'HDR Personalized', label: 'personalized' },
+  dolbyHdrPersonalized: { label: 'personalized' },
+  vivid: { display: 'Vivid', label: 'vivid' },
+  hdrVivid: { display: 'HDR Vivid', label: 'vivid' },
+  dolbyHdrVivid: { display: 'Dolby Vision Vivid', label: 'vivid' },
+  standard: { display: 'Standard' },
+  normal: { display: 'Standard', label: 'standard' },
+  hdrStandard: { display: 'HDR Standard', label: 'standard' },
+  dolbyHdrStandard: { display: 'Dolby Vision Standard', label: 'standard' },
+  hdrExternal: { label: 'standard' },
+  eco: { display: 'Eco', label: 'eco' },
+  hdrEco: { label: 'eco' },
+  cinema: { display: 'Cinema', label: 'cinema' },
+  hdrCinema: { display: 'HDR Cinema', label: 'cinema' },
+  dolbyHdrCinema: { display: 'Dolby Vision Cinema', label: 'cinema' },
+  hdrCinemaBright: { display: 'HDR Cinema Bright', label: 'cinema_bright' },
+  dolbyHdrCinemaBright: { display: 'Dolby Vision Cinema Bright', label: 'cinema_bright' },
+  dolbyHdrDarkAmazon: { label: 'cinema_bright' },
+  hdrCinemaHome: { display: 'HDR Cinema Home' },
+  dolbyHdrCinemaHome: { display: 'Dolby Vision Cinema Home' },
+  sports: { label: 'sports' },
+  game: { display: 'Game', label: 'game' },
+  hdrGame: { display: 'HDR Game', label: 'game' },
+  dolbyHdrGame: { display: 'Dolby Vision Game', label: 'game' },
+  photo: { label: 'photo' },
+  filmMaker: { display: 'Filmmaker', label: 'filmmaker' },
+  hdrFilmMaker: { display: 'HDR Filmmaker', label: 'filmmaker' },
+  dolbyHdrFilmMaker: { display: 'Dolby Vision Filmmaker' },
+  expert1: { display: 'ISF Expert (Bright)', label: 'expert_bright' },
+  expert2: { display: 'ISF Expert (Dark)', label: 'expert_dark' },
+  technicolor: { display: 'Technicolor' },
+  technicolorHdr: { display: 'Technicolor HDR' },
+  hdrEffect: { display: 'HDR Effect', label: 'hdr_effect' }
+};
+
+/*
+ * A mode outside the table is spelled out from its id rather than shown as
+ * one word: dolbyHdrCinemaBright reads "Dolby Vision Cinema Bright".
+ */
+function spelledOut(raw) {
+  return raw
+    .replace(/^dolbyHdr(?=[A-Z])/, 'Dolby Vision ')
+    .replace(/^hdr(?=[A-Z])/, 'HDR ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/^[a-z]/, function (c) { return c.toUpperCase(); });
+}
+
+function pictureMode(raw) {
+  var mode = String(raw);
+  var name = PICTURE_MODES.hasOwnProperty(mode) ? PICTURE_MODES[mode] : {};
+  return { display: name.display || spelledOut(mode), label: name.label || snakeCase(mode) };
+}
+
 module.exports = {
   snakeCase: snakeCase,
   mapped: mapped,
@@ -146,5 +210,7 @@ module.exports = {
   signalHdrType: signalHdrType,
   signalEotf: signalEotf,
   signalColorimetry: signalColorimetry,
-  signalEncoding: signalEncoding
+  signalEncoding: signalEncoding,
+  PICTURE_MODES: PICTURE_MODES,
+  pictureMode: pictureMode
 };
