@@ -18,7 +18,7 @@ Hardware specifications directly determine runtime compatibility and performance
 
 ## Hardware comparison across generations
 
-The table below summarizes hardware specifications across key LG TV generations tested with the project, spanning webOS 3.x (2016) through webOS 26 (2025).
+The table below summarizes hardware specifications across key LG TV generations tested with the project, spanning webOS 3.x (2016) through webOS 26 (2026).
 
 | Series / Year | webOS (native) | SoC / Board | CPU | GPU | RAM | eMMC | Kernel | Node / Chromium | HDMI |
 |---|---|---|---|---|---|---|---|---|---|
@@ -36,6 +36,7 @@ The table below summarizes hardware specifications across key LG TV generations 
 | **G4 / M4** (2024) | webOS 24 (9.x / 25) | Alpha 11 (O24Pro) | 4× Cortex-A78 @ 1.6 GHz (ARMv8.2-A) | Mali-G57 MC4 | 4.0 GB | 16 GB | Linux 5.15 / 6.1 | Node 20.x / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
 | **[C5](c5.md)** (2025) | webOS 25 | Alpha 9 Gen 8 (LG1213 / O22A3) | 4× Cortex-A76 @ 1.4 GHz (ARMv8.2-A) | Mali-G52 MP3 | 2.5 GB (2.0 GB to Linux) | 16 GB | Linux 5.4 | Node 16.20 / Chr 120 | 4× HDMI 2.1 (144 Hz) |
 | **G5** (2025) | webOS 25 / 26 | Alpha 11 Gen 2 | Quad-core ARMv8.2-A (ARMv8) | Mali-G57 / Immortalis | 4.0 GB | 16 GB | Linux 6.1+ | Node 20+ / Chr 120+ | 4× HDMI 2.1 (144 Hz) |
+| **[NU80](nu80.md)** (2026 LCD) | webOS 26 | Realtek K25Lpn | 4× Cortex-A73 @ 1.24 GHz (ARMv8-A) | PowerVR CXM-2-64 | ~1.5 GB (1.2 GB to Linux) | 8 GB | Linux 6.12 | Node 20.12 / — | — |
 
 ---
 
@@ -47,6 +48,7 @@ Detailed diagnostic scrapes gathered directly from live hardware via root shells
 - [LG OLED48CXPUB (2020 — webOS 5)](cx.md): Alpha 9 Gen 3 (LG1212 / "O20"), 4× Cortex-A55, Mali-G51 MP3, Node v8.12.0, Chromium 68, Linux 4.4.
 - [LG OLED42C24LA (2022 — webOS 6/9)](c2.md): Alpha 9 Gen 5 (LG1213 / "O22"), 4× Cortex-A76 @ 1.4 GHz, Mali-G52 MP3, Node v16.19.1, Chromium 108, Linux 5.4.
 - [LG OLED48C5PUA (2025 — webOS 25)](c5.md): Alpha 9 Gen 8 (LG1213 / "O22"), 4× Cortex-A76 @ 1.4 GHz, Mali-G52 MP3, Node v16.20.2, Chromium 120, Linux 5.4.
+- [LG 43NU800BPSC (2026 — webOS 26)](nu80.md): Realtek K25Lpn, 4× Cortex-A73 @ 1.24 GHz, PowerVR GPU, Node v20.12.2, Linux 6.12.
 
 ### Generational leap: B8 vs C2
 
