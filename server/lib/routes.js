@@ -73,6 +73,8 @@ var repoModule = null;
 var installerModule = null;
 /** @type {typeof import('./prometheus')} */
 var prometheusModule = null;
+/** @type {typeof import('./syslog')} */
+var syslogModule = null;
 var fromHbcFn = null;
 var tileHidingOffMsg = '';
 var assetPathFn = null;
@@ -1275,7 +1277,8 @@ function handleRequest(req, res) {
   // While switched off the endpoint does not exist: it falls through to the 404.
   if (pathname === '/api/prometheus/metrics' && prometheusEnabled()) {
     return telemetryModule.collectStats(function (s) {
-      send(res, 200, prometheusModule.render(s, versionStr), 'text/plain; version=0.0.4; charset=utf-8');
+      var forwarded = syslogModule ? syslogModule.getCounters() : null;
+      send(res, 200, prometheusModule.render(s, versionStr, forwarded), 'text/plain; version=0.0.4; charset=utf-8');
     });
   }
 
@@ -1450,6 +1453,7 @@ function init(opts) {
   if (opts.repo) repoModule = opts.repo;
   if (opts.installer) installerModule = opts.installer;
   if (opts.prometheus) prometheusModule = opts.prometheus;
+  if (opts.syslog) syslogModule = opts.syslog;
   if (opts.fromHomebrewChannel) fromHbcFn = opts.fromHomebrewChannel;
   if (opts.tileHidingOff) tileHidingOffMsg = opts.tileHidingOff;
   if (opts.assetPath) assetPathFn = opts.assetPath;

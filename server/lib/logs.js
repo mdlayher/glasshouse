@@ -25,32 +25,48 @@ function getTvwebRotatedLogPath() {
  * another file (ino), or further back than maxBytes. `end` is the offset just
  * past the last newline, so a line still being written is read whole by the
  * next call; `whole` says the start was not `from`, so what came before has to
- * be dropped rather than added to.
+ * be dropped rather than added to. `atEnd` says the read reached the end of
+ * the file.
+ *
+ * With `forward`, a file that grew by more than maxBytes is read maxBytes at a
+ * time from `from` rather than for its last maxBytes, and one that is new or
+ * was cut short is read from its start: every line is read once, a piece at a
+ * time, for following the file rather than showing its end.
  */
-function readLines(filePath, from, ino, maxBytes) {
+function readLines(filePath, from, ino, maxBytes, forward) {
   try {
     if (!fs.existsSync(filePath)) return null;
     var stat = fs.statSync(filePath);
     if (!stat.isFile()) return null;
     var size = stat.size;
     var sameFile = from !== null && (!ino || ino === String(stat.ino));
-    var whole = !sameFile || from > size || size - from > maxBytes;
-    var start = whole ? Math.max(0, size - maxBytes) : from;
-    var toRead = size - start;
-    if (toRead <= 0) return { text: '', end: start, ino: String(stat.ino), whole: whole };
+    var whole, start, toRead;
+    if (forward) {
+      whole = !sameFile || from > size;
+      start = whole ? 0 : from;
+      toRead = Math.min(size - start, maxBytes);
+    } else {
+      whole = !sameFile || from > size || size - from > maxBytes;
+      start = whole ? Math.max(0, size - maxBytes) : from;
+      toRead = size - start;
+    }
+    if (toRead <= 0) return { text: '', end: start, ino: String(stat.ino), whole: whole, atEnd: true };
     var fd = fs.openSync(filePath, 'r');
     var buf = typeof Buffer.alloc === 'function' ? Buffer.alloc(toRead) : new Buffer(toRead);
     var bytesRead = fs.readSync(fd, buf, 0, toRead, start);
     fs.closeSync(fd);
     var last = -1;
     for (var i = bytesRead - 1; i >= 0; i--) { if (buf[i] === 10) { last = i; break; } }
+    // A line longer than a whole forward read is taken as it is, or the read
+    // would never get past it.
+    if (forward && last === -1 && bytesRead === maxBytes) last = bytesRead - 1;
     var text = last === -1 ? '' : buf.toString('utf8', 0, last + 1);
     // A read that began part way into the file starts mid-line.
     if (whole && start > 0) {
       var firstNewline = text.indexOf('\n');
       text = firstNewline === -1 ? '' : text.substring(firstNewline + 1);
     }
-    return { text: text, end: start + last + 1, ino: String(stat.ino), whole: whole };
+    return { text: text, end: start + last + 1, ino: String(stat.ino), whole: whole, atEnd: start + bytesRead >= size };
   } catch (e) {
     return null;
   }
@@ -192,10 +208,12 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
   return out;
 }
 
-var DMESG_RE = /^\s*\[\s*([0-9.]+)\s*\]\s*(.*)$/;
+// `dmesg -r` puts each line's priority first, as <6>.
+var DMESG_RE = /^\s*(?:<(\d+)>)?\[\s*([0-9.]+)\s*\]\s*(.*)$/;
 
 /**
- * Parse kernel dmesg output.
+ * Parse kernel dmesg output, with or without -r. An entry from `dmesg -r`
+ * also has its priority as `pri`.
  * @param {string} raw
  * @param {number} bootTimeMs
  * @returns {Array.<Object>}
@@ -209,8 +227,8 @@ function parseKernelLogs(raw, bootTimeMs) {
     if (!line) continue;
     var m = DMESG_RE.exec(line);
     if (m) {
-      var mono = parseFloat(m[1]);
-      var msg = m[2];
+      var mono = parseFloat(m[2]);
+      var msg = m[3];
       var ts = new Date(bootTimeMs + Math.round(mono * 1000)).toISOString();
       var proc = 'kernel';
       var tagMatch = /^(?:\[([a-zA-Z0-9_.-]+)\]:?\s*|([a-zA-Z0-9_.-]+)(?:\s+[\w.:-]+)?:\s*)(.*)$/.exec(msg);
@@ -221,7 +239,7 @@ function parseKernelLogs(raw, bootTimeMs) {
           proc = candidate;
         }
       }
-      out.push({
+      var entry = {
         ts: ts,
         mono: mono,
         source: 'kernel',
@@ -229,7 +247,9 @@ function parseKernelLogs(raw, bootTimeMs) {
         proc: proc,
         msg: msg,
         raw: line
-      });
+      };
+      if (m[1]) entry.pri = parseInt(m[1], 10);
+      out.push(entry);
     }
   }
   return out;
@@ -490,6 +510,8 @@ function shouldLog(levelTag, configuredLevel) {
 
 module.exports = {
   getLogs: getLogs,
+  readLines: readLines,
+  MESSAGES_LOG: MESSAGES_LOG,
   parseCursor: parseCursor,
   parseSystemLogs: parseSystemLogs,
   parseGlasshouseLogs: parseGlasshouseLogs,

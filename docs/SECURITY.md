@@ -15,6 +15,10 @@ it before exposing it more widely.
   if asked, the kernel's - to whoever can reach the dashboard, as `/api/logs`.
   They name the apps in use, the network and the broker the TV talks to. A
   token gates them with the rest of the API.
+- **Syslog forwarding is off by default.** With `syslog.server` set in
+  `config.json` the same logs go to that server as plain UDP: unencrypted,
+  unauthenticated, and readable by anything on the path. Addresses,
+  credentials and postcodes are redacted unless `"redact": false` is set.
 - **`"allowPower": false`** hides and refuses power off, power on and reboot,
   in the dashboard and in Home Assistant, for a TV that should never be
   switched off over the network. The other controls stay.

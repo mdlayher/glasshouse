@@ -38,6 +38,13 @@
   "prometheus": {
     "enabled": false
   },
+  "syslog": {
+    "server": "",
+    "port": 514,
+    "hostname": "",
+    "sources": ["system", "glasshouse"],
+    "redact": true
+  },
   "device": {
     "id": "lg_tv",
     "name": "LG webOS TV",
