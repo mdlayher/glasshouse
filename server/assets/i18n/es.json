@@ -1235,6 +1235,10 @@
   "text": "Luz ambiental",
   "from": "Room light"
  },
+ "metrics.stream.lowLatency": {
+  "text": "{format} · Baja latencia",
+  "from": "{format} · Low latency"
+ },
  "metrics.storage": {
   "text": "Almacenamiento",
   "from": "Storage"

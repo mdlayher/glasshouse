@@ -72,7 +72,7 @@ console.log('Running test-telemetry.js ...');
 
 (function testSignalHdr() {
   assert.deepEqual(telemetry.signalFormat(require('./fixtures/videooutput-cx-webos5-hdr.json')), {
-    type: 'hdr10', eotf: 'pq', colorimetry: 'BT2020_RGBORYCbCr', encoding: 'YCbCr422',
+    type: 'hdr10', type_display: 'HDR10', eotf: 'pq', colorimetry: 'BT2020_RGBORYCbCr', encoding: 'YCbCr422',
     max_luminance: 400, min_luminance: 0.0049, max_cll: 0, max_fall: 0,
     game_mode: false, freesync: false
   });
@@ -84,7 +84,7 @@ console.log('Running test-telemetry.js ...');
     { sink: 'MAIN', connected: false, videoInfo: null },
     { sink: 'SUB0', connected: true, videoInfo: { hdrType: 'DOLBY_VISION', colormetry: 'BT709', isGameMode: 1, freesyncEnabled: 1 } }
   ] }), {
-    type: 'dolby_vision', eotf: null, colorimetry: 'BT709', encoding: null,
+    type: 'dolby_vision', type_display: 'Dolby Vision', eotf: null, colorimetry: 'BT709', encoding: null,
     max_luminance: null, min_luminance: null, max_cll: null, max_fall: null,
     game_mode: true, freesync: true
   });

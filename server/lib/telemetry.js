@@ -781,8 +781,10 @@ function signalFormat(reply) {
   }
   var colorimetry = vi.colormetry === 'FUTURE' ? vi.extendedColormetry : vi.colormetry;
   var eotf = meta && typeof meta.EOTFtype === 'number' ? names.signalEotf(meta.EOTFtype) : null;
+  var hdrType = typeof vi.hdrType === 'string' && vi.hdrType ? names.signalHdrType(vi.hdrType) : null;
   return {
-    type: typeof vi.hdrType === 'string' && vi.hdrType ? names.signalHdrType(vi.hdrType).label : null,
+    type: hdrType ? hdrType.label : null,
+    type_display: hdrType ? hdrType.display : null,
     eotf: eotf ? eotf.label : null,
     colorimetry: typeof colorimetry === 'string' && colorimetry ? colorimetry : null,
     encoding: typeof vi.pixelEncoding === 'string' && vi.pixelEncoding ? vi.pixelEncoding : null,

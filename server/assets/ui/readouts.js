@@ -267,12 +267,23 @@ async function tick() {
       q('remoteblock').hidden = true;
     }
 
-    const dr = pic.dynamicRange || '';
-    let drBadge = '';
-    if (dr) {
-      const drClass = /dolby/i.test(dr) ? 'dv' : /hdr/i.test(dr) ? 'hdr' : 'sdr';
-      drBadge = `<span class="stream-tag ${drClass}">${esc(dr)}</span>`;
+    /* The badge names the format the source is sending, and the picture
+       settings' family only where the TV reports no format: in standby, or
+       with nothing from its video output service. The format is cached for 4 s
+       and the family for 10 s, so across a change they can disagree for a
+       poll; following the format whenever there is one keeps the badge from
+       flipping between the two. Low latency is the family's ALLM suffix
+       either way. */
+    const fmt = d.signal_format;
+    let dr = pic.dynamicRange || '', drClass = '';
+    if (fmt && fmt.type) {
+      dr = fmt.type_display || fmt.type;
+      if (/ALLM$/.test(pic.dynamicRange_raw || '')) dr = t('metrics.stream.lowLatency', '{format} \u00b7 Low latency', { format: dr });
+      drClass = /^dolby_vision/.test(fmt.type) ? 'dv' : fmt.type === 'sdr' ? 'sdr' : 'hdr';
+    } else if (dr) {
+      drClass = /dolby/i.test(dr) ? 'dv' : /hdr/i.test(dr) ? 'hdr' : 'sdr';
     }
+    const drBadge = dr ? `<span class="stream-tag ${drClass}">${esc(dr)}</span>` : '';
     const modeBadge = pic.mode ? `<span class="stream-mode">${esc(pic.mode)}</span>` : '';
     const resStr = d.signal ? esc(d.signal) : '';
     lastInputNames = d.inputs || {};
