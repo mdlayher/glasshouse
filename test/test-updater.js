@@ -147,4 +147,24 @@ console.log('Running test-updater.js ...');
   console.log('  \u2713 Homebrew Channel installs refuse updates unless force is specified');
 })();
 
+// The version line where TVs already installed can find it (#586)
+(function testVersionLineFirst4k() {
+  var fs = require('fs');
+  var os = require('os');
+  var src = fs.readFileSync(path.join(__dirname, '..', 'server', 'tvweb.js'), 'utf8');
+  // Exactly as the updater up to 0.82.2 reads a downloaded release: a TV on one
+  // of those refuses any release where this fails.
+  assert.ok(/TVWEB_VERSION\s*=\s*'([^']+)'/.test(src.slice(0, 4096)),
+    'TVWEB_VERSION must stay within the first 4096 bytes of server/tvweb.js');
+
+  var file = path.join(os.tmpdir(), 'tvweb-version-' + process.pid + '.js');
+  fs.writeFileSync(file, '/*' + new Array(6000).join(' ') + '*/\nvar TVWEB_VERSION = \'9.9.9\';\n');
+  try {
+    assert.strictEqual(updater.declaredVersion(file), '9.9.9', 'found further down too');
+  } finally {
+    fs.unlinkSync(file);
+  }
+  console.log('  \u2713 the version line is where every installed updater looks for it');
+})();
+
 console.log('ALL test-updater.js assertions passed!\n');

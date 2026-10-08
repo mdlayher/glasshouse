@@ -10,6 +10,17 @@
  * Run:  node tvweb.js
  */
 
+/*
+ * Bump on release, and tag the release to match: the dashboard turns this into
+ * a link to /releases/tag/v<version>, so a value with no tag behind it gives a
+ * 404 rather than a wrong page.
+ *
+ * Keep it near the top. The updater already installed on a TV reads only the
+ * first 4096 bytes of a downloaded tvweb.js for this line (up to 0.82.2), and
+ * refuses a release where it is further down (#586).
+ */
+var TVWEB_VERSION = '0.82.1';
+
 var http = require('http');
 var fs = require('fs');
 var toInt = require('./lib/util').toInt;
@@ -110,12 +121,6 @@ if (typeof process !== 'undefined' && process.on) {
   }
 }
 
-/*
- * Bump on release, and tag the release to match: the dashboard turns this into
- * a link to /releases/tag/v<version>, so a value with no tag behind it gives a
- * 404 rather than a wrong page.
- */
-var TVWEB_VERSION = '0.82.1';
 // What a person is shown: the same, plus the commit when deploy.sh installed it
 // from a git clone. Anything that compares versions uses TVWEB_VERSION.
 var TVWEB_DISPLAY_VERSION = updater.displayVersion(TVWEB_VERSION, __dirname);
@@ -1012,17 +1017,20 @@ function setupHomeAssistant() {
   function publishUpdate() {
     if (!mqttClient.connected) return;
     var upd = updater.UPDATE;
-    mqttClient.publish(mqttTopics.update, JSON.stringify({
+    var state = {
       // Bare: Home Assistant compares it with latest_version.
       installed_version: TVWEB_VERSION,
-      latest_version: upd.latest || null,
       title: 'Server',
-      release_url: upd.url || null,
-      // Home Assistant caps this at 255 characters and drops the message
-      // whole if it is longer.
-      release_summary: upd.notes ? upd.notes.slice(0, 255) : null,
       in_progress: !!upd.busy
-    }), true);
+    };
+    // Left out until known rather than null, which Home Assistant rejects with
+    // the whole message: before the first check, 2 minutes after start (#586).
+    if (upd.latest) state.latest_version = upd.latest;
+    if (upd.url) state.release_url = upd.url;
+    // Home Assistant caps this at 255 characters and drops the message whole
+    // if it is longer.
+    if (upd.notes) state.release_summary = upd.notes.slice(0, 255);
+    mqttClient.publish(mqttTopics.update, JSON.stringify(state), true);
   }
   updater.setPublishHandler(publishUpdate, publishDiscovery);
 

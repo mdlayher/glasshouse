@@ -86,7 +86,9 @@ function displayVersion(version, dir) {
 
 function declaredVersion(file) {
   try {
-    var m = /TVWEB_VERSION\s*=\s*'([^']+)'/.exec(fs.readFileSync(file, 'utf8').slice(0, 4096));
+    // The whole file: up to 0.82.2 this read only the first 4096 bytes, which
+    // missed the line once it moved further down (#586).
+    var m = /^var TVWEB_VERSION = '([^']+)';/m.exec(fs.readFileSync(file, 'utf8'));
     return m ? m[1] : null;
   } catch (e) { return null; }
 }
@@ -428,5 +430,6 @@ module.exports = {
   scheduleUpdateChecks: scheduleUpdateChecks,
   setAutoCheck: setAutoCheck,
   verNewer: verNewer,
+  declaredVersion: declaredVersion,
   displayVersion: displayVersion
 };
