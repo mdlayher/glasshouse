@@ -1180,48 +1180,70 @@ function collectCpuProcesses(cb, retried) {
       return collectCpuProcesses(cb, true);
     }
 
-    var rows = [], busy = 0;
-    for (var pid in second.procs) {
-      if (!second.procs.hasOwnProperty(pid)) continue;
-      var was = first.procs[pid];
-      if (!was) continue;
-      var delta = second.procs[pid].ticks - was.ticks;
-      if (delta <= 0) continue;
-      var pct = delta / elapsed * 100;
-      busy += pct;
-      rows.push({ name: procName(second.procs[pid].comm, procCmdline(pid)), pct: Math.round(pct * 10) / 10 });
-    }
-    rows.sort(function (a, b) { return b.pct - a.pct; });
+    var r = cpuProcessRows(first, second, elapsed);
     cb({
       ok: true,
       windowMs: CPU_WINDOW_MS,
-      busy: Math.round(busy * 10) / 10,
-      active: rows.length,
-      top: rows.slice(0, 10)
+      busy: r.busy,
+      active: r.rows.length,
+      top: r.rows.slice(0, 10)
     });
   }, CPU_WINDOW_MS);
 }
 
-function collectProcesses(cb) {
-  execFile('/bin/ps', ['-eo', 'rss,comm,args'], { timeout: 4000, maxBuffer: 1024 * 1024 }, function (err, stdout) {
-    if (err) return cb({ ok: false, error: msg('srv.processes.failed', 'could not read process list') });
-    var lines = String(stdout || '').split('\n'), rows = [], total = 0, count = 0;
-    for (var i = 0; i < lines.length; i++) {
-      var m = lines[i].match(/^\s*(\d+)\s+(\S+)\s+(\S.*?)\s*$/);
-      if (!m) continue;
-      var rss = parseInt(m[1], 10);
-      count++;
-      total += rss;
-      rows.push({ name: procName(m[2], m[3]), mb: Math.round(rss / 1024 * 10) / 10 });
-    }
-    rows.sort(function (a, b) { return b.mb - a.mb; });
-    cb({
-      ok: true,
-      count: count,
-      totalMb: Math.round(total / 1024),
-      top: rows.slice(0, 10)
+// The processes that used the CPU between two samples, busiest first.
+function cpuProcessRows(first, second, elapsed) {
+  var rows = [], busy = 0;
+  for (var pid in second.procs) {
+    if (!second.procs.hasOwnProperty(pid)) continue;
+    var was = first.procs[pid];
+    if (!was) continue;
+    var delta = second.procs[pid].ticks - was.ticks;
+    if (delta <= 0) continue;
+    var pct = delta / elapsed * 100;
+    busy += pct;
+    rows.push({
+      pid: parseInt(pid, 10),
+      name: procName(second.procs[pid].comm, procCmdline(pid)),
+      pct: Math.round(pct * 10) / 10
     });
+  }
+  rows.sort(function (a, b) { return b.pct - a.pct; });
+  return { rows: rows, busy: Math.round(busy * 10) / 10 };
+}
+
+// Every process, largest resident size first, or the ten largest.
+function collectProcesses(all, cb) {
+  execFile('/bin/ps', ['-eo', 'pid,rss,comm,args'], { timeout: 4000, maxBuffer: 1024 * 1024 }, function (err, stdout) {
+    if (err) return cb({ ok: false, error: msg('srv.processes.failed', 'could not read process list') });
+    cb(parseProcesses(stdout, all));
   });
+}
+
+function parseProcesses(stdout, all) {
+  var lines = String(stdout || '').split('\n'), rows = [], total = 0, count = 0;
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^\s*(\d+)\s+(\d+)\s+(\S+)(?:\s+(\S.*?))?\s*$/);
+    if (!m) continue;
+    var rss = parseInt(m[2], 10);
+    var comm = m[3], args = m[4];
+    // A blank comm shifts args into its column. comm is never a path, so one
+    // there is the start of args.
+    if (args === undefined || comm.charAt(0) === '/') {
+      args = args === undefined ? comm : comm + ' ' + args;
+      comm = '';
+    }
+    count++;
+    total += rss;
+    rows.push({ pid: parseInt(m[1], 10), name: procName(comm, args), mb: Math.round(rss / 1024 * 10) / 10 });
+  }
+  rows.sort(function (a, b) { return b.mb - a.mb; });
+  return {
+    ok: true,
+    count: count,
+    totalMb: Math.round(total / 1024),
+    top: all ? rows : rows.slice(0, 10)
+  };
 }
 
 function socArchName(raw) {
@@ -1984,6 +2006,8 @@ module.exports = {
   hdmiPorts: hdmiPorts,
   hdmiInputs: hdmiInputs,
   collectProcesses: collectProcesses,
+  parseProcesses: parseProcesses,
+  cpuProcessRows: cpuProcessRows,
   collectCpuProcesses: collectCpuProcesses,
   detectWebosVersion: detectWebosVersion,
   detectHardwareInfo: detectHardwareInfo,
