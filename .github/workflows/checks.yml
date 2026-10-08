@@ -68,6 +68,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: npm install -g @webos-tools/cli@3.2.6 && python3 scripts/build-ipk.py
+      # The Homebrew Channel's own compatibility check, as its listing runs it:
+      # it reads every .js file in the package as code for the TV's browser.
+      - name: Homebrew Channel compatibility check
+        run: |
+          gh release download -R webosbrew/dev-toolbox-cli -p 'webosbrew-toolbox-*_amd64.deb' -D /tmp/toolbox
+          sudo apt-get install -y /tmp/toolbox/*.deb
+          webosbrew-ipk-verify --format markdown --details --fw-releases '>=4.4' dist/*.ipk
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   # The unit tests on the node each kind of supported TV runs, since a
   # laptop's node accepts calls an older one lacks: 0.12 on webOS 4 (B8),
