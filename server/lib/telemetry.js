@@ -845,6 +845,19 @@ function formatSoundOutput(so) {
   return names.soundOutput(so).display;
 }
 
+/*
+ * The output the sound is going to. The newer service's soundOutput uses the
+ * setting's keys, or their Bluetooth surround variant; getSoundOut's scenario
+ * does not (the C4, webOS 9.2, reads tv_speaker_ext on TV Speaker + Optical)
+ * and fails outright on TV Speaker + Bluetooth with nothing paired, so the
+ * scenario is only for a TV without the newer service.
+ */
+function audioOutput(vs, sound) {
+  if (vs && vs.soundOutput) return formatSoundOutput(String(vs.soundOutput));
+  if (sound && sound.scenario) return formatSoundOutput(String(sound.scenario).replace(/^mastervolume_/, ''));
+  return 'Internal';
+}
+
 function formatPicMode(mode) {
   return mode ? names.pictureMode(mode).display : 'Standard';
 }
@@ -1639,8 +1652,6 @@ function collectStats(cb) {
     if (sound) {
       out.volume = sound.volume;
       out.muted = !!sound.muted;
-      out.audio_output = sound.scenario ?
-        formatSoundOutput(String(sound.scenario).replace(/^mastervolume_/, '')) : 'Internal';
     }
   masterVolume(function (vs) {
     // With an eARC soundbar controlling the volume, getSoundOut reports 0 and
@@ -1649,6 +1660,7 @@ function collectStats(cb) {
       if (typeof vs.volume === 'number') out.volume = vs.volume;
       if (typeof vs.muteStatus === 'boolean') out.muted = vs.muteStatus;
     }
+    if (sound || vs) out.audio_output = audioOutput(vs, sound);
     out.volume_control = volumeControl(vs, sound);
     if (out.volume_control !== 'level') out.volume = null;
     lunaCachedFn('com.webos.service.settings/getSystemSettings',
