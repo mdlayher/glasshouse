@@ -71,6 +71,28 @@ def read(path):
         return f.read()
 
 
+# The web dashboard's scripts, which ui.html names and the server puts back
+# inline when it serves the page (inlineUI in lib/routes.js). The package
+# carries them inline already: the Homebrew Channel's compatibility check reads
+# every .js file under the app as code for the TV's own browser, and these run
+# only in a phone's or computer's, so it would mark the app unable to run on
+# webOS 4 when it does.
+UI_SCRIPT = re.compile(r'^assets/ui/[\w-]+\.js$')
+UI_SCRIPTS_RUN = re.compile(r'(?:<script src="/assets/ui/[\w-]+\.js"></script>\n)+')
+
+
+def inline_ui_scripts(html):
+    """ui.html with its scripts in place, as inlineUI serves it."""
+    def run(m):
+        names = re.findall(r'ui/[\w-]+\.js', m.group(0))
+        return '<script>\n' + ''.join(read(os.path.join(SERVER, 'assets', n)).decode('utf-8')
+                                       for n in names) + '</script>\n'
+    page, n = UI_SCRIPTS_RUN.subn(run, html.decode('utf-8'))
+    if not n:
+        sys.exit('assets/ui.html names no scripts to put inline')
+    return page.encode('utf-8')
+
+
 def stage(app, ver):
     """Lay out the app directory ares-package is given."""
     icons = os.path.join(SERVER, 'assets', 'dashboard-app', 'assets')
@@ -90,12 +112,13 @@ def stage(app, ver):
         put(os.path.join(app, icon), read(os.path.join(icons, icon)), 0o644)
     put(os.path.join(app, 'payload', 'install.sh'), read(os.path.join(HBC, 'install.sh')), 0o755)
 
-    payload = deploy_files() + ['50-tvweb.sh']
+    payload = [rel for rel in deploy_files() + ['50-tvweb.sh'] if not UI_SCRIPT.match(rel)]
     for rel in payload:
         src = os.path.join(SERVER, rel)
         if not os.path.isfile(src):
             sys.exit('deploy.sh lists %s, which does not exist' % rel)
-        put(os.path.join(app, 'payload', 'server', rel), read(src),
+        data = inline_ui_scripts(read(src)) if rel == 'assets/ui.html' else read(src)
+        put(os.path.join(app, 'payload', 'server', rel), data,
             0o755 if EXECUTABLE.search(rel) else 0o644)
     return len(payload)
 
