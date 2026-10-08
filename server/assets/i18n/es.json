@@ -4043,14 +4043,6 @@
   "text": "Tema: {setting} (pulsa para {next})",
   "from": "Theme: {setting} (click for {next})"
  },
- "tools.activeSources": {
-  "text": "{active} fuentes activas",
-  "from": "{active} active sources"
- },
- "tools.bottom": {
-  "text": "Abajo",
-  "from": "Bottom"
- },
  "tools.clearFilter": {
   "text": "Borrar filtro",
   "from": "Clear filter"
@@ -4096,8 +4088,8 @@
   "from": "Copy raw"
  },
  "tools.desc": {
-  "text": "Inspecciona y depura registros del sistema webOS en vivo, actividad del servicio Glasshouse y el búfer del kernel.",
-  "from": "Inspect and debug live webOS system logs, Glasshouse service activity, and kernel ring buffer."
+  "text": "Registros de la TV, de Glasshouse y del hardware de la TV, para solucionar problemas.",
+  "from": "Logs from the TV, Glasshouse and the TV's hardware, for troubleshooting."
  },
  "tools.download": {
   "text": "Exportar",
@@ -4106,6 +4098,10 @@
  "tools.empty": {
   "text": "No se encontraron entradas de registro que coincidan con el filtro.",
   "from": "No log entries found matching the filter."
+ },
+ "tools.jumpLatest": {
+  "text": "Ir a lo último ↓",
+  "from": "Jump to latest ↓"
  },
  "tools.level": {
   "text": "Nivel",
@@ -4160,8 +4156,8 @@
   "from": "Filter log text or process..."
  },
  "tools.showingCount": {
-  "text": "Mostrando {visible} de {total} entradas",
-  "from": "Showing {visible} of {total} entries"
+  "text": "{visible} de {total}",
+  "from": "{visible} of {total}"
  },
  "tools.sources": {
   "text": "Fuentes",
@@ -4179,26 +4175,6 @@
   "text": "Sistema",
   "from": "System"
  },
- "tools.stats.clickFilter": {
-  "text": "Pulsa para filtrar",
-  "from": "Click to filter"
- },
- "tools.stats.errors": {
-  "text": "Errores",
-  "from": "Errors"
- },
- "tools.stats.loaded": {
-  "text": "Entradas cargadas",
-  "from": "Loaded entries"
- },
- "tools.stats.uptime": {
-  "text": "Tiempo activo del sistema",
-  "from": "System uptime"
- },
- "tools.stats.warnings": {
-  "text": "Avisos",
-  "from": "Warnings"
- },
  "tools.structuredJson": {
   "text": "Carga útil estructurada del evento",
   "from": "Structured event payload"
@@ -4206,6 +4182,10 @@
  "tools.title": {
   "text": "Registros del sistema",
   "from": "System logs"
+ },
+ "tools.uptime": {
+  "text": "Tiempo encendida",
+  "from": "Uptime"
  },
  "tools.uptimeOffset": {
   "text": "+{sec}s de actividad",
