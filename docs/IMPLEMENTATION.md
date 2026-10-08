@@ -132,6 +132,8 @@ and to `dolby_vision` when the TV maps it from a BT.709 RGB 4:4:4 carrier. The
 picture settings' `dynamicRange` is `dolbyHdr` in both. Its `ALLM` suffix, like
 `isAllm` in the receiver's status file, is the source asking for low-latency
 processing in any format, and is independent of either.
+The names of the dynamic range, the HDR type, the EOTF, the colorimetry, and
+the pixel encoding come from `server/lib/names.js`.
 
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is

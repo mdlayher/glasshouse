@@ -755,13 +755,6 @@ function getPictureEngineInfo() {
   };
 }
 
-// CTA-861-G's EOTF codes in the HDR static metadata; 4 to 7 are reserved.
-var HDR_EOTFS = ['sdr', 'hdr', 'pq', 'hlg'];
-
-// hdrType values renamed after snake-casing. An SDR source reports none,
-// and a C4 (webOS 9) reports player-led (low-latency) Dolby Vision as dolby_ll.
-var HDR_TYPES = { none: 'sdr', dolby_ll: 'dolby_vision_low_latency' };
-
 /*
  * The format and HDR metadata of the connected sink in videooutput's
  * getStatus, or null with none connected or no videoInfo, as in standby.
@@ -787,11 +780,10 @@ function signalFormat(reply) {
     return typeof v === 'number' || typeof v === 'boolean' ? !!v : null;
   }
   var colorimetry = vi.colormetry === 'FUTURE' ? vi.extendedColormetry : vi.colormetry;
-  var type = typeof vi.hdrType === 'string' && vi.hdrType ?
-    vi.hdrType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase() : null;
+  var eotf = meta && typeof meta.EOTFtype === 'number' ? names.signalEotf(meta.EOTFtype) : null;
   return {
-    type: type && HDR_TYPES.hasOwnProperty(type) ? HDR_TYPES[type] : type,
-    eotf: meta && typeof meta.EOTFtype === 'number' ? (HDR_EOTFS[meta.EOTFtype] || null) : null,
+    type: typeof vi.hdrType === 'string' && vi.hdrType ? names.signalHdrType(vi.hdrType).label : null,
+    eotf: eotf ? eotf.label : null,
     colorimetry: typeof colorimetry === 'string' && colorimetry ? colorimetry : null,
     encoding: typeof vi.pixelEncoding === 'string' && vi.pixelEncoding ? vi.pixelEncoding : null,
     max_luminance: luminance('maxDisplayMasteringLuminance', 1),
@@ -862,23 +854,9 @@ function formatPicMode(mode) {
   return ha.picModeName(mode);
 }
 
-/*
- * The picture setting's "dimension". LG's own picture settings code (webOS 9.2,
- * QuickSettings PictureModeInterfaces) knows sdr, hdr, dolbyHdr and
- * technicolorHdr, each of the three HDR kinds also with an ALLM suffix: the
- * source asked for Auto Low Latency Mode, the TV's game-style low-latency
- * picture. Anything else is shown readably rather than as one word in capitals.
- */
-var DYNAMIC_RANGES = { sdr: 'SDR', hdr: 'HDR', dolbyHdr: 'Dolby Vision', technicolorHdr: 'Technicolor HDR' };
-
+// The TV gives no dimension where the picture is SDR.
 function formatDynamicRange(dr) {
-  if (!dr) return 'SDR';
-  var s = String(dr), low = /ALLM$/.test(s);
-  if (low) s = s.slice(0, -4);
-  var name = DYNAMIC_RANGES[s] ||
-    s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/^(sdr|hdr|hlg)/i, function (m) { return m.toUpperCase(); })
-     .replace(/^./, function (c) { return c.toUpperCase(); });
-  return low ? name + ' \u00b7 Low latency' : name;
+  return dr ? names.dynamicRange(String(dr)).display : 'SDR';
 }
 
 function pictureModes(cb) {
