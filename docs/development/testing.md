@@ -22,8 +22,9 @@ something is wrong, and Home Assistant and the TV's own browser fail quietly.
 | [`shellcheck`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L51-L52) | Mistakes in `deploy.sh`, `tvwebctl` and the boot script. |
 | [`TypeScript`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L54-L55) | Type errors, from the JSDoc types in the server's JavaScript. |
 | [`check-entities.py`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L57-L58) | A Home Assistant entity reading a field the TV's telemetry does not have, checked against a B8's real telemetry. |
-| [`Package build`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L61-L67) | The Homebrew Channel `.ipk` still builds. |
-| [`Unit tests`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L72-L85) | Each part of the server, and one suite that starts the whole server against a fake TV and MQTT broker, once with a TV that answers and once with one that answers late, wrongly or not at all, and checking the dashboard keeps answering and telemetry keeps flowing. |
+| [`check-upgrade.js`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L61-L62) | A release the updater already installed on a TV would refuse. The updaters of the latest release and the oldest still in use install the change in place, from a local copy, as a TV does when it updates; 0.82.0 and 0.82.1 could not be installed that way (#586). |
+| [`Package build`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L65-L70) | The Homebrew Channel `.ipk` still builds. |
+| [`Unit tests`](https://github.com/rorygallagher2024/lg-webos-dashboard/blob/main/.github/workflows/checks.yml#L76-L88) | Each part of the server, and one suite that starts the whole server against a fake TV and MQTT broker, once with a TV that answers and once with one that answers late, wrongly or not at all, and checking the dashboard keeps answering and telemetry keeps flowing. |
 
 ## On each supported TV's node
 
@@ -72,6 +73,7 @@ npm ci && npx tsc
 node test/run-all.js
 for s in check-es5 check-module-calls check-ui-ids check-strings check-screensavers check-drift; do ./scripts/$s.py || break; done
 ./scripts/check-entities.py --stats test/fixtures/stats-b8-webos4.json
+node scripts/check-upgrade.js
 ```
 
 The dashboard check needs Playwright and its browser:

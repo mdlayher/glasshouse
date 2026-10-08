@@ -57,6 +57,10 @@ jobs:
       - name: entity templates resolve against fixture
         run: ./scripts/check-entities.py --stats test/fixtures/stats-b8-webos4.json
 
+      # The updater already on a TV checks the release it downloads (#586).
+      - name: earlier releases' updaters install this tree
+        run: node scripts/check-upgrade.js
+
   # Its own job, so it builds alongside the rest.
   package:
     runs-on: ubuntu-latest
