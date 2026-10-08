@@ -138,6 +138,14 @@ dynamic range while the TV reports no format, as in standby.
 The names of the dynamic range, the HDR type, the EOTF, the colorimetry, and
 the pixel encoding come from `server/lib/names.js`.
 
+The audio output in the stats is named from the `soundOutput` of
+`com.webos.service.audio/master/getVolume`, which uses the sound settings'
+keys, or `tv_speaker_bt_surround` for `tv_speaker_bluetooth` when the
+Bluetooth mode is `surroundMode`. Only a TV without that service is named
+from the `scenario` of `com.webos.audio/getSoundOut`: the scenario is
+`tv_speaker_ext` on TV Speaker + Optical, and getSoundOut fails outright on
+TV Speaker + Bluetooth with nothing paired.
+
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is
 empty, there is no `hwmon`, and `systemproperty` rejects every temperature key. The

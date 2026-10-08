@@ -706,8 +706,7 @@ telemetry.refreshInstalledApps(function (apps) {
                     setImmediate(function () {
                       assert.strictEqual(third.uptime, 99999);
                       console.log('  ✓ a clock stepped back does not keep serving the last stats');
-                      console.log('ALL test-telemetry.js assertions passed!\n');
-                      mockEnv.restore();
+                      audioOutputs();
                     });
                   });
                 });
@@ -719,3 +718,53 @@ telemetry.refreshInstalledApps(function (apps) {
     });
   });
 });
+
+// 13. The audio output is named from the volume service where it answers.
+// Replies from a C4 (webOS 9.2) on three outputs.
+function audioOutputs() {
+  var VOLUME_STATUS = { ossActivate: false, volumeLimiter: 'none', maxVolume: 100, volumeLimitable: true,
+    activeStatus: true, soundOutput: 'tv_speaker', volume: 0, mode: 'normal', externalDeviceControl: false,
+    muteStatus: false, volumeSyncable: true, adjustVolume: true };
+  function volumeStatus(changes) {
+    var vs = {}, k;
+    for (k in VOLUME_STATUS) vs[k] = VOLUME_STATUS[k];
+    for (k in changes) vs[k] = changes[k];
+    return { returnValue: true, volumeStatus: vs };
+  }
+  var NO_SCENARIO = { returnValue: false, errorCode: 3, errorText: 'failed to get parameter (invalid scenario name?)' };
+  var cases = [
+    ['TV Speaker', { returnValue: true, muted: false, volume: 0, scenario: 'mastervolume_tv_speaker' },
+      volumeStatus({}), 'TV Speaker'],
+    ['Optical + TV Speaker', { returnValue: true, muted: false, volume: 0, scenario: 'mastervolume_tv_speaker_ext' },
+      volumeStatus({ soundOutput: 'tv_external_speaker', volumeSyncable: false }), 'TV Speaker + Optical'],
+    ['Bluetooth + TV Speaker, nothing paired', NO_SCENARIO,
+      volumeStatus({ soundOutput: 'tv_speaker_bt_surround', externalDeviceControl: true }), 'TV Speaker + Bluetooth'],
+    ['neither service naming an output', NO_SCENARIO,
+      { returnValue: false, errorText: 'not answering' }, 'Internal'],
+    // The newer service refused for good: from here on, an older TV.
+    ['a TV without the volume service', { returnValue: true, muted: false, volume: -1, scenario: 'mastervolume_ext_speaker_optical' },
+      { returnValue: false, errorCode: -1, errorText: 'Unknown method "getVolume" for category "/master"' }, 'Optical'],
+    ['a TV without the volume service, no scenario', NO_SCENARIO, null, 'Internal']
+  ];
+  var seen = [];
+  (function next(i) {
+    if (i === cases.length) {
+      // Asserted outside: collectStats swallows what its callbacks throw.
+      return setImmediate(function () {
+        for (var j = 0; j < cases.length; j++) {
+          assert.strictEqual(seen[j], cases[j][3], cases[j][0]);
+        }
+        console.log('  ✓ the audio output is named from the volume service, and from the scenario without it');
+        console.log('ALL test-telemetry.js assertions passed!\n');
+        mockEnv.restore();
+      });
+    }
+    mockEnv.luna['com.webos.audio/getSoundOut'] = cases[i][1];
+    mockEnv.luna['com.webos.service.audio/master/getVolume'] = cases[i][2];
+    telemetry.clearCache();
+    telemetry.collectStats(function (stats) {
+      seen.push(stats.audio_output);
+      next(i + 1);
+    });
+  })(0);
+}
