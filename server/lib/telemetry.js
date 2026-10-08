@@ -13,11 +13,8 @@ var readTrimmed = require('./util').readTrimmed;
 var toInt = require('./util').toInt;
 var path = require('path');
 var execFile = require('child_process').execFile;
-var ha = require('./ha');
 var names = require('./names');
 var timers = require('./timers');
-
-var SOUND_OUTPUT_MAP = ha.SOUND_OUTPUT_MAP;
 
 // LG's own reading where it exists. Models without it (the 55QNED826QB, webOS
 // 7.6) still have the kernel's thermal zone, in millidegrees: 68000 = 68 C.
@@ -843,10 +840,7 @@ function refreshBtAudio() {
 
 function formatSoundOutput(so) {
   if (!so) return 'TV Speaker';
-  if (SOUND_OUTPUT_MAP[so]) return SOUND_OUTPUT_MAP[so];
-  // A name not in the map is still shown readably: mobile_phone reads as
-  // "Mobile Phone" rather than as the raw key.
-  return String(so).replace(/_/g, ' ').replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); });
+  return names.soundOutput(so).display;
 }
 
 function formatPicMode(mode) {

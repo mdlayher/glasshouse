@@ -37,22 +37,8 @@ function picModeNames(ids) {
   return byId;
 }
 
-var SOUND_OUTPUT_MAP = {
-  tv_speaker: 'TV Speaker',
-  external_arc: 'HDMI ARC',
-  optical: 'Optical',
-  external_optical: 'Optical',
-  ext_speaker_optical: 'Optical',
-  ext_speaker_builtin_lg_optical: 'Optical',
-  ext_speaker_arc: 'HDMI ARC',
-  headphone: 'Headphone / AUX',
-  bt_soundbar: 'Bluetooth',
-  external_speaker: 'External Speaker',
-  lineout: 'Line Out',
-  soundbar: 'LG Sound Sync',
-  tv_speaker_headphone: 'TV Speaker + Headphone',
-  internal: 'TV Speaker'
-};
+// The sound outputs' names come from the names module.
+var SOUND_OUTPUT_MAP = names.SOUND_OUTPUTS;
 
 var HA_CATEGORIES = [
   { id: 'controls', name: msg('srv.ha.cat.controls', 'Controls & Media'), desc: msg('srv.ha.cat.controls.desc', 'Power, volume, mute, playback buttons, apps, and input sources.') },
