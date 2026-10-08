@@ -89,3 +89,21 @@ The Home Assistant check needs Python 3.13 and the `homeassistant` package:
 pip install homeassistant
 ./scripts/check-ha-discovery.py
 ```
+
+## Capturing a TV for fixtures
+
+`scripts/glasshouse-dump.sh` reads every API endpoint of a running Glasshouse
+into a `.tar.gz`, for a fixture from a TV the project has not seen:
+
+```bash
+./scripts/glasshouse-dump.sh <tv-address> [token]            # the API alone
+./scripts/glasshouse-dump.sh <tv-address> [token] --ssh      # and the raw files on the TV, as root
+./scripts/glasshouse-dump.sh <tv-address> [token] --telnet   # the same over the Homebrew Channel's telnet
+```
+
+It sends only GET requests, and the on-TV pass runs read-only commands:
+the HDMI receiver status files under `/proc/lg/hdmi20`, the configd input
+map, the video output and input services' replies, and the TV's version
+strings. The logs come redacted. The raw dump still holds the network name,
+addresses and serials, so scrub a capture as the existing fixtures are before
+it goes into `test/fixtures/`.
