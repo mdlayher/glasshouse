@@ -121,4 +121,10 @@ For example:
 - Not tested on webOS 4 or on webOS 10 and later.
 ```
 
-If you couldn't test on a TV, say so. A maintainer or another contributor can test it before it's merged.
+### If you can't test on the right TV
+
+If you don't have a TV to test on, or the change affects TVs you don't have, say so in the pull request and ask for testers. A maintainer will label it [testers wanted](https://github.com/rorygallagher2024/glasshouse/labels/testers%20wanted), where people with other TVs look for things to try.
+
+### Help by testing on your TV
+
+Some changes can only be checked on TVs the maintainers don't have, such as newer or less common models. If you have a rooted LG TV, you can help without writing any code: pull requests and issues labelled [testers wanted](https://github.com/rorygallagher2024/glasshouse/labels/testers%20wanted) say what to run and what to send back.
