@@ -36,12 +36,15 @@ function redactToolsText(str) {
 
 function toggleToolsRedact() {
   toolsRedact = !toolsRedact;
-  const btn = q('tools-redact-btn');
-  if (btn) {
-    btn.classList.toggle('active', toolsRedact);
-    btn.classList.toggle('on', toolsRedact);
-  }
+  setToolsSwitch('tools-redact-btn', toolsRedact);
   renderToolsLogs();
+}
+
+function setToolsSwitch(id, on) {
+  const btn = q(id);
+  if (!btn) return;
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
 function formatLogTime(isoStr) {
@@ -54,15 +57,6 @@ function formatLogTime(isoStr) {
   } catch (e) {
     return isoStr;
   }
-}
-
-function formatUptimeStr(sec) {
-  if (sec == null || isNaN(sec)) return '—';
-  const s = Math.floor(sec);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s % 60}s`;
 }
 
 function levelShort(lvl) {
@@ -161,44 +155,17 @@ async function loadLogs(silent = false) {
 
 function updateToolsStats() {
   if (!toolsMeta) return;
-  const total = toolsEntries.length;
   const errCount = toolsEntries.filter(e => e.level === 'error').length;
   const warnCount = toolsEntries.filter(e => e.level === 'warning').length;
-
-  if (q('tools-cnt-total')) q('tools-cnt-total').textContent = String(total);
-  if (q('tools-cnt-errors')) q('tools-cnt-errors').textContent = String(errCount);
-  if (q('tools-cnt-warnings')) q('tools-cnt-warnings').textContent = String(warnCount);
-
-  if (q('tools-uptime')) {
-    q('tools-uptime').textContent = formatUptimeStr(toolsMeta.uptime);
+  const errEl = q('tools-cnt-errors'), warnEl = q('tools-cnt-warnings');
+  if (errEl) {
+    errEl.textContent = String(errCount);
+    errEl.classList.toggle('has-err', errCount > 0);
   }
-  if (q('tools-boottime') && toolsMeta.bootTime) {
-    try {
-      const bDate = new Date(toolsMeta.bootTime);
-      q('tools-boottime').textContent = bDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      q('tools-boottime').textContent = '—';
-    }
+  if (warnEl) {
+    warnEl.textContent = String(warnCount);
+    warnEl.classList.toggle('has-warn', warnCount > 0);
   }
-
-  const activeSrcs = Object.keys(toolsSources).filter(k => toolsSources[k]);
-  if (q('tools-cnt-sources')) {
-    q('tools-cnt-sources').textContent = t('tools.activeSources', '{active} active sources', { active: activeSrcs.length });
-  }
-
-  // Update error/warning stat card highlights and active filter
-  const errCard = q('tools-card-errors');
-  if (errCard) {
-    errCard.classList.toggle('has-err', errCount > 0);
-    errCard.classList.toggle('active-filter', toolsLevel === 'error');
-  }
-  const warnCard = q('tools-card-warnings');
-  if (warnCard) {
-    warnCard.classList.toggle('has-warn', warnCount > 0);
-    warnCard.classList.toggle('active-filter', toolsLevel === 'warning');
-  }
-
-  // Synchronize refresh button visibility with live mode
   const refBtn = q('tools-refresh-btn');
   if (refBtn) refBtn.hidden = toolsLive;
 }
@@ -228,7 +195,7 @@ function renderToolsLogs() {
   const filtered = getFilteredEntries();
   const countEl = q('tools-search-count');
   if (countEl) {
-    countEl.textContent = t('tools.showingCount', 'Showing {visible} of {total} entries', {
+    countEl.textContent = t('tools.showingCount', '{visible} of {total}', {
       visible: filtered.length,
       total: toolsEntries.length
     });
@@ -252,6 +219,10 @@ function renderToolsLogs() {
     const fullTimeTip = esc(e.ts + (uptime ? ' (' + uptime + ')' : ''));
     const lvl = levelShort(e.level);
     const displayMsg = toolsRedact ? redactToolsText(e.msg) : e.msg;
+    // Glasshouse lines start with their process ("mqtt: ..."), which the
+    // Process column already shows.
+    const rowMsg = e.proc && displayMsg && displayMsg.indexOf(e.proc + ': ') === 0
+      ? displayMsg.slice(e.proc.length + 2) : displayMsg;
     const displayRaw = toolsRedact ? redactToolsText(e.raw) : e.raw;
     const displayProc = toolsRedact ? redactToolsText(e.proc) : e.proc;
 
@@ -261,7 +232,8 @@ function renderToolsLogs() {
       detailHtml = `
         <div class="log-detail" onclick="event.stopPropagation()">
           <div class="log-detail-meta">
-            <div><span class="lbl">${esc(t('tools.col.time', 'Time'))}:</span> <code>${esc(e.ts)}</code>${uptime ? ' (' + esc(uptime) + ')' : ''}</div>
+            <div><span class="lbl">${esc(t('tools.col.time', 'Time'))}:</span> <code>${esc(e.ts)}</code></div>
+            ${uptime ? `<div><span class="lbl">${esc(t('tools.uptime', 'Uptime'))}:</span> <code>${esc(uptime)}</code></div>` : ''}
             <div><span class="lbl">${esc(t('tools.col.source', 'Source'))}:</span> <code>${esc(e.source)}</code></div>
             <div><span class="lbl">${esc(t('tools.col.process', 'Process'))}:</span> <code>${esc(displayProc)}</code></div>
             <div><span class="lbl">${esc(t('tools.col.level', 'Level'))}:</span> <span class="log-lvl lvl-${lvl}">${lvl}</span></div>
@@ -289,7 +261,7 @@ function renderToolsLogs() {
         <div class="term-col term-col-src"><span class="log-src src-${esc(e.source)}">${esc(e.source)}</span></div>
         <div class="term-col term-col-lvl"><span class="log-lvl lvl-${lvl}">${lvl}</span></div>
         <div class="term-col term-col-proc" title="${esc(displayProc)}">${highlightText(displayProc, toolsQuery)}</div>
-        <div class="term-col term-col-msg">${highlightText(displayMsg, toolsQuery)}</div>
+        <div class="term-col term-col-msg">${highlightText(rowMsg, toolsQuery)}</div>
       </div>
       ${detailHtml}`;
   }
@@ -300,6 +272,7 @@ function renderToolsLogs() {
     container.scrollTop = container.scrollHeight;
   }
   setupToolsScrollListener();
+  showToolsJump();
 }
 
 function toggleToolsSource(src) {
@@ -308,6 +281,7 @@ function toggleToolsSource(src) {
   if (btn) {
     btn.classList.toggle('active', toolsSources[src]);
     btn.classList.toggle('on', toolsSources[src]);
+    btn.setAttribute('aria-pressed', toolsSources[src] ? 'true' : 'false');
   }
   toolsExpandedKey = null;
   loadLogs(false);
@@ -367,11 +341,10 @@ function resetToolsFilters() {
 
 function toggleToolsLive() {
   toolsLive = !toolsLive;
-  const btn = q('tools-live-btn');
   const dot = q('tools-live-dot');
   const txt = q('tools-live-text');
   const refBtn = q('tools-refresh-btn');
-  if (btn) btn.classList.toggle('paused', !toolsLive);
+  setToolsSwitch('tools-live-btn', toolsLive);
   if (dot) dot.classList.toggle('paused', !toolsLive);
   if (txt) txt.textContent = toolsLive ? t('tools.live', 'Live') : t('tools.paused', 'Paused');
   if (refBtn) refBtn.hidden = toolsLive;
@@ -382,6 +355,7 @@ function scrollToolsToBottom() {
   const container = q('tools-log-entries');
   if (container) {
     toolsAutoScroll = true;
+    showToolsJump();
     try {
       container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } catch (_) {
@@ -511,8 +485,15 @@ function setupToolsScrollListener() {
     container.addEventListener('scroll', () => {
       const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 35;
       toolsAutoScroll = atBottom;
+      showToolsJump();
     });
   }
+}
+
+// Offered only while scrolled away from the newest line.
+function showToolsJump() {
+  const btn = q('tools-scroll-btn');
+  if (btn) btn.hidden = toolsAutoScroll;
 }
 
 document.addEventListener('DOMContentLoaded', setupToolsScrollListener);

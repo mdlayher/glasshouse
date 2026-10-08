@@ -825,22 +825,15 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 /* ---------------------------------------------------------------
    Tools tab: System logs and diagnostic terminal.
    --------------------------------------------------------------- */
-.tools-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:24px;margin:20px 0 28px}
-.tools-stat-card{background:transparent;border:0;padding:0;border-radius:0;
-  display:flex;flex-direction:column;justify-content:flex-start}
-.tools-stat-card.clickable{cursor:pointer;user-select:none}
-.tools-stat-card.clickable:hover .lbl{color:var(--w100)}
-.tools-stat-card .lbl{margin-bottom:6px}
-.tools-stat-card .v{font-family:'Outfit';font-weight:200;font-size:clamp(36px,5vw,52px);color:var(--w100);line-height:1;margin-top:4px}
-.tools-stat-card.has-err .v{color:var(--red)}
-.tools-stat-card.has-warn .v{color:var(--cand)}
-.tools-stat-card.active-filter .lbl{color:var(--w100);font-weight:700}
-.tools-stat-card .sub{margin-top:6px}
-
-.tools-toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:12px}
-.tools-toolbar-grp{display:flex;align-items:center;gap:8px}
+.tools-toolbar{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;margin:20px 0 14px}
+.tools-toolbar-grp{display:flex;align-items:center;gap:10px;min-width:0}
 .tools-toolbar-lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--w60);font-weight:500}
-.tools-seg{display:inline-flex;gap:6px}
+.tools-seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.tools-cnt{font-variant-numeric:tabular-nums;color:var(--w50);margin-left:2px}
+.tools-cnt:empty{display:none}
+.tools-cnt.has-err{color:var(--red)}
+.tools-cnt.has-warn{color:var(--cand)}
+.tools-seg button.on .tools-cnt{color:inherit}
 .tools-seg button{background:transparent;border:1px solid var(--edge);border-radius:2px;color:var(--w80);
   font:500 11px 'Manrope';letter-spacing:.1em;text-transform:uppercase;padding:0 12px;height:28px;min-height:0;
   cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.16s ease}
@@ -855,7 +848,7 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 
 .tools-subbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
 .tools-search-wrap{position:relative;flex:1 1 240px;display:flex;align-items:center}
-.tools-search-icon{position:absolute;left:10px;color:var(--w50);font-size:13px;pointer-events:none}
+.tools-search-icon{position:absolute;left:10px;color:var(--w50);pointer-events:none}
 .tools-search-input{width:100%;height:28px;padding:0 28px 0 28px;background:transparent;border:1px solid var(--edge);
   border-radius:2px;color:var(--w100);font:12px 'Manrope';box-sizing:border-box;transition:border-color .16s ease}
 .tools-search-input:focus{outline:0;border-color:var(--w100)}
@@ -863,22 +856,39 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 .tools-search-clear{position:absolute;right:6px;background:transparent;border:0;color:var(--w60);font-size:16px;
   cursor:pointer;padding:2px 6px;line-height:1}
 .tools-search-clear:hover{color:var(--w100)}
-.tools-search-count{font-size:12px;color:var(--w60);white-space:nowrap;font-variant-numeric:tabular-nums}
-.tools-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.tools-search-count{margin-left:auto;padding-left:12px;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.tools-actions{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.tools-switches,.tools-buttons{display:flex;gap:8px}
 
-#tools-live-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:96px;padding:0 14px}
+/* Live and Redact are states, not actions: a quiet toggle with its own indicator. */
+button.tools-switch{display:inline-flex;align-items:center;gap:8px;height:28px;min-height:0;padding:0 10px;background:transparent;
+  border:1px solid transparent;border-radius:2px;color:var(--w60);font:500 11px 'Manrope';letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;transition:.16s ease}
+button.tools-switch:hover{color:var(--w100);border-color:var(--edge)}
+button.tools-switch.on{color:var(--w100);background:transparent;border-color:transparent}
+button.tools-switch.on:hover{border-color:var(--edge)}
+.tools-switch-box{width:22px;height:12px;border-radius:6px;border:1px solid var(--w40);position:relative;flex:none;transition:.16s ease}
+.tools-switch-box::after{content:'';position:absolute;top:2px;left:2px;width:6px;height:6px;border-radius:50%;background:var(--w60);transition:.16s ease}
+.tools-switch.on .tools-switch-box{border-color:var(--w100);background:var(--w100)}
+.tools-switch.on .tools-switch-box::after{left:12px;background:var(--btn-on-fg)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#30DE61;display:inline-block;flex:none;
   box-shadow:0 0 6px rgba(48,222,97,.6);animation:livePulse 2s infinite}
 .live-dot.paused{background:var(--w40);box-shadow:none;animation:none}
 @keyframes livePulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
-#tools-live-btn.paused{opacity:.7}
+
 
 /* Terminal View */
-.tools-terminal{background:var(--bg);border:1px solid var(--edge);border-radius:2px;overflow:hidden;
+.tools-terminal{position:relative;background:var(--bg);border:1px solid var(--edge);border-radius:2px;overflow:hidden;
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.55}
 .tools-term-header{display:flex;background:transparent;border-bottom:1px solid var(--edge);padding:9px 14px;
   font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--w60);font-weight:500;user-select:none}
 .tools-term-body{max-height:clamp(400px,65vh,800px);overflow-y:auto;overflow-x:hidden}
+/* Under the column headings rather than at the foot of the box, which is
+   below the fold on a laptop screen. */
+.tools-jump{position:absolute;left:50%;transform:translateX(-50%);top:46px;z-index:1;height:28px;padding:0 14px;border-radius:14px;border:0;
+  background:var(--w100);color:var(--btn-on-fg);font:600 11px 'Manrope';letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.tools-jump[hidden]{display:none}
 .tools-term-empty{padding:48px 20px;text-align:center;color:var(--w50);font-family:'Manrope';font-size:14px}
 
 .log-row{display:flex;padding:6px 14px;border-bottom:1px solid rgba(var(--fg),.04);cursor:pointer;
@@ -928,7 +938,15 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 .json-null{color:var(--w50)}
 
 @media(max-width:720px){
-  .term-col-proc{display:none}
-  .term-col-time{flex:0 0 75px;font-size:11px}
-  .tools-actions{width:100%;justify-content:space-between}
+  /* Columns would leave the message a few characters wide: each line becomes
+     a header row (time, source, level, process) with the message under it. */
+  .tools-term-header .term-col{display:none}
+  .tools-search-count{margin-left:0;padding-left:0}
+  .log-row{flex-wrap:wrap;gap:2px 8px;align-items:center;padding:8px 12px}
+  .term-col-time{flex:0 0 auto;font-size:11px}
+  .term-col-src,.term-col-lvl{flex:0 0 auto}
+  .term-col-proc{flex:1 1 0;font-size:11px;color:var(--w60)}
+  .term-col-msg{flex:0 0 100%}
+  .tools-actions{width:100%;justify-content:space-between;margin-left:0}
+  .tools-toolbar-grp{flex-direction:column;align-items:flex-start;gap:6px}
 }
