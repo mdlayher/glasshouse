@@ -66,6 +66,8 @@ The HDMI link families describe every input with a source linked to it, whicheve
 
 `glasshouse_foreground_app_info` has a sample while an app is in the foreground, including with the screen off, and none in standby: `app_id` is the app's id, such as `com.webos.app.hdmi4` or `netflix`, and `app_name` is the name given an input in the TV's settings, an app's title, or the short id. `glasshouse_hdmi_input_info` has a sample for every HDMI input, labelled with `input`, its `app_id`, and the `name` given it in the TV's settings, so the foreground app joins it on `app_id` and the input then joins the HDMI link families on `input`.
 
+The syslog counters count since the server started and have samples only while [syslog forwarding](IMPLEMENTATION.md#forwarding-the-logs-to-syslog) is on. `source` is `system`, `glasshouse`, or `kernel`, one for each source forwarded. Compared with what the receiver counts per `source` as MSGID, they show lines lost on the way.
+
 `version` is the Glasshouse version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `glasshouse_oled_panel_usage_seconds_total - glasshouse_oled_last_compensation_usage_seconds`, the uptime is `time() - glasshouse_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(glasshouse_cpu_seconds_total{mode="idle"}[5m]))`.
 
 | Metric                                            | Type    | Labels                                  | Value                                                       |
@@ -125,3 +127,5 @@ The HDMI link families describe every input with a source linked to it, whicheve
 | `glasshouse_hdmi_link_bits_per_second`            | gauge   | `input`                                 | Rate of the input's link                                    |
 | `glasshouse_hdmi_qms`                             | gauge   | `input`                                 | 1 while Quick Media Switching is active on the link         |
 | `glasshouse_hdmi_source_powered`                  | gauge   | `input`                                 | 1 while a powered source is on the input's cable            |
+| `glasshouse_syslog_messages_total`                | counter | `source`                                | Log lines sent to the syslog server                         |
+| `glasshouse_syslog_errors_total`                  | counter |                                         | Log lines that could not be sent, and were dropped          |

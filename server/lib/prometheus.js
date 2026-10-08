@@ -579,6 +579,21 @@ var FAMILIES = [
         return [hdmiInput(source), source.powered ? 1 : 0];
       });
     }
+  },
+  {
+    name: 'glasshouse_syslog_messages_total', type: 'counter',
+    help: 'Log lines sent to the syslog server since the server started, by source: system, glasshouse, or kernel.',
+    samples: function (s, version, syslog) {
+      if (!syslog) return [];
+      return Object.keys(syslog.messages).map(function (source) {
+        return [{ source: source }, syslog.messages[source]];
+      });
+    }
+  },
+  {
+    name: 'glasshouse_syslog_errors_total', type: 'counter',
+    help: 'Log lines that could not be sent to the syslog server since the server started. They are dropped, not sent again.',
+    samples: function (s, version, syslog) { return syslog ? one(syslog.errors) : []; }
   }
 ];
 
@@ -599,14 +614,15 @@ function labelSet(labels) {
   return parts.length ? '{' + parts.join(',') + '}' : '';
 }
 
-// stats is telemetry's collectStats result; version is Glasshouse's own.
-function render(stats, version) {
+// stats is telemetry's collectStats result; version is Glasshouse's own;
+// syslog is the syslog module's counters, null while forwarding is off.
+function render(stats, version, syslog) {
   var s = stats && typeof stats === 'object' ? stats : {};
   var out = '';
   for (var i = 0; i < FAMILIES.length; i++) {
     var f = FAMILIES[i];
     out += '# HELP ' + f.name + ' ' + f.help + '\n# TYPE ' + f.name + ' ' + f.type + '\n';
-    var samples = f.samples(s, version);
+    var samples = f.samples(s, version, syslog || null);
     for (var j = 0; j < samples.length; j++) {
       out += f.name + labelSet(samples[j][0]) + ' ' + samples[j][1] + '\n';
     }

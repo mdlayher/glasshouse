@@ -60,6 +60,7 @@ var game = require('./lib/game');
 var piccapTransport = require('./lib/piccap');
 var remotebuttons = require('./lib/remotebuttons');
 var logsModule = require('./lib/logs');
+var syslogForwarder = require('./lib/syslog');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -200,6 +201,22 @@ var CONFIG = {
       diagnostics: true,
       disabled: []
     }
+  },
+
+  /*
+   * Forwarding the logs the Tools tab shows to a syslog server, as RFC 5424
+   * over UDP. Off while server is empty. hostname is what the TV sends as,
+   * the device name when empty. sources takes 'system', 'glasshouse'
+   * and 'kernel'; the kernel's means running dmesg every 5 seconds. redact
+   * takes addresses, credentials and the like out, as the Tools tab's copy
+   * and export do.
+   */
+  syslog: {
+    server: '',
+    port: 514,
+    hostname: '',
+    sources: ['system', 'glasshouse'],
+    redact: true
   },
 
   device: {
@@ -770,6 +787,7 @@ routes.init({
   repo: repo,
   installer: installer,
   prometheus: prometheus,
+  syslog: syslogForwarder,
   configFile: CONFIG_FILE,
   controls: controls,
   telemetry: telemetry,
@@ -1452,7 +1470,13 @@ if (!CLI_MODE) {
 
   screensavers.restageScreensaver();
 
+  // Started here so its start positions are taken now; without a hostname in
+  // config it sends nothing until it has the device name to send as.
+  syslogForwarder.init({ config: CONFIG });
+  syslogForwarder.start();
+
   telemetry.detectDeviceInfo(function() {
+    syslogForwarder.setHostname(CONFIG.device && CONFIG.device.name);
     setupHomeAssistant();
   });
 

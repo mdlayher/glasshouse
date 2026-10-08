@@ -90,7 +90,9 @@ function sampleLines(text) {
     'glasshouse_hdmi_link_info',
     'glasshouse_hdmi_link_bits_per_second',
     'glasshouse_hdmi_qms',
-    'glasshouse_hdmi_source_powered'
+    'glasshouse_hdmi_source_powered',
+    'glasshouse_syslog_messages_total',
+    'glasshouse_syslog_errors_total'
   ]);
 
   var renderings = {
@@ -123,6 +125,19 @@ function sampleLines(text) {
   ]);
   assert.deepEqual(sampleLines(renderings.failed), sampleLines(renderings.empty));
   console.log('  ✓ every rendering declares exactly the stable metric names');
+})();
+
+// 1b. The syslog counters have samples only while forwarding is on
+(function testSyslogCounters() {
+  var on = sampleLines(prometheus.render({}, '0.80.1', { messages: { system: 12, glasshouse: 3 }, errors: 1 }));
+  assert.deepEqual(on.slice(1), [
+    'glasshouse_syslog_messages_total{source="system"} 12',
+    'glasshouse_syslog_messages_total{source="glasshouse"} 3',
+    'glasshouse_syslog_errors_total 1'
+  ]);
+  var off = sampleLines(prometheus.render({}, '0.80.1', null));
+  assert.strictEqual(off.length, 1);
+  console.log('  ✓ the syslog counters are sampled only while forwarding is on');
 })();
 
 // 2. Values are in base units: bytes, hertz, seconds and ratios

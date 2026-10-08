@@ -575,6 +575,81 @@ into rotating it on every pass.
 
 ---
 
+## Forwarding the logs to syslog
+
+Glasshouse can send the logs the Tools tab shows to a syslog server: RFC 5424
+over UDP, one datagram a line, as Alloy's `loki.source.syslog` (with
+`syslog_format = "rfc5424"`), rsyslog, syslog-ng and Vector take it. It is off
+until `server` is set in `config.json`, and changed settings take effect at
+Glasshouse's next start:
+
+```json
+"syslog": {
+  "server": "logs.lan",
+  "port": 514,
+  "hostname": "",
+  "sources": ["system", "glasshouse"],
+  "redact": true
+}
+```
+
+`hostname` is the name the TV sends as; left empty, it is the device name.
+`sources` takes `system` (`/var/log/messages`), `glasshouse` (`tvweb.log`) and
+`kernel`. The kernel's is not on by default, since following it means running
+`dmesg` every poll.
+
+Forwarding follows the files rather than wrapping `console.log`, so lines
+Glasshouse never wrote through console go too: libuv's assertions, and the crash
+handler's last lines once the watchdog has restarted Glasshouse. Every 5
+seconds a timer reads what each file gained since the last poll, with the
+Tools tab's cursor reads and parsers, so what leaves the TV is what the tab
+shows. A read takes at most 64 KB and the next poll carries on: the loop is
+single threaded, and a large synchronous read would hold up every HTTP answer
+and the heartbeat. `dmesg -r` is read whole and sent from after the last
+uptime sent.
+
+Where a start begins:
+
+* Until the boot's system and kernel logs have been sent, a start sends them
+  from their beginning. `/var/log/messages` is on tmpfs and starts over at
+  each boot. Once the system log has been read to its end and the kernel's
+  read, the start leaves `/var/run/tvweb.syslog-boot-sent`, on tmpfs too, so
+  a start that dies first leaves none and the next sends them.
+* At any start after that, a watchdog restart included, each is sent from its
+  end at the time, so a restart does not send the last 512 KB again.
+* Glasshouse's own log is always sent from its end.
+
+Lines wait, unread, until there is a hostname to send as, the clock reads
+2026 or later, and the syslog server's address has resolved.
+
+Each message is `<PRI>1 TIMESTAMP HOSTNAME APP-NAME - MSGID - MSG`, with no
+structured data and no BOM:
+
+| Field | Value |
+| :--- | :--- |
+| PRI | facility × 8 + severity. System lines carry both as text in their third field, such as `user.info`. Glasshouse lines are `daemon`, with the severity from their `[INFO]`, `[WARN]`, `[ERR]` or `[DBG]` tag. Kernel lines carry the whole priority in the `<6>` that `dmesg -r` puts first: `kern` for the kernel's own, and its own facility for a line userspace wrote to `/dev/kmsg`. |
+| TIMESTAMP | the line's own time. A line dated before 2026, written before the clock synced, is dated by boot time plus its uptime instead. Kernel lines are always dated by their uptime. |
+| HOSTNAME | `hostname` from the config, or else the device name the server logs as `device detected`, with spaces as `-`. The system's hostname is not used. |
+| APP-NAME | the process the Tools tab shows for the line; `kernel` for every kernel line |
+| MSGID | the source: `system`, `glasshouse` or `kernel` |
+
+A datagram is at most 2048 bytes and a longer line is cut.
+
+`redact`, on by default, takes out addresses, credentials, serial numbers and
+the postcode the system log carries in `pqcontroller
+NL_PICTURE_PERIODIC_REPORT` lines, as the Tools tab's copy and export do.
+`"redact": false` sends lines as they are.
+
+The syslog server's address is looked up at start and again after a send
+fails, never for each send, and the socket is `udp4` or `udp6` to match the
+address the lookup gives. A failed send is dropped and counted, not queued, as
+UDP syslog is everywhere. Glasshouse logs one line when forwarding starts and
+one at each change of error state. `glasshouse_syslog_messages_total` and
+`glasshouse_syslog_errors_total` on the [Prometheus endpoint](PROMETHEUS.md)
+count what was sent and what was dropped.
+
+---
+
 ## The checks
 
 `scripts/` holds five static checks. Four need nothing but the repository and
