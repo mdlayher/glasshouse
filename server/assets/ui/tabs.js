@@ -19,6 +19,14 @@ const TABS = {
   server:      'serverpane',
   tools:       'toolspane'
 };
+// Each tab's page on the docs site, for Help.
+const DOCS = 'https://rorygallagher2024.github.io/lg-webos-dashboard/';
+const TAB_DOCS = {
+  control: 'dashboard/control/', metrics: 'dashboard/metrics/', apps: 'dashboard/apps/',
+  oledcare: 'dashboard/oled-care/', game: 'dashboard/game/', servicemenu: 'dashboard/service-menu/',
+  screensaver: 'dashboard/screen-savers/', privacy: 'dashboard/privacy/', advanced: 'dashboard/advanced/',
+  mqtt: 'HOME-ASSISTANT/', server: 'dashboard/server/', tools: 'dashboard/tools/'
+};
 let activeTab = null;
 let ssHeld = false;   // see checkScreensaverTab
 // null until the first telemetry says either way.
@@ -51,6 +59,8 @@ function showTab(name) {
     b.tabIndex = isSel ? 0 : -1;
   });
   showNavCurrent();
+  const help = q('nav-help');
+  if (help) help.href = DOCS + (TAB_DOCS[name] || 'dashboard/');
   closeNav();
   try { localStorage.setItem('tab', name); } catch (e) { /* private window */ }
   relayout(false);   // the panel just became measurable

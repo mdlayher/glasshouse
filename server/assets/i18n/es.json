@@ -1527,6 +1527,14 @@
   "text": "Cerrar menú",
   "from": "Close menu"
  },
+ "nav.help": {
+  "text": "Ayuda",
+  "from": "Help"
+ },
+ "nav.newTab": {
+  "text": "(se abre en una pestaña nueva)",
+  "from": "(opens in a new tab)"
+ },
  "nav.open": {
   "text": "Abrir menú",
   "from": "Open menu"
