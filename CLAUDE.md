@@ -82,8 +82,12 @@ A small change can skip the heading: one or two plain sentences are enough.
 ## Don't narrate the work
 
 No process commentary: what was tried, what was ruled out, what turned out to
-be a false alarm, how something was verified. If a check found nothing, that
-is not a finding worth writing down.
+be a false alarm. If a check found nothing, that is not a finding worth
+writing down.
+
+The exception is a PR's **Testing** section, which docs/CONTRIBUTING.md asks
+for: the TV and webOS version the change was tried on, what was done and seen,
+and what wasn't tested. State them as facts, briefly, not as a story.
 
 Record decisions and their reasons, not the route taken to reach them.
 
