@@ -107,6 +107,10 @@ instead:
 
 **Do not read `/proc/lg/pm/ts_enable`** — it segfaults the reading process.
 
+The receiver's PHY mode, chroma, and HDCP version are named in
+`server/lib/names.js`, which gives both the display string in `hdmi_diag` and
+the Prometheus label from the one raw value.
+
 The `port<n>` receivers are not numbered as the inputs are, and each keeps its
 link whichever input is on screen. configd holds the board's wiring as
 `inputMap.videoInputMapIndexInfo0`, an `assignment` of `hdmi1` to `hdmi4` to a

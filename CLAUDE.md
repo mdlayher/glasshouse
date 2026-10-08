@@ -28,6 +28,7 @@ use modern JavaScript.
   `repo` (installing .ipk packages, the Homebrew Channel catalog),
   `services` (background services), `screensavers`, `updater` and `fetch`
   (self-update over curl or wget), `piccap`, `say` (server-side strings),
+  `names` (raw TV values as display strings and Prometheus labels),
   `util` (small shared helpers).
 - `server/assets/ui.html` - the web dashboard's markup; its CSS and script
   are in `server/assets/ui/`, one script per tab or concern.
