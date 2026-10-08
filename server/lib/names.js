@@ -227,6 +227,12 @@ var SOUND_OUTPUTS = {
   ext_speaker_arc: 'HDMI ARC',
   headphone: 'Headphone / AUX',
   bt_soundbar: 'Bluetooth',
+  tv_external_speaker: 'TV Speaker + Optical',
+  tv_speaker_bluetooth: 'TV Speaker + Bluetooth',
+  tv_speaker_external_arc: 'TV Speaker + HDMI ARC',
+  wow_cast: 'LG WOWCAST',
+  mobile_phone: 'Mobile Phone',
+  wisa_speaker: 'WiSA Speakers',
   external_speaker: 'External Speaker',
   lineout: 'Line Out',
   soundbar: 'LG Sound Sync',
@@ -234,8 +240,8 @@ var SOUND_OUTPUTS = {
   internal: 'TV Speaker'
 };
 
-// An output outside the table is still shown readably: mobile_phone reads as
-// "Mobile Phone" rather than as the raw key.
+// An output outside the table is still shown readably: usb_speaker reads as
+// "Usb Speaker" rather than as the raw key.
 function soundOutput(raw) {
   var output = String(raw);
   return {

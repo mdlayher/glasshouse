@@ -118,10 +118,12 @@ function output(raw) { return both(names.soundOutput(raw)); }
 assert.deepEqual(output('tv_speaker'), ['TV Speaker', 'tv_speaker']);
 assert.deepEqual(output('internal'), ['TV Speaker', 'internal']);
 assert.deepEqual(output('external_arc'), ['HDMI ARC', 'external_arc']);
+assert.deepEqual(output('tv_external_speaker'), ['TV Speaker + Optical', 'tv_external_speaker']);
+assert.deepEqual(output('tv_speaker_bluetooth'), ['TV Speaker + Bluetooth', 'tv_speaker_bluetooth']);
 assert.deepEqual(output('ext_speaker_builtin_lg_optical'), ['Optical', 'ext_speaker_builtin_lg_optical']);
 assert.deepEqual(output('headphone'), ['Headphone / AUX', 'headphone']);
 assert.deepEqual(output('bt_soundbar'), ['Bluetooth', 'bt_soundbar']);
 console.log('  ✓ sound output, labelled by its own key');
 
-assert.deepEqual(output('mobile_phone'), ['Mobile Phone', 'mobile_phone']);
+assert.deepEqual(output('usb_speaker'), ['Usb Speaker', 'usb_speaker']);
 console.log('  ✓ an unknown sound output is spelled out and keeps its own label');
