@@ -15,7 +15,7 @@ The **Tools** tab, `/?tab=tools`, provides a live system log inspection terminal
 * **Live view & pause**: The view follows new lines as they are written, fetching only what is new, and stops while the browser tab is hidden. It opens at the newest line; scrolling up holds it in place, and **Jump to latest** follows again.
 * **Inspector drawer**: Clicking any log line expands detailed metadata and renders pretty-printed, syntax-highlighted JSON for structured webOS event payloads.
 * **Export & copy**: The lines shown, after any filter, copied to the clipboard or saved as a timestamped `.txt` file for a bug report.
-* **Redact**: Hides passwords, tokens, serial numbers, Wi-Fi network names, and MAC and IP addresses in the view, and in what is copied or exported. The logs can still name the apps in use, so it is worth reading them before posting.
+* **Hide private details**: On by default, it takes passwords, tokens, serial numbers, Wi-Fi network names, and MAC and IP addresses out of what is copied or exported. The view itself always shows the full log. The logs can still name the apps in use, so it is worth reading them before posting.
 
 ### Log levels
 
@@ -27,6 +27,6 @@ How much the Glasshouse server writes is set in `/var/lib/tvweb/config.json`:
 
 `info`, the default, writes the server's normal activity. `quiet` leaves that out and writes only warnings and errors. `debug` adds extra detail for troubleshooting, though few parts of the server write any yet. The level is read when the server starts, so a change takes effect after `/var/lib/tvweb/tvwebctl restart` or a reboot of the TV.
 
-![Tools tab: source, level and line filters, search, Live and Redact switches, and the log](../screenshots/tools.png)
+![Tools tab: source, level and line filters, search, Live switch, and the log](../screenshots/tools.png)
 
 *Live webOS system logs, Glasshouse daemon events, and kernel ring buffer diagnostics.*

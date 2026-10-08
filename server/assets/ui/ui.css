@@ -858,19 +858,18 @@ footer{margin-top:38px;font-size:12px;letter-spacing:.10em;text-transform:upperc
 .tools-search-clear:hover{color:var(--w100)}
 .tools-search-count{margin-left:auto;padding-left:12px;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .tools-actions{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;margin-left:auto}
-.tools-switches,.tools-buttons{display:flex;gap:8px}
+.tools-switches,.tools-buttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tools-check{display:inline-flex;align-items:center;gap:8px;margin-right:8px;font:500 11px 'Manrope';letter-spacing:.1em;
+  text-transform:uppercase;color:var(--w70);cursor:pointer;user-select:none}
+.tools-check input{width:14px;height:14px;margin:0;accent-color:var(--w100);cursor:pointer}
 
-/* Live and Redact are states, not actions: a quiet toggle with its own indicator. */
+/* Live is a state, not an action: a quiet toggle with its own indicator. */
 button.tools-switch{display:inline-flex;align-items:center;gap:8px;height:28px;min-height:0;padding:0 10px;background:transparent;
   border:1px solid transparent;border-radius:2px;color:var(--w60);font:500 11px 'Manrope';letter-spacing:.1em;
   text-transform:uppercase;cursor:pointer;transition:.16s ease}
 button.tools-switch:hover{color:var(--w100);border-color:var(--edge)}
 button.tools-switch.on{color:var(--w100);background:transparent;border-color:transparent}
 button.tools-switch.on:hover{border-color:var(--edge)}
-.tools-switch-box{width:22px;height:12px;border-radius:6px;border:1px solid var(--w40);position:relative;flex:none;transition:.16s ease}
-.tools-switch-box::after{content:'';position:absolute;top:2px;left:2px;width:6px;height:6px;border-radius:50%;background:var(--w60);transition:.16s ease}
-.tools-switch.on .tools-switch-box{border-color:var(--w100);background:var(--w100)}
-.tools-switch.on .tools-switch-box::after{left:12px;background:var(--btn-on-fg)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#30DE61;display:inline-block;flex:none;
   box-shadow:0 0 6px rgba(48,222,97,.6);animation:livePulse 2s infinite}
 .live-dot.paused{background:var(--w40);box-shadow:none;animation:none}
@@ -948,5 +947,8 @@ button.tools-switch.on:hover{border-color:var(--edge)}
   .term-col-proc{flex:1 1 0;font-size:11px;color:var(--w60)}
   .term-col-msg{flex:0 0 100%}
   .tools-actions{width:100%;justify-content:space-between;margin-left:0}
+  .tools-buttons{width:100%}
+  .tools-check{flex:0 0 100%;margin:0 0 4px}
+  .tools-buttons .pill{flex:1 1 0}
   .tools-toolbar-grp{flex-direction:column;align-items:flex-start;gap:6px}
 }

@@ -6,7 +6,9 @@ let toolsLevel = 'all';
 let toolsQuery = '';
 let toolsLive = true;
 let toolsAutoScroll = true;
-let toolsRedact = false;
+// Whether Copy, Export and Copy raw take private details out. On unless
+// unticked: a log is most often copied to be posted somewhere public.
+let toolsRedact = true;
 let toolsEntries = [];
 // The open row, by what it is rather than where: new lines on a live tab move
 // every row, so a position would drift onto another entry.
@@ -34,10 +36,8 @@ function redactToolsText(str) {
     .replace(/\b(?!(?:127\.0\.0\.1|0\.0\.0\.0)\b)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g, '<IP>');
 }
 
-function toggleToolsRedact() {
-  toolsRedact = !toolsRedact;
-  setToolsSwitch('tools-redact-btn', toolsRedact);
-  renderToolsLogs();
+function setToolsRedact(on) {
+  toolsRedact = !!on;
 }
 
 function setToolsSwitch(id, on) {
@@ -218,13 +218,13 @@ function renderToolsLogs() {
     const uptime = e.mono != null ? t('tools.uptimeOffset', '+{sec}s uptime', { sec: e.mono.toFixed(1) }) : '';
     const fullTimeTip = esc(e.ts + (uptime ? ' (' + uptime + ')' : ''));
     const lvl = levelShort(e.level);
-    const displayMsg = toolsRedact ? redactToolsText(e.msg) : e.msg;
+    const displayMsg = e.msg;
     // Glasshouse lines start with their process ("mqtt: ..."), which the
     // Process column already shows.
     const rowMsg = e.proc && displayMsg && displayMsg.indexOf(e.proc + ': ') === 0
       ? displayMsg.slice(e.proc.length + 2) : displayMsg;
-    const displayRaw = toolsRedact ? redactToolsText(e.raw) : e.raw;
-    const displayProc = toolsRedact ? redactToolsText(e.proc) : e.proc;
+    const displayRaw = e.raw;
+    const displayProc = e.proc;
 
     let detailHtml = '';
     if (isExpanded) {
@@ -450,7 +450,7 @@ async function copyToolsRaw(idx, btn) {
 function downloadToolsLogs() {
   const filtered = getFilteredEntries();
   if (!filtered.length) return;
-  const header = `# Glasshouse & webOS System Logs\n# Exported: ${new Date().toISOString()}\n# Entries: ${filtered.length}\n# Redacted: ${toolsRedact ? 'true' : 'false'}\n\n`;
+  const header = `# Glasshouse & webOS System Logs\n# Exported: ${new Date().toISOString()}\n# Entries: ${filtered.length}\n# Private details hidden: ${toolsRedact ? 'yes' : 'no'}\n\n`;
   const lines = filtered.map(logLine);
   const content = header + lines.join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });

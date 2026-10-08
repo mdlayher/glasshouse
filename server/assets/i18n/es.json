@@ -4099,6 +4099,10 @@
   "text": "No se encontraron entradas de registro que coincidan con el filtro.",
   "from": "No log entries found matching the filter."
  },
+ "tools.hidePrivate": {
+  "text": "Ocultar datos privados",
+  "from": "Hide private details"
+ },
  "tools.jumpLatest": {
   "text": "Ir a lo último ↓",
   "from": "Jump to latest ↓"
@@ -4142,10 +4146,6 @@
  "tools.rawLine": {
   "text": "Línea de registro original",
   "from": "Raw log line"
- },
- "tools.redact": {
-  "text": "Anonimizar",
-  "from": "Redact"
  },
  "tools.refresh": {
   "text": "Actualizar",
