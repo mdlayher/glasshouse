@@ -162,6 +162,47 @@ test('parseKernelLogs parses dmesg monotonic timestamps and process tags', funct
   assert.strictEqual(parsed[2].ts, expectedTs);
 });
 
+test('parseKernelLogs reads the priority dmesg -r puts first', function () {
+  var parsed = logs.parseKernelLogs('<3>[   42.250000] usb 1-1: device descriptor read/64, error -71\n' +
+    '[   43.000000] usb 1-1: new high-speed USB device number 3\n', 1760000000000);
+  assert.strictEqual(parsed.length, 2);
+  assert.strictEqual(parsed[0].pri, 3);
+  assert.strictEqual(parsed[0].mono, 42.25);
+  assert.strictEqual(parsed[0].proc, 'usb');
+  assert.strictEqual(parsed[0].msg, 'usb 1-1: device descriptor read/64, error -71');
+  assert.strictEqual(parsed[1].pri, undefined, 'plain dmesg has none');
+});
+
+test('a forward read takes a grown file a piece at a time from the cursor', function () {
+  var fs = require('fs'), os = require('os'), path = require('path');
+  var file = path.join(os.tmpdir(), 'glasshouse-forward-' + process.pid + '.log');
+  try {
+    fs.writeFileSync(file, 'one\ntwo\nthree\n');
+    var a = logs.readLines(file, 0, '', 9, true);
+    assert.strictEqual(a.text, 'one\ntwo\n');
+    assert.strictEqual(a.whole, false);
+    assert.strictEqual(a.atEnd, false, 'more of the file to come');
+    var b = logs.readLines(file, a.end, a.ino, 9, true);
+    assert.strictEqual(b.text, 'three\n');
+    assert.strictEqual(b.atEnd, true);
+    var c = logs.readLines(file, b.end, b.ino, 9, true);
+    assert.strictEqual(c.text, '');
+    assert.strictEqual(c.end, b.end);
+
+    fs.writeFileSync(file, 'abcdefghijklmnop\nq\n');
+    var cut = logs.readLines(file, 0, '', 8, true);
+    assert.strictEqual(cut.text, 'abcdefgh', 'a line longer than a read is not stuck on');
+    assert.strictEqual(cut.end, 8);
+
+    fs.writeFileSync(file, 'new\n');
+    var rotated = logs.readLines(file, 18, cut.ino, 8, true);
+    assert.strictEqual(rotated.text, 'new\n', 'a file cut short is read from its start');
+    assert.strictEqual(rotated.whole, true);
+  } finally {
+    try { fs.unlinkSync(file); } catch (e) {}
+  }
+});
+
 test('getLogs clamps limits and handles filtering', function (done) {
   logs.getLogs({ limit: 5000, sources: [] }, function (err, result) {
     assert.ifError(err);
