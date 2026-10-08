@@ -231,6 +231,8 @@ test('an error the server tagged is an error, whatever its words', function () {
   assert.strictEqual(parsed[0].proc, 'adblock', 'the tag is not taken for the process');
   assert.strictEqual(parsed[0].msg, 'adblock: could not close port 9998');
   assert.strictEqual(parsed[1].level, 'info');
+  var dbg = logs.parseGlasshouseLogs('2026-10-08T10:00:02.000Z [7.0] [DBG] mqtt: detail\n', Date.now() - 10000, 0);
+  assert.strictEqual(dbg[0].level, 'debug', 'the tag tvweb.js writes for console.debug');
 });
 
 test('the cursor is read back as it was written', function () {

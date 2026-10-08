@@ -32,6 +32,9 @@
       "disabled": []
     }
   },
+  "logging": {
+    "level": "info"
+  },
   "prometheus": {
     "enabled": false
   },

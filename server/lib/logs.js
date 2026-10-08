@@ -126,7 +126,7 @@ function parseSystemLogs(raw, bootTimeMs) {
   return out;
 }
 
-var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?(?:\s+\[(INFO|WARN|WARNING|ERR|ERROR|DEBUG)\])?(?:\s+(.*))?$/i;
+var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?(?:\s+\[(INFO|WARN|WARNING|ERR|ERROR|DBG|DEBUG)\])?(?:\s+(.*))?$/i;
 
 /**
  * Parse Glasshouse server log lines.
@@ -155,7 +155,7 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
         var tagUpper = m[3].toUpperCase();
         if (tagUpper === 'WARN' || tagUpper === 'WARNING') explicitLvl = 'warning';
         else if (tagUpper === 'ERR' || tagUpper === 'ERROR') explicitLvl = 'error';
-        else if (tagUpper === 'DEBUG') explicitLvl = 'debug';
+        else if (tagUpper === 'DBG' || tagUpper === 'DEBUG') explicitLvl = 'debug';
         else explicitLvl = 'info';
       }
       msg = m[4] || '';
