@@ -277,6 +277,13 @@ function appNames(installed) {
  * one sent. A value sent that is not a listed name goes through as written,
  * so an automation still sending the id keeps working.
  */
+// Each output's name, including one the names module only spells out.
+function soundOutputNames(ids) {
+  var map = {};
+  ids.forEach(function (id) { map[id] = names.soundOutput(id).display; });
+  return map;
+}
+
 function namedSelect(ids, names, stateExpr) {
   var toId = {}, toName = {}, options = [];
   for (var i = 0; i < ids.length; i++) {
@@ -371,6 +378,7 @@ function buildEntities(opts) {
   var topic = topics(opts.pfx);
   var installedApps = opts.installedApps || [];
   var lastPicModes = opts.pictureModes || [];
+  var soundOutputIds = (opts.soundOutputs && opts.soundOutputs.length) ? opts.soundOutputs : Object.keys(SOUND_OUTPUT_MAP);
 
   // telemetry's volume_control: the level can be set, or only stepped (a
   // receiver on HDMI ARC/eARC), or neither (optical). Stepping and mute are
@@ -957,7 +965,9 @@ function buildEntities(opts) {
           command_topic: topic.command('sound_output'),
           state_topic: topic.telemetry,
           icon: 'mdi:speaker'
-        }, namedSelect(Object.keys(SOUND_OUTPUT_MAP), SOUND_OUTPUT_MAP,
+        // The outputs this TV offers, as LG's own menu decides them, once it
+        // has said; every known output until then.
+        }, namedSelect(soundOutputIds, soundOutputNames(soundOutputIds),
           '(value_json.sound.output_raw if value_json.sound else "tv_speaker")'))
       },
       {
