@@ -845,6 +845,87 @@ function formatSoundOutput(so) {
   return names.soundOutput(so).display;
 }
 
+/*
+ * The sound outputs this TV offers, as LG's own Quick Settings menu decides
+ * them (QuickSettings/Controllers/SoundOutInterfaces on a C2, webOS 9.2). The
+ * settings service lists every output the firmware knows - on that C2, a
+ * speaker bar and WiSA speakers it cannot use - so the menu drops some always
+ * and others where the model's configd settings say it lacks them. Unlike the
+ * menu, an output configd says nothing about stays (webOS 4 has other keys),
+ * and one outside LG's ordering is kept after the rest, as webOS 4 names its
+ * outputs differently.
+ */
+var SOUND_OUT_ORDER = ['tv_speaker', 'external_optical', 'tv_external_speaker', 'external_arc',
+  'tv_speaker_external_arc', 'bt_soundbar', 'tv_speaker_bluetooth', 'wow_cast', 'tv_speaker_wow_cast',
+  'lineout', 'headphone', 'usb_speaker', 'tv_speaker_headphone', 'mobile_phone', 'wisa_speaker'];
+// Never on LG's menu: tv_speaker_optical_arc is for factory mode.
+var SOUND_OUT_NEVER = { tv_speaker_optical_arc: 1, tv_speakerbar: 1, builtin_soundbar: 1,
+  tv_speakerbar_headphone: 1, bt_audio: 1 };
+// Offered only with an LG soundbar or WOWCAST device connected, which is not
+// read here: listed only while in use.
+var SOUND_OUT_WHEN_IN_USE = { tv_speaker_external_arc: 1, tv_speaker_wow_cast: 1 };
+var SOUND_OUT_CONFIGS = ['tv.model.supportHeadPhone', 'tv.model.supportOpticalJack', 'tv.model.supportAudioLineOut',
+  'tv.model.supportWiSA', 'system.supportBluetoothFeatures', 'com.webos.service.wowplay.supportWowCast', 'profile.list'];
+
+function soundOutputHidden(id, cfg) {
+  if (SOUND_OUT_NEVER[id] || SOUND_OUT_WHEN_IN_USE[id]) return true;
+  var bt = cfg['system.supportBluetoothFeatures'], profile = cfg['profile.list'];
+  function says(key, value) { return cfg.hasOwnProperty(key) && cfg[key] === value; }
+  switch (id) {
+    case 'bt_soundbar': return Array.isArray(bt) && bt.indexOf('btsound') === -1;
+    case 'tv_speaker_bluetooth': return Array.isArray(bt) && bt.indexOf('bluetoothPlusTvSpeaker') === -1;
+    case 'lineout': return says('tv.model.supportAudioLineOut', false) || says('tv.model.supportHeadPhone', false);
+    case 'headphone':
+    case 'tv_speaker_headphone': return says('tv.model.supportHeadPhone', false);
+    case 'external_optical':
+    case 'tv_external_speaker':
+      return cfg.hasOwnProperty('tv.model.supportOpticalJack') && cfg['tv.model.supportOpticalJack'] !== 'On';
+    // Features few models have: offered only where the model says so.
+    case 'wisa_speaker': return cfg['tv.model.supportWiSA'] !== true;
+    case 'wow_cast': return cfg['com.webos.service.wowplay.supportWowCast'] !== true;
+    case 'usb_speaker':
+      return !(Array.isArray(profile) && profile.indexOf('gaming') !== -1 && profile.indexOf('usbSoundOutput') !== -1);
+  }
+  return false;
+}
+
+/**
+ * values: the settings service's arrayExt for soundOutput; cfg: configd's
+ * answer for SOUND_OUT_CONFIGS; current: the output in use, always kept.
+ * Returns the ids in LG's order, or [] where the TV listed none.
+ */
+function offeredSoundOutputs(values, cfg, current) {
+  cfg = cfg || {};
+  var offered = [];
+  (Array.isArray(values) ? values : []).forEach(function (v) {
+    if (!v || typeof v.value !== 'string' || !v.visible || !v.active) return;
+    if (offered.indexOf(v.value) !== -1) return;
+    if (v.value === current || !soundOutputHidden(v.value, cfg)) offered.push(v.value);
+  });
+  if (!offered.length) return [];
+  if (current && offered.indexOf(current) === -1) offered.push(current);
+  // Sorted by hand: node 0.12's sort is not stable.
+  return offered.map(function (id, i) {
+    var at = SOUND_OUT_ORDER.indexOf(id);
+    return { id: id, key: at === -1 ? SOUND_OUT_ORDER.length + i : at };
+  }).sort(function (a, b) { return a.key - b.key; }).map(function (o) { return o.id; });
+}
+
+var lastSoundOutputs = [];
+
+// The outputs on offer, kept for Home Assistant's select; cb(ids).
+function soundOutputs(current, cb) {
+  if (!lunaCachedFn) return cb([]);
+  lunaCachedFn('com.webos.service.settings/getSystemSettingValues', { category: 'sound', key: 'soundOutput' }, 60000, function (res) {
+    var values = res && res.values && res.values.arrayExt;
+    lunaCachedFn('com.webos.service.config/getConfigs', { configNames: SOUND_OUT_CONFIGS }, 300000, function (c) {
+      var ids = offeredSoundOutputs(values, c && c.configs, current);
+      if (ids.length) lastSoundOutputs = ids;
+      cb(ids);
+    });
+  });
+}
+
 function formatPicMode(mode) {
   return mode ? names.pictureMode(mode).display : 'Standard';
 }
@@ -1661,6 +1742,9 @@ function collectStats(cb) {
           bt_audio: btAudio,
           mode: (snd && snd.settings && snd.settings.soundMode) || 'standard'
         };
+        // Not waited for: the list changes rarely, and Home Assistant reads
+        // the last one, which a later collection brings.
+        soundOutputs(rawSnd, function (ids) { if (out.sound && ids.length) out.sound.outputs = ids; });
 
         lunaCachedFn('com.webos.service.acb/getForegroundAppInfo', {}, 4000, function (acb) {
         var pipe = (acb && Array.isArray(acb.acbs)) ? acb.acbs[0] : null;
@@ -1888,6 +1972,10 @@ function getPictureModes() {
   return lastPicModes;
 }
 
+function getSoundOutputs() {
+  return lastSoundOutputs;
+}
+
 function getCapabilitySignature() {
   var cap = [];
   for (var hs in hdmiSeen) cap.push(hs);
@@ -1931,6 +2019,8 @@ module.exports = {
   getPictureEngineInfo: getPictureEngineInfo,
   signalFormat: signalFormat,
   formatSoundOutput: formatSoundOutput,
+  offeredSoundOutputs: offeredSoundOutputs,
+  getSoundOutputs: getSoundOutputs,
   volumeControl: volumeControl,
   formatPicMode: formatPicMode,
   formatDynamicRange: formatDynamicRange,

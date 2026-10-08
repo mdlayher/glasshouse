@@ -991,6 +991,7 @@ function setupHomeAssistant() {
       pfx: pfx,
       installedApps: telemetry.getInstalledApps(),
       pictureModes: telemetry.getPictureModes(),
+      soundOutputs: telemetry.getSoundOutputs(),
       lgRows: lgsRows,
       allowPower: CONFIG.allowPower,
       isOled: oled.getIsOled(),
@@ -1067,6 +1068,7 @@ function setupHomeAssistant() {
   };
 
   var lastPicSig = '';
+  var lastSoundSig = '';
   publishNow = function () { publishTelemetry(); };
 
   /*
@@ -1215,6 +1217,14 @@ function setupHomeAssistant() {
       if (sig && sig !== lastPicSig) {
         lastPicSig = sig;
         console.log('mqtt: picture modes changed (' + sig + ') - republishing discovery');
+        publishDiscovery();
+      }
+      // The Sound Output select's options are the outputs the TV offers, also
+      // in discovery: the first answer replaces the list of every output.
+      var soundSig = telemetry.getSoundOutputs().join(',');
+      if (soundSig && soundSig !== lastSoundSig) {
+        lastSoundSig = soundSig;
+        console.log('mqtt: sound outputs on offer (' + soundSig + ') - republishing discovery');
         publishDiscovery();
       }
       // Launch App's options are the installed apps, and live in discovery too.
