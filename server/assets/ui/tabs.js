@@ -1,4 +1,4 @@
-// The tab bar.
+// The tabs: a sidebar on a wide screen, a drawer on a narrow one.
 
 /*
  * Tabs. The privacy and MQTT panels load on demand - privacy costs several Luna
@@ -50,8 +50,8 @@ function showTab(name) {
     b.setAttribute('aria-selected', String(isSel));
     b.tabIndex = isSel ? 0 : -1;
   });
-  const selected = document.querySelector('#tabs button[aria-selected="true"]');
-  if (selected && selected.scrollIntoView) selected.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  showNavCurrent();
+  closeNav();
   try { localStorage.setItem('tab', name); } catch (e) { /* private window */ }
   relayout(false);   // the panel just became measurable
   cfgPollStatus(name === 'mqtt');
@@ -76,18 +76,19 @@ document.querySelectorAll('#tabs button').forEach(b =>
 const tabsNav = q('tabs');
 if (tabsNav) {
   tabsNav.addEventListener('keydown', e => {
-    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) === -1) return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) === -1) return;
     const tabs = Array.from(tabsNav.querySelectorAll('button:not([hidden])'));
     const idx = tabs.indexOf(document.activeElement);
     if (idx === -1) return;
     let nextIdx = idx;
-    if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
     else if (e.key === 'Home') nextIdx = 0;
     else if (e.key === 'End') nextIdx = tabs.length - 1;
     e.preventDefault();
     tabs[nextIdx].focus();
-    showTab(tabs[nextIdx].dataset.tab);
+    // Only moves focus while the drawer is open: choosing closes it.
+    if (!navIsDrawer()) showTab(tabs[nextIdx].dataset.tab);
   });
 }
 // Reveals the Game tab on TVs with LG's Game Optimizer.
@@ -103,24 +104,61 @@ loadGame();
   if (ssHeld && activeTab === 'screensaver') showTab('control');
 })();
 
-/*
- * Each arrow shows only while the strip has more that way. Tabs appear after
- * the first telemetry - OLED Care and the service menu - and the row reflows
- * on resize, so this is called from both as well as on scroll.
- */
-function updateTabArrows() {
-  const strip = q('tabs'), prev = q('tabs-prev'), next = q('tabs-next');
-  if (!strip || !prev || !next) return;
-  const max = strip.scrollWidth - strip.clientWidth;
-  prev.hidden = strip.scrollLeft <= 1;
-  next.hidden = strip.scrollLeft >= max - 1;
+// The menu bar names the tab on show, in the page's language: the strings are
+// put in at DOMContentLoaded, after the first showTab.
+function showNavCurrent() {
+  const sel = document.querySelector('#tabs button[aria-selected="true"] span');
+  const cur = q('nav-current');
+  if (sel && cur) cur.textContent = sel.textContent;
+}
+document.addEventListener('DOMContentLoaded', showNavCurrent);
+
+function navIsDrawer() {
+  const bar = document.querySelector('.nav-bar');
+  return !!bar && getComputedStyle(bar).display !== 'none';
 }
 
-function scrollTabs(dir) {
-  const strip = q('tabs');
-  strip.scrollBy({ left: dir * Math.max(140, strip.clientWidth * 0.6), behavior: 'smooth' });
+function openNav() {
+  const nav = q('sidenav');
+  if (!nav || !navIsDrawer()) return;
+  nav.classList.add('open');
+  q('nav-backdrop').hidden = false;
+  q('nav-toggle').setAttribute('aria-expanded', 'true');
+  document.body.classList.add('nav-open');
+  const sel = nav.querySelector('button[aria-selected="true"]') || nav.querySelector('.tabs button:not([hidden])');
+  if (sel) sel.focus();
 }
 
-q('tabs').addEventListener('scroll', updateTabArrows);
-window.addEventListener('resize', updateTabArrows);
-updateTabArrows();
+function closeNav() {
+  const nav = q('sidenav');
+  if (!nav || !nav.classList.contains('open')) return;
+  nav.classList.remove('open');
+  q('nav-backdrop').hidden = true;
+  q('nav-toggle').setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('nav-open');
+  q('nav-toggle').focus();
+}
+
+// Whether a wide screen lists the tabs down the left, kept per browser.
+function setSidebar(mode) {
+  const hide = mode === 'hide';
+  closeNav();
+  document.documentElement.classList.toggle('nav-hidden', hide);
+  try { localStorage.setItem('sidebar', hide ? 'hide' : 'show'); } catch (e) { /* private window */ }
+  document.querySelectorAll('[data-sidebar-set]').forEach(b => {
+    const on = b.dataset.sidebarSet === (hide ? 'hide' : 'show');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+document.querySelectorAll('[data-sidebar-set]').forEach(b =>
+  b.addEventListener('click', () => setSidebar(b.dataset.sidebarSet)));
+(function initSidebar() {
+  let stored = null;
+  try { stored = localStorage.getItem('sidebar'); } catch (e) { /* private window */ }
+  setSidebar(stored === 'hide' ? 'hide' : 'show');
+})();
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+// Widened past the drawer while it was open: the sidebar is simply there.
+window.addEventListener('resize', () => { if (!navIsDrawer()) closeNav(); });

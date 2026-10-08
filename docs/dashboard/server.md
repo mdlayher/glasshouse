@@ -6,6 +6,8 @@ The **Server** tab, `/?tab=server`, shows the installed version, whether a newer
 
 It also adds or removes [the app on the TV's home screen](../dashboard/tv-app.md).
 
+The theme, the sidebar and the language are set here for each browser, so other phones and computers keep their own.
+
 ![Server tab: version and daily check beside the update buttons, blocking the TV's own software updates, the dashboard app on the TV, and the theme for this browser](../screenshots/server.png)
 
 *Server and TV software updates, the dashboard app and the theme.*
