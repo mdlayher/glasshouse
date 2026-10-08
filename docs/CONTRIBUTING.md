@@ -107,7 +107,7 @@ The automated checks run the server's code, not the TV. LG's services, the pictu
 
 Add a short **Testing** section to the pull request description:
 
-* the TV's model and webOS version, for example "OLED42C24LA, webOS 22";
+* the TV's model and webOS version, for example "OLED42C24LA, webOS 9.2";
 * what you did and what you saw;
 * what you didn't test, such as other webOS versions or something that needs hardware you don't have.
 
@@ -116,7 +116,7 @@ For example:
 ```
 ## Testing
 
-- OLED42C24LA, webOS 22: hid and unhid three tiles from the Apps tab. Each took
+- OLED42C24LA, webOS 9.2: hid and unhid three tiles from the Apps tab. Each took
   about 4 seconds, and HDMI 2 kept its picture and sound throughout.
 - Not tested on webOS 4 or on webOS 10 and later.
 ```
