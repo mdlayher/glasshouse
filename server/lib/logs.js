@@ -440,6 +440,8 @@ function redact(str) {
     .replace(/(["']?(?:password|passwd|secret|client_secret|access_token|refresh_token)["']?\s*[:=]\s*["']?)[^"',\s}]+(["']?)/gi, '$1<REDACTED>$2')
     // Serial numbers and device IDs (e.g. serialNumber: "301NDXK0C912")
     .replace(/(["']?(?:serial(?:_?number)?|device_?id|esn)["']?\s*[:=]\s*["']?)[A-Za-z0-9_-]{6,}(["']?)/gi, '$1<SERIAL>$2')
+    // Postcodes and coordinates (pqcontroller reports "zip_code":"bt155at" on a C2)
+    .replace(/(["']?(?:zip_?code|post_?code|postal_?code|latitude|longitude)["']?\s*[:=]\s*["']?)[^"',}\r\n]+(["']?)/gi, '$1<LOCATION>$2')
     // Wi-Fi SSIDs (e.g. SSID "MyNetwork")
     .replace(/(ssid["':=\s]+["'])[^\r\n"']*(["'])/gi, '$1<SSID>$2')
     // MAC addresses (e.g. 14:49:e0:12:34:56 or 14-49-e0-12-34-56)

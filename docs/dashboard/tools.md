@@ -15,7 +15,7 @@ The **Tools** tab, `/?tab=tools`, provides a live system log inspection terminal
 * **Live view & pause**: The view follows new lines as they are written, fetching only what is new, and stops while the browser tab is hidden. It opens at the newest line; scrolling up holds it in place, and **Jump to latest** follows again.
 * **Inspector drawer**: Clicking any log line expands detailed metadata and renders pretty-printed, syntax-highlighted JSON for structured webOS event payloads.
 * **Export & copy**: The lines shown, after any filter, copied to the clipboard or saved as a timestamped `.txt` file for a bug report.
-* **Hide private details**: On by default, it takes passwords, tokens, serial numbers, Wi-Fi network names, and MAC and IP addresses out of what is copied or exported. The view itself always shows the full log. The logs can still name the apps in use, so it is worth reading them before posting.
+* **Hide private details**: On by default, it takes passwords, tokens, serial numbers, postcodes and locations, Wi-Fi network names, and MAC and IP addresses out of what is copied or exported. The view itself always shows the full log. The logs can still name the apps in use, so it is worth reading them before posting.
 
 ### Log levels
 

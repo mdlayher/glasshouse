@@ -348,6 +348,16 @@ test('logs.redact scrubs sensitive network and device data while preserving safe
     logs.redact('wlan0: associate to SSID "Home_Network_5G"'),
     'wlan0: associate to SSID "<SSID>"'
   );
+
+  // Postcodes and coordinates, as a C2's picture report carries them
+  assert.strictEqual(
+    logs.redact('pqcontroller NL_PICTURE_PERIODIC_REPORT {"backlight":186,"zip_code":"bt155at","app_id":"com.webos.app.hdmi2"}'),
+    'pqcontroller NL_PICTURE_PERIODIC_REPORT {"backlight":186,"zip_code":"<LOCATION>","app_id":"com.webos.app.hdmi2"}'
+  );
+  assert.strictEqual(
+    logs.redact('postcode: "SW1A 1AA", latitude=51.5014, longitude=-0.1419'),
+    'postcode: "<LOCATION>", latitude=<LOCATION>, longitude=<LOCATION>'
+  );
 });
 
 test('logs.redactEntry redacts msg, proc, and raw and preserves metadata', function () {
