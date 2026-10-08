@@ -14,6 +14,11 @@ function getTvwebLogPath() {
   return process.env.TVWEB_LOG || '/var/lib/tvweb/tvweb.log';
 }
 
+// Where tvwebctl keeps the last copy when it trims tvweb.log.
+function getTvwebRotatedLogPath() {
+  return getTvwebLogPath() + '.1';
+}
+
 /*
  * Reads a file's complete lines from `from` to the end, or the last maxBytes
  * of it when `from` is null, no longer in the file (rotated or truncated), on
@@ -121,7 +126,7 @@ function parseSystemLogs(raw, bootTimeMs) {
   return out;
 }
 
-var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?\s+(.*)$/;
+var TVWEB_RE = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)(?:\s+\[([0-9.]+)\])?(?:\s+\[(INFO|WARN|WARNING|ERR|ERROR|DBG|DEBUG)\])?(?:\s+(.*))?$/i;
 
 /**
  * Parse Glasshouse server log lines.
@@ -134,26 +139,35 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
   if (!raw) return [];
   var lines = raw.split('\n');
   var out = [];
-  var lastMono = defaultMono;
-  var lastTs = new Date(bootTimeMs + Math.round(defaultMono * 1000)).toISOString();
+  var lastMono = null;
+  var lastTs = null;
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
     if (!line) continue;
     var m = TVWEB_RE.exec(line);
     var ts, mono, msg;
-    var marked = false;
+    var explicitLvl = null;
     if (m) {
       ts = m[1];
       mono = m[2] ? parseFloat(m[2]) : (Date.parse(ts) - bootTimeMs) / 1000;
-      msg = m[3];
+      if (m[3]) {
+        var tagUpper = m[3].toUpperCase();
+        if (tagUpper === 'WARN' || tagUpper === 'WARNING') explicitLvl = 'warning';
+        else if (tagUpper === 'ERR' || tagUpper === 'ERROR') explicitLvl = 'error';
+        else if (tagUpper === 'DBG' || tagUpper === 'DEBUG') explicitLvl = 'debug';
+        else explicitLvl = 'info';
+      }
+      msg = m[4] || '';
       lastMono = mono;
       lastTs = ts;
-      // console.error's mark (tvweb.js); lines from before it are guessed.
-      if (msg.indexOf('ERROR ') === 0) { marked = true; msg = msg.substring(6); }
-    } else {
+    } else if (lastMono !== null) {
       ts = lastTs;
       mono = lastMono;
+      msg = line;
+    } else {
+      ts = new Date(bootTimeMs).toISOString();
+      mono = 0;
       msg = line;
     }
     var proc = 'tvweb';
@@ -169,7 +183,7 @@ function parseGlasshouseLogs(raw, bootTimeMs, defaultMono) {
       ts: ts,
       mono: mono,
       source: 'glasshouse',
-      level: marked ? 'error' : detectLevel(msg),
+      level: explicitLvl || detectLevel(msg),
       proc: proc,
       msg: msg,
       raw: line
@@ -245,6 +259,7 @@ function parseCursor(since) {
  * @param {string} [opts.filter]
  * @param {string} [opts.since] the cursor from the last call: only what
  *   came after it is returned, unless `incremental` comes back false
+ * @param {boolean} [opts.redact]
  * @param {function(Error|null, Object=): void} cb
  */
 function getLogs(opts, cb) {
@@ -266,12 +281,17 @@ function getLogs(opts, cb) {
   var bootTimeMs = now - Math.round(uptime * 1000);
 
   var tvwebPath = getTvwebLogPath();
+  var rotPath = getTvwebRotatedLogPath();
   var sysAvailable = fs.existsSync(MESSAGES_LOG);
-  var ghAvailable = fs.existsSync(tvwebPath);
+  var ghAvailable = fs.existsSync(tvwebPath) || fs.existsSync(rotPath);
 
   var meta = {
     system: { available: sysAvailable, path: MESSAGES_LOG },
-    glasshouse: { available: ghAvailable, path: tvwebPath },
+    glasshouse: {
+      available: ghAvailable,
+      path: tvwebPath,
+      rotatedAvailable: fs.existsSync(rotPath)
+    },
     kernel: { available: true }
   };
 
@@ -290,6 +310,7 @@ function getLogs(opts, cb) {
     cursor.push(name + ':' + r.end + ':' + r.ino);
     var entries = parse(r.text);
     for (var e = 0; e < entries.length; e++) allEntries.push(entries[e]);
+    return { whole: r.whole, count: entries.length };
   }
 
   if (wantSystem && sysAvailable) {
@@ -297,7 +318,16 @@ function getLogs(opts, cb) {
   }
 
   if (wantGlasshouse && ghAvailable) {
-    readSource('glasshouse', tvwebPath, function (text) { return parseGlasshouseLogs(text, bootTimeMs, uptime); });
+    var gh = readSource('glasshouse', tvwebPath, function (text) { return parseGlasshouseLogs(text, bootTimeMs, uptime); });
+    // Just after tvwebctl trims tvweb.log it holds a few lines: a whole read
+    // that comes up short is topped up from the copy it kept, oldest first.
+    if (gh && gh.whole && gh.count < limit && fs.existsSync(rotPath)) {
+      var rot = readLines(rotPath, null, '', MAX_FILE_READ);
+      if (rot) {
+        var rotEntries = parseGlasshouseLogs(rot.text, bootTimeMs, uptime);
+        for (var o = 0; o < rotEntries.length; o++) allEntries.push(rotEntries[o]);
+      }
+    }
   }
 
   function finish() {
@@ -324,6 +354,14 @@ function getLogs(opts, cb) {
     // Apply cap
     if (allEntries.length > limit) {
       allEntries = allEntries.slice(allEntries.length - limit);
+    }
+
+    if (opts && opts.redact) {
+      var redacted = [];
+      for (var r = 0; r < allEntries.length; r++) {
+        redacted.push(redactEntry(allEntries[r]));
+      }
+      allEntries = redacted;
     }
 
     cb(null, {
@@ -364,11 +402,101 @@ function getLogs(opts, cb) {
   }
 }
 
+/**
+ * Format an unhandled exception or fatal error into structured log lines.
+ * @param {Error|any} err
+ * @returns {Array.<string>}
+ */
+function formatFatalError(err) {
+  var mem = (typeof process !== 'undefined' && process.memoryUsage) ? process.memoryUsage() : null;
+  var memStr = mem ? 'rss=' + Math.round(mem.rss / 1048576) + 'MB heap=' + Math.round(mem.heapUsed / 1048576) + '/' + Math.round(mem.heapTotal / 1048576) + 'MB' : '';
+  var stack = (err && err.stack) ? String(err.stack) : String(err);
+  var out = [];
+  out.push('fatal: uncaught exception' + (memStr ? ' (' + memStr + ')' : ''));
+  var lines = stack.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim();
+    if (l) out.push('fatal: ' + l);
+  }
+  return out;
+}
+
+/**
+ * Redact sensitive diagnostic information (IPs, MACs, device serials, tokens/credentials)
+ * for safe bug reporting, sharing, and exports.
+ * @param {string} str
+ * @returns {string}
+ */
+function redact(str) {
+  if (!str) return str;
+  return String(str)
+    // Passwords, credentials, and basic auth in URLs
+    .replace(/(:\/\/[^:]+:)[^@\s]+(@)/g, '$1<REDACTED>$2')
+    // URL query tokens and auth keys (e.g. ?k=..., &token=...)
+    .replace(/((\?|&)(?:k|token|key|api_key|auth)=)[^&\s"'`>]+/gi, '$1<REDACTED>')
+    // Bearer authorization tokens
+    .replace(/(Bearer\s+)[A-Za-z0-9_\-\.]+/gi, '$1<REDACTED>')
+    // Key-value credentials (e.g. password: "foo", secret = "bar")
+    .replace(/(["']?(?:password|passwd|secret|client_secret|access_token|refresh_token)["']?\s*[:=]\s*["']?)[^"',\s}]+(["']?)/gi, '$1<REDACTED>$2')
+    // Serial numbers and device IDs (e.g. serialNumber: "301NDXK0C912")
+    .replace(/(["']?(?:serial(?:_?number)?|device_?id|esn)["']?\s*[:=]\s*["']?)[A-Za-z0-9_-]{6,}(["']?)/gi, '$1<SERIAL>$2')
+    // Wi-Fi SSIDs (e.g. SSID "MyNetwork")
+    .replace(/(ssid["':=\s]+["'])[^\r\n"']*(["'])/gi, '$1<SSID>$2')
+    // MAC addresses (e.g. 14:49:e0:12:34:56 or 14-49-e0-12-34-56)
+    .replace(/\b([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})\b/g, '<MAC>')
+    // IPv6 addresses (preserving ::1)
+    .replace(/(?:\bfe80:[0-9a-fA-F:]+\b|\b(?:[0-9a-fA-F]{1,4}:){3,7}[0-9a-fA-F]{1,4}\b|\b[0-9a-fA-F]{1,4}::[0-9a-fA-F:]*\b)/gi, '<IPV6>')
+    // IPv4 addresses (private and public, preserving 127.0.0.1 and 0.0.0.0)
+    .replace(/\b(?!(?:127\.0\.0\.1|0\.0\.0\.0)\b)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g, '<IP>');
+}
+
+/**
+ * Return a copy of a log entry with sensitive data redacted in msg, proc, and raw.
+ * @param {Object} entry
+ * @returns {Object}
+ */
+function redactEntry(entry) {
+  if (!entry) return entry;
+  return {
+    ts: entry.ts,
+    mono: entry.mono,
+    source: entry.source,
+    proc: redact(entry.proc),
+    level: entry.level,
+    msg: redact(entry.msg),
+    raw: redact(entry.raw)
+  };
+}
+
+/**
+ * Determine if a log entry with the given levelTag should be output
+ * under the configured verbosity setting ('quiet', 'info', 'debug').
+ * @param {string} levelTag 'INFO', 'WARN', 'ERR', 'DBG'
+ * @param {string} [configuredLevel='info']
+ * @returns {boolean}
+ */
+function shouldLog(levelTag, configuredLevel) {
+  var tag = (levelTag || 'INFO').toUpperCase();
+  var cfg = String(configuredLevel || 'info').toLowerCase();
+  if (tag === 'ERR' || tag === 'FATAL' || tag === 'ERROR') return true;
+  if (tag === 'WARN' || tag === 'WARNING') return true;
+  if (cfg === 'quiet' || cfg === 'error' || cfg === 'warn') return false;
+  if (tag === 'INFO') return true;
+  if (tag === 'DBG' || tag === 'DEBUG') return cfg === 'debug';
+  return true;
+}
+
 module.exports = {
   getLogs: getLogs,
   parseCursor: parseCursor,
   parseSystemLogs: parseSystemLogs,
   parseGlasshouseLogs: parseGlasshouseLogs,
   parseKernelLogs: parseKernelLogs,
-  detectLevel: detectLevel
+  detectLevel: detectLevel,
+  formatFatalError: formatFatalError,
+  redact: redact,
+  redactEntry: redactEntry,
+  shouldLog: shouldLog,
+  getTvwebLogPath: getTvwebLogPath,
+  getTvwebRotatedLogPath: getTvwebRotatedLogPath
 };

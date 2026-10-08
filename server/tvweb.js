@@ -53,13 +53,26 @@ var msg = say.msg;
 var luna = lunaTransport.call;
 
 var _origLog = console.log;
+var _origWarn = console.warn || console.log;
 var _origErr = console.error;
-// Errors are marked, as stdout and stderr share tvweb.log: the Tools tab reads
-// the level from the mark rather than guessing it from the words.
-function logStamp(fn, args, mark) {
+var _origDbg = console.debug || console.log;
+
+function getActiveLogLevel() {
+  if (process.env.TVWEB_LOG_LEVEL) return process.env.TVWEB_LOG_LEVEL;
+  if (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.logging && CONFIG.logging.level) {
+    return CONFIG.logging.level;
+  }
+  return 'info';
+}
+
+function logStamp(fn, levelTag, args) {
+  var activeLevel = getActiveLogLevel();
+  if (!logsModule.shouldLog(levelTag, activeLevel)) {
+    return;
+  }
   var iso = new Date().toISOString();
   var up = typeof os.uptime === 'function' ? os.uptime().toFixed(3) : null;
-  var pfx = iso + (up !== null ? ' [' + up + ']' : '') + (mark ? ' ' + mark : '');
+  var pfx = iso + (up !== null ? ' [' + up + ']' : '') + ' [' + levelTag + ']';
   var a = Array.prototype.slice.call(args);
   if (a.length > 0 && typeof a[0] === 'string') {
     a[0] = pfx + ' ' + a[0];
@@ -68,8 +81,34 @@ function logStamp(fn, args, mark) {
   }
   fn.apply(console, a);
 }
-console.log = function () { logStamp(_origLog, arguments); };
-console.error = function () { logStamp(_origErr, arguments, 'ERROR'); };
+console.log = function () { logStamp(_origLog, 'INFO', arguments); };
+console.warn = function () { logStamp(_origWarn, 'WARN', arguments); };
+console.error = function () { logStamp(_origErr, 'ERR', arguments); };
+console.debug = function () { logStamp(_origDbg, 'DBG', arguments); };
+
+if (typeof process !== 'undefined' && process.on) {
+  process.on('uncaughtException', function (err) {
+    try {
+      var lines = logsModule.formatFatalError(err);
+      for (var i = 0; i < lines.length; i++) {
+        console.error(lines[i]);
+      }
+    } catch (e) {
+      _origErr.call(console, 'fatal: crash handler error: ' + (e && e.message));
+    }
+    process.exit(1);
+  });
+  if (typeof process.on === 'function') {
+    process.on('unhandledRejection', function (reason) {
+      try {
+        var lines = logsModule.formatFatalError(reason);
+        for (var i = 0; i < lines.length; i++) {
+          console.error(lines[i]);
+        }
+      } catch (e) {}
+    });
+  }
+}
 
 /*
  * Bump on release, and tag the release to match: the dashboard turns this into
@@ -88,6 +127,12 @@ var CONFIG = {
   // it is an unauthenticated control endpoint unless `token` is set, and an
   // MQTT-only install has no reason to expose one.  { "web": { "enabled": false } }
   web: { enabled: true },
+
+  // Server logging verbosity: 'quiet', 'info' (default), or 'debug'.
+  //   'quiet': suppress routine info logs; only log warnings and errors
+  //   'info': standard operational logs
+  //   'debug': verbose diagnostics and details
+  logging: { level: 'info' },
 
   port: 8080,           // dashboard port
   host: '0.0.0.0',      // '127.0.0.1' to keep it TV-local only
@@ -237,14 +282,14 @@ function loadConfig() {
             console.log('tightened permissions on ' + paths[i] + ' to 0600');
           }
         } catch (e) {
-          console.error('warning: could not chmod ' + paths[i] + ': ' + e.message);
+          console.warn('warning: could not chmod ' + paths[i] + ': ' + e.message);
         }
         CONFIG_FILE = paths[i];
         console.log('loaded configuration from ' + paths[i]);
         break;
       }
     } catch (e) {
-      console.error('warning: error reading config from ' + paths[i] + ':', e.message);
+      console.warn('warning: error reading config from ' + paths[i] + ':', e.message);
     }
   }
 }
@@ -287,6 +332,18 @@ loadConfig();
     else if (a[i] === '--config') i++;   // consumed before loadConfig
     else if (a[i] === '--no-mqtt') { CONFIG.mqtt = CONFIG.mqtt || {}; CONFIG.mqtt.enabled = false; }
     else if (a[i] === '--no-control') CONFIG.allowControl = false;
+    else if (a[i] === '--log-level' && a[i + 1]) {
+      CONFIG.logging = CONFIG.logging || {};
+      CONFIG.logging.level = a[++i].toLowerCase();
+    }
+    else if (a[i] === '--quiet' || a[i] === '-q') {
+      CONFIG.logging = CONFIG.logging || {};
+      CONFIG.logging.level = 'quiet';
+    }
+    else if (a[i] === '--debug' || a[i] === '-d') {
+      CONFIG.logging = CONFIG.logging || {};
+      CONFIG.logging.level = 'debug';
+    }
   }
 })();
 
@@ -768,7 +825,7 @@ if (CLI_MODE) {
                 '  control=' + CONFIG.allowControl + '  power=' + CONFIG.allowPower +
                 '  auth=' + (CONFIG.token ? 'token' : 'none'));
     if (CONFIG.apps && CONFIG.apps.sideload === true && !CONFIG.token) {
-      console.error('warning: apps.sideload is on and no token is set; anyone who can reach port ' +
+      console.warn('warning: apps.sideload is on and no token is set; anyone who can reach port ' +
                     CONFIG.port + ' can install a package from a URL or a file');
     }
     oled.detectOled(function () {});   // resolve and log panel type up front
