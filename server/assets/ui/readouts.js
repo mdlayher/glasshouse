@@ -151,7 +151,11 @@ let lastInputNames = {};
    while the TV was in standby. */
 let lastHdmiKey = null;
 function hdmiKey(d) {
-  return [d.app_id || '', (d.powerState && d.powerState.raw) || '', d.signal || '', !!d.screenSaver].join('|');
+  // The colour format is in the key too: a source switching RGB to YCbCr, or
+  // SDR to HDR, keeps the same resolution and refresh.
+  const diag = d.hdmi_diag || {}, pe = d.picture_engine || {};
+  return [d.app_id || '', (d.powerState && d.powerState.raw) || '', d.signal || '', !!d.screenSaver,
+          diag.chroma || '', diag.hdcp || '', d.colorimetry || pe.colorimetry || '', pe.hdr_mode || ''].join('|');
 }
 
 async function tick() {
