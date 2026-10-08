@@ -49,6 +49,12 @@
      4.5:1 AA floor for small text. The solid tone stays for fills. */
   --purple-t:#B57BFF;
   --gut:clamp(20px,5vw,64px);
+  /* The masthead's type and the gap under it, shared with the sidebar so its
+     head and first tab line up with them at every width. */
+  --mh-model:clamp(22px,2.6vw,30px);
+  --mh-source:clamp(15px,1.8vw,19px);
+  --mh-stream:clamp(15px,1.7vw,18px);
+  --panels-gap:clamp(24px,3.5vw,36px);
   /* Active/selected button foreground - inverted against the surface. */
   --btn-on-fg:#000;
 }
@@ -89,17 +95,14 @@ body{
 /* ---- masthead ---- */
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
 .hdr-left{display:flex;align-items:flex-start;gap:18px}
-/* The masthead: the Glasshouse mark, a hairline, and the TV in the page's two
-   voices - the kind of TV as a tracked label, the model in the thin display
-   face the big readings use. The mark takes the text colour, so it follows
-   the theme. */
-.mark{display:flex;align-items:center;gap:clamp(14px,1.8vw,22px)}
-.mark-logo{height:clamp(40px,4.6vw,54px);width:auto;color:var(--w100);flex:none}
-.mark-rule{width:1px;align-self:stretch;margin:4px 0;background:var(--w25)}
+/* The masthead: the TV in the page's two voices - the kind of TV as a tracked
+   label, the model in the thin display face the big readings use. The
+   Glasshouse mark is in the sidebar's head. */
+.mark{display:flex;align-items:center}
 .mark-tv{display:flex;flex-direction:column;gap:7px}
 .mark-tv #brand{font-family:'Manrope';font-weight:500;font-size:12px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--w60)}
-.mark-tv #model{font-family:'Outfit';font-weight:200;font-size:clamp(22px,2.6vw,30px);line-height:1;
+.mark-tv #model{font-family:'Outfit';font-weight:200;font-size:var(--mh-model);line-height:1;
   letter-spacing:.01em;color:var(--w100)}
 
 /* Theme toggle, at the end of the footer: a set-and-forget control, which
@@ -118,7 +121,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
 /* Remote peripheral badge */
 
 .src{text-align:right}
-.src .t{font-family:'Outfit';font-weight:300;font-size:clamp(15px,1.8vw,19px);color:var(--w80)}
+.src .t{font-family:'Outfit';font-weight:300;font-size:var(--mh-source);color:var(--w80)}
 /* Stale while the TV is off, so faded - but only to .8: at .55 the picture
    mode fell to 3.4:1 on black, under AA for small text. */
 .src.dim .t,.src.dim .stream-info{opacity:.8}
@@ -136,8 +139,11 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
 .stream-info{margin-top:3px}
 .stream-primary{
   font-family:'Outfit',sans-serif;font-weight:300;
-  font-size:clamp(15px,1.7vw,18px);color:var(--w100);
+  font-size:var(--mh-stream);color:var(--w100);
   display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;
+  /* A full line even when it holds only the tags: the masthead keeps one
+     height, which the sidebar's first tab lines up under. */
+  min-height:1.5em;
 }
 .stream-tag{
   font-family:'Manrope',sans-serif;font-size:11px;font-weight:600;
@@ -201,17 +207,30 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
 /* Tabs. Twelve no longer fit a strip across a phone, so they are a sidebar:
    always open from 1024px, and below that a drawer behind the menu bar,
    which also names the tab being shown. */
-:root{--nav-w:232px}
+:root{--nav-w:232px;
+  /* Its padding, and the 4 of 24 units the icon's lines are inset by at 20px:
+     the lines then start on the content's edge. */
+  --nav-toggle-pull:calc(-4px - 20px * 4 / 24)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .nav-ico{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 
 .sidenav{position:fixed;top:0;bottom:0;left:0;z-index:60;width:var(--nav-w);background:var(--bg);
   border-right:1px solid var(--w12);overflow-y:auto;overscroll-behavior:contain;
   padding:var(--gut) 0 24px;display:flex;flex-direction:column}
-.sidenav-head{display:none;align-items:center;gap:12px;padding:0 12px 18px 22px;color:var(--w100)}
-.sidenav-head .mark-logo{width:22px;height:auto}
-.sidenav-title{font:300 18px 'Outfit';letter-spacing:.02em;flex:1}
-.nav-close{width:40px;height:40px;min-height:0;border:0;background:transparent;color:var(--w60);font-size:24px;
+/* The mark, the width of a tab's icon and in the same column, with the name
+   where the tabs' labels start (12 + 12px in, then 20 + 14px). As tall as the
+   masthead's label (18px), gap (7px) and model beside it, so the two read as
+   one row. */
+.sidenav-head{display:flex;align-items:center;gap:14px;padding:0 12px 0 24px;color:var(--w100);
+  height:calc(25px + var(--mh-model));flex:none}
+.sidenav-head .mark-logo{width:20px;height:auto;flex:none;color:var(--w100)}
+.sidenav-title{font:300 21px 'Outfit';line-height:1;letter-spacing:.01em;flex:1}
+
+/* The first tab level with the panels. The masthead's right column sets its
+   height: the same 18px label row and 7px of gaps as the left, then the
+   source and stream lines at 1.5x their size, where the left has the model. */
+.sidenav .tabs{margin-top:calc(1.5 * var(--mh-source) + 1.5 * var(--mh-stream) - var(--mh-model) + var(--panels-gap))}
+.nav-close{display:none;width:40px;height:40px;min-height:0;border:0;background:transparent;color:var(--w60);font-size:24px;
   line-height:1;cursor:pointer;padding:0;letter-spacing:0}
 .nav-close:hover{color:var(--w100)}
 
@@ -236,27 +255,39 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
   /* Alongside the sidebar, not centred under it. */
   html:not(.nav-hidden) body{margin-left:var(--nav-w);margin-right:auto}
   html:not(.nav-hidden) .nav-backdrop{display:none}
+  /* The name on the model's baseline beside it, the mark moving with it.
+     Outfit's baseline sits 0.889em down a line-height 1 box. The head is
+     centred on the masthead's 25px + model, so the model's baseline is
+     25px + 0.889 * model down it and the name's (25px + model) / 2 - 10.5px
+     + 0.889 * 21px: the difference is the shift. */
+  html:not(.nav-hidden) .sidenav-head .mark-logo,
+  html:not(.nav-hidden) .sidenav-title{
+    transform:translateY(calc((0.889 - 0.5) * var(--mh-model) + 23px - 0.889 * 21px))}
 }
 /* The drawer: below 1024px, and on a wide screen whose sidebar is hidden
    (Server tab, kept per browser). */
 @media (max-width:1023px){
   .nav-bar{display:block;margin-top:clamp(20px,3vw,30px);border-bottom:1px solid var(--w12)}
-  .nav-toggle{display:flex;align-items:center;gap:14px;min-height:0;height:46px;padding:0 4px;margin-left:-4px;background:transparent;border:0;color:var(--w100);cursor:pointer;font:500 12px 'Manrope';letter-spacing:.14em;text-transform:uppercase}
+  .nav-toggle{display:flex;align-items:center;gap:14px;min-height:0;height:46px;padding:0 4px;margin-left:var(--nav-toggle-pull);background:transparent;border:0;color:var(--w100);cursor:pointer;font:500 12px 'Manrope';letter-spacing:.14em;text-transform:uppercase}
   .nav-toggle:focus-visible{outline:2px solid var(--w80);outline-offset:2px}
   .sidenav{width:min(300px,84vw);padding-top:max(16px,env(safe-area-inset-top));transform:translateX(-100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;box-shadow:0 0 40px rgba(0,0,0,.5)}
   .sidenav.open{transform:none;visibility:visible;transition:transform .22s ease}
-  .sidenav-head{display:flex}
+  .sidenav-head{height:auto;padding-bottom:6px}
+  .sidenav .tabs{margin-top:12px}
+  .nav-close{display:block}
   body.nav-open{overflow:hidden}
 }
 html.nav-hidden .nav-bar{display:block;margin-top:clamp(20px,3vw,30px);border-bottom:1px solid var(--w12)}
-html.nav-hidden .nav-toggle{display:flex;align-items:center;gap:14px;min-height:0;height:46px;padding:0 4px;margin-left:-4px;background:transparent;border:0;color:var(--w100);cursor:pointer;font:500 12px 'Manrope';letter-spacing:.14em;text-transform:uppercase}
+html.nav-hidden .nav-toggle{display:flex;align-items:center;gap:14px;min-height:0;height:46px;padding:0 4px;margin-left:var(--nav-toggle-pull);background:transparent;border:0;color:var(--w100);cursor:pointer;font:500 12px 'Manrope';letter-spacing:.14em;text-transform:uppercase}
 html.nav-hidden .nav-toggle:focus-visible{outline:2px solid var(--w80);outline-offset:2px}
 html.nav-hidden .sidenav{width:min(300px,84vw);padding-top:max(16px,env(safe-area-inset-top));transform:translateX(-100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;box-shadow:0 0 40px rgba(0,0,0,.5)}
 html.nav-hidden .sidenav.open{transform:none;visibility:visible;transition:transform .22s ease}
-html.nav-hidden .sidenav-head{display:flex}
+html.nav-hidden .sidenav-head{height:auto;padding-bottom:6px}
+html.nav-hidden .sidenav .tabs{margin-top:12px}
+html.nav-hidden .nav-close{display:block}
 html.nav-hidden body.nav-open{overflow:hidden}
 @media (prefers-reduced-motion:reduce){ .sidenav,.sidenav.open{transition:none} }
-#panels{margin-top:clamp(24px,3.5vw,36px)}
+#panels{margin-top:var(--panels-gap)}
 /* A panel is the whole width now, so the columns come from the panel itself
    rather than from the page splitting in two. */
 .panel .col-sec{display:none}
