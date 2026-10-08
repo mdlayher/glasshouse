@@ -219,12 +219,13 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
   padding:var(--gut) 0 24px;display:flex;flex-direction:column}
 /* The mark, the width of a tab's icon and in the same column, with the name
    where the tabs' labels start (12 + 12px in, then 20 + 14px). As tall as the
-   masthead's label (18px), gap (7px) and model beside it, so the two read as
-   one row. */
+   masthead's label (18px), gap (7px) and model beside it, so the tabs below
+   can line up with the panels. */
 .sidenav-head{display:flex;align-items:center;gap:14px;padding:0 12px 0 24px;color:var(--w100);
   height:calc(25px + var(--mh-model));flex:none}
+.sidenav-brand{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
 .sidenav-head .mark-logo{width:20px;height:auto;flex:none;color:var(--w100)}
-.sidenav-title{font:300 21px 'Outfit';line-height:1;letter-spacing:.01em;flex:1}
+.sidenav-title{font:300 21px 'Outfit';line-height:1;letter-spacing:.01em}
 
 /* The first tab level with the panels. The masthead's right column sets its
    height: the same 18px label row and 7px of gaps as the left, then the
@@ -255,14 +256,11 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
   /* Alongside the sidebar, not centred under it. */
   html:not(.nav-hidden) body{margin-left:var(--nav-w);margin-right:auto}
   html:not(.nav-hidden) .nav-backdrop{display:none}
-  /* The name on the model's baseline beside it, the mark moving with it.
-     Outfit's baseline sits 0.889em down a line-height 1 box. The head is
-     centred on the masthead's 25px + model, so the model's baseline is
-     25px + 0.889 * model down it and the name's (25px + model) / 2 - 10.5px
-     + 0.889 * 21px: the difference is the shift. */
-  html:not(.nav-hidden) .sidenav-head .mark-logo,
-  html:not(.nav-hidden) .sidenav-title{
-    transform:translateY(calc((0.889 - 0.5) * var(--mh-model) + 23px - 0.889 * 21px))}
+  /* The top of the mark on the top of the masthead's "LG OLED TV": its
+     capitals start 4.18px into their 18px line (Manrope 12px), and the
+     mark's ink 0.76px into its box. */
+  html:not(.nav-hidden) .sidenav-head{align-items:flex-start}
+  html:not(.nav-hidden) .sidenav-brand{margin-top:calc(4.18px - 0.76px)}
 }
 /* The drawer: below 1024px, and on a wide screen whose sidebar is hidden
    (Server tab, kept per browser). */

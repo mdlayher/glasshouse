@@ -47,12 +47,14 @@
 <div class="nav-backdrop" id="nav-backdrop" hidden onclick="closeNav()"></div>
 <aside class="sidenav" id="sidenav" aria-label="Sections" data-t-aria-label="nav.sections">
   <div class="sidenav-head">
-    <!-- docs/logo/glasshouse.svg without its tile. -->
-    <svg class="mark-logo" viewBox="124 104 264 302" aria-hidden="true">
-      <path d="M358 214 L256 134 L154 214 V342 A34 34 0 0 0 188 376 H324 A34 34 0 0 0 358 342 V286 H272"
-            fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span class="sidenav-title" translate="no">Glasshouse</span>
+    <span class="sidenav-brand">
+      <!-- docs/logo/glasshouse.svg without its tile. -->
+      <svg class="mark-logo" viewBox="124 104 264 302" aria-hidden="true">
+        <path d="M358 214 L256 134 L154 214 V342 A34 34 0 0 0 188 376 H324 A34 34 0 0 0 358 342 V286 H272"
+              fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="sidenav-title" translate="no">Glasshouse</span>
+    </span>
     <button type="button" class="nav-close" onclick="closeNav()" aria-label="Close menu" data-t-aria-label="nav.close">&times;</button>
   </div>
   <nav class="tabs" id="tabs" role="tablist" aria-orientation="vertical">
