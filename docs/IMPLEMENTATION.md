@@ -600,7 +600,7 @@ Glasshouse's next start:
 `hostname` is the name the TV sends as; left empty, it is the device name.
 `sources` takes `system` (`/var/log/messages`), `glasshouse` (`tvweb.log`) and
 `kernel`. The kernel's is not on by default, since following it means running
-`dmesg` every poll.
+`dmesg` every 30 seconds.
 
 Forwarding follows the files rather than wrapping `console.log`, so lines
 Glasshouse never wrote through console go too: libuv's assertions, and the crash
@@ -609,8 +609,12 @@ seconds a timer reads what each file gained since the last poll, with the
 Tools tab's cursor reads and parsers, so what leaves the TV is what the tab
 shows. A read takes at most 64 KB and the next poll carries on: the loop is
 single threaded, and a large synchronous read would hold up every HTTP answer
-and the heartbeat. `dmesg -r` is read whole and sent from after the last
-uptime sent.
+and the heartbeat. `dmesg -r` is read whole every 30 seconds and sent from
+after the last uptime sent. It starts in turn with the luna-send children,
+with the same gap between starts: on a CX (webOS 5), luna-send children
+aborting in libuv went from 1 to 3 an hour to 13 in 47 minutes once `dmesg`
+ran every 5 seconds outside that gate. The ring holds minutes of lines there,
+so nothing is lost between reads.
 
 Where a start begins:
 

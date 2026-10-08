@@ -207,7 +207,7 @@ var CONFIG = {
    * Forwarding the logs the Tools tab shows to a syslog server, as RFC 5424
    * over UDP. Off while server is empty. hostname is what the TV sends as,
    * the device name when empty. sources takes 'system', 'glasshouse'
-   * and 'kernel'; the kernel's means running dmesg every 5 seconds. redact
+   * and 'kernel'; the kernel's means running dmesg every 30 seconds. redact
    * takes addresses, credentials and the like out, as the Tools tab's copy
    * and export do.
    */
