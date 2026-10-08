@@ -98,7 +98,7 @@ function installWith(tag, work, tarball, ver, want) {
   // As GitHub lays out a tag's tarball: everything under <repo>-<version>/.
   const tree = git(['stash', 'create']) || 'HEAD';
   const tarball = path.join(work, 'release.tar.gz');
-  child.execFileSync('git', ['archive', '--format=tar.gz', '--prefix=lg-webos-dashboard-' + ver + '/', '-o', tarball, tree], { cwd: ROOT });
+  child.execFileSync('git', ['archive', '--format=tar.gz', '--prefix=glasshouse-' + ver + '/', '-o', tarball, tree], { cwd: ROOT });
   process.env.UPGRADE_VERSION = ver;
   process.env.UPGRADE_TARBALL = tarball;
 

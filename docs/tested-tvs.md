@@ -82,4 +82,4 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 
 </details>
 
-**Tested on another model?** Please [open an issue](https://github.com/rorygallagher2024/lg-webos-dashboard/issues/new) with the TV model, webOS version, and the contents of `/var/lib/tvweb/tvweb.log` — whether everything worked or something broke — and we will add a row.
+**Tested on another model?** Please [open an issue](https://github.com/rorygallagher2024/glasshouse/issues/new) with the TV model, webOS version, and the contents of `/var/lib/tvweb/tvweb.log` — whether everything worked or something broke — and we will add a row.

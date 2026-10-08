@@ -1,6 +1,6 @@
 name: Docs
 
-# The site at rorygallagher2024.github.io/lg-webos-dashboard, built from docs/.
+# The site at rorygallagher2024.github.io/glasshouse, built from docs/.
 # A pull request only builds it, in strict mode, so a broken link fails there;
 # docs-publish.yml publishes it once merged.
 on:

@@ -1513,7 +1513,7 @@ function render() {
     } else if (d.error) {
       var detail = '<div class="msg-detail">' + esc(d.error);
       if (lanOrigin) detail += '<br>' + esc(t('tv.msg.useWeb', 'Use the web dashboard instead:')) + ' <span class="msg-url">' + esc(lanOrigin) + '</span>';
-      detail += '<br>' + esc(t('tv.msg.issue', 'If this persists, open an issue at github.com/rorygallagher2024/lg-webos-dashboard')) +
+      detail += '<br>' + esc(t('tv.msg.issue', 'If this persists, open an issue at github.com/rorygallagher2024/glasshouse')) +
                 '<br>' + esc(t('tv.msg.includeError', 'and include the error:')) + ' <span class="msg-url">' + esc(d.error) + '</span></div>';
       msg.innerHTML = esc(t('tv.msg.wentWrong', 'Something went wrong')) + detail;
     } else {
@@ -1693,7 +1693,7 @@ function fetchTab(keepSel) {
       msg.style.display = 'block';
       var detail = '<div class="msg-detail">' + esc(t('tv.msg.noResponse', 'The dashboard’s server on this TV did not respond.'));
       if (lanOrigin) detail += '<br>' + esc(t('tv.msg.useWeb', 'Use the web dashboard instead:')) + ' <span class="msg-url">' + esc(lanOrigin) + '</span>';
-      detail += '<br>' + esc(t('tv.msg.issue', 'If this persists, open an issue at github.com/rorygallagher2024/lg-webos-dashboard')) + '</div>';
+      detail += '<br>' + esc(t('tv.msg.issue', 'If this persists, open an issue at github.com/rorygallagher2024/glasshouse')) + '</div>';
       msg.innerHTML = esc(t('tv.msg.unreachable', 'Could not reach the TV server')) + detail;
     });
 }
