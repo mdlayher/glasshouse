@@ -72,6 +72,9 @@ function sampleLines(text) {
     'glasshouse_oled_gsr_stress_events_total',
     'glasshouse_oled_protection_enabled',
     'glasshouse_picture_backlight_ratio',
+    'glasshouse_sound_info',
+    'glasshouse_volume_ratio',
+    'glasshouse_muted',
     'glasshouse_foreground_app_info',
     'glasshouse_signal_info',
     'glasshouse_signal_low_latency',
@@ -180,6 +183,9 @@ function sampleLines(text) {
     'glasshouse_oled_refresher_running 0',
     'glasshouse_oled_refresher_scheduled 0',
     'glasshouse_oled_failure_alerts_total 0',
+    'glasshouse_sound_info{output="tv_external_speaker",mode="game"} 1',
+    'glasshouse_volume_ratio 0',
+    'glasshouse_muted 0',
     'glasshouse_foreground_app_info{app_id="com.webos.app.hdmi4",app_name="PC"} 1',
     'glasshouse_signal_info{dynamic_range="",picture_mode="game"} 1',
     'glasshouse_signal_vrr 0',
@@ -244,6 +250,9 @@ function sampleLines(text) {
     'glasshouse_oled_gsr_stress_events_total 133204',
     'glasshouse_oled_protection_enabled{protection="asbl"} 1',
     'glasshouse_oled_protection_enabled{protection="gsr"} 1',
+    'glasshouse_sound_info{output="tv_external_speaker",mode="game"} 1',
+    'glasshouse_volume_ratio 0',
+    'glasshouse_muted 0',
     'glasshouse_signal_info{dynamic_range="sdr",picture_mode="eco"} 1',
     'glasshouse_signal_low_latency 0',
     'glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="HDMI 1"} 1',
@@ -320,6 +329,9 @@ function sampleLines(text) {
     'glasshouse_oled_refresher_runs_total 5',
     'glasshouse_oled_refresher_running 0',
     'glasshouse_oled_refresher_scheduled 0',
+    'glasshouse_sound_info{output="tv_speaker",mode="standard"} 1',
+    'glasshouse_volume_ratio 0',
+    'glasshouse_muted 0',
     'glasshouse_foreground_app_info{app_id="com.webos.app.hdmi4",app_name="HDMI 4"} 1',
     'glasshouse_signal_info{dynamic_range="",picture_mode="eco"} 1',
     'glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="HDMI 1"} 1',
@@ -554,6 +566,34 @@ function sampleLines(text) {
   assert.deepEqual(matching(quoted, foreground), ['glasshouse_foreground_app_info{app_id="com.webos.app.hdmi1",app_name="Den\\"on\\\\s"} 1']);
   assert.deepEqual(matching(quoted, inputs), ['glasshouse_hdmi_input_info{input="hdmi1",app_id="com.webos.app.hdmi1",name="Den\\"on\\\\s"} 1']);
   console.log('  ✓ the foreground app and the HDMI input names are exported');
+})();
+
+// 2d. The sound output and mode are the TV's settings, the volume only a level
+// the TV sets
+(function testSound() {
+  function sound(stats) {
+    return sampleLines(prometheus.render(stats, '')).filter(function (l) { return /^glasshouse_(sound|volume|muted)/.test(l); });
+  }
+  assert.deepEqual(sound({ sound: { output_raw: 'external_arc', mode: 'aiSoundPlus' }, volume: 23, muted: true, volume_control: 'level' }), [
+    'glasshouse_sound_info{output="external_arc",mode="ai_sound_plus"} 1',
+    'glasshouse_volume_ratio 0.23',
+    'glasshouse_muted 1'
+  ]);
+  // An output or mode outside the names table keeps its own name in snake case.
+  assert.deepEqual(sound({ sound: { output_raw: 'tv_speaker_wow_cast', mode: 'aiSound_soundbar' } }), [
+    'glasshouse_sound_info{output="tv_speaker_wow_cast",mode="ai_sound_soundbar"} 1'
+  ]);
+  // A volume only stepped, as with an ARC soundbar, or not controlled at all,
+  // as over optical, is no level.
+  ['steps', 'none'].forEach(function (vc) {
+    assert.deepEqual(sound({ volume: -1, muted: false, volume_control: vc }), ['glasshouse_muted 0'], vc);
+  });
+  // One setting known without the other: the other label is empty.
+  assert.deepEqual(sound({ sound: { mode: 'movie' } }), ['glasshouse_sound_info{output="",mode="movie"} 1']);
+  // No sound settings and no mute reading: no samples.
+  assert.deepEqual(sound({ volume: 10, volume_control: 'level', muted: null }), ['glasshouse_volume_ratio 0.1']);
+  assert.deepEqual(sound({ sound: null }), []);
+  console.log('  ✓ the sound output, mode, volume, and mute are exported');
 })();
 
 // 3. Label values are escaped, and a missing one is empty rather than omitted

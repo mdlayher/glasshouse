@@ -411,7 +411,7 @@ console.log('Running test-telemetry.js ...');
   assert.strictEqual(telemetry.formatSoundOutput('ext_speaker_optical'), 'Optical');
   assert.strictEqual(telemetry.formatSoundOutput('ext_speaker_builtin_lg_optical'), 'Optical');
   assert.strictEqual(telemetry.formatSoundOutput('ext_speaker_arc'), 'HDMI ARC');
-  assert.strictEqual(telemetry.formatSoundOutput('mobile_phone'), 'Mobile Phone');
+  assert.strictEqual(telemetry.formatSoundOutput('usb_speaker'), 'Usb Speaker');
   assert.strictEqual(telemetry.formatPicMode('hdrCinemaBright'), 'HDR Cinema Bright');
   assert.strictEqual(telemetry.formatPicMode('hdrFilmMaker'), 'HDR Filmmaker');
   assert.strictEqual(telemetry.formatPicMode('dolbyHdrSomethingNew'), 'Dolby Vision Something New');

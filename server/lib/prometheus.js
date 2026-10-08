@@ -353,6 +353,32 @@ var FAMILIES = [
     samples: function (s) { return one(percent(path(s, ['picture', 'backlight_raw']))); }
   },
   {
+    name: 'glasshouse_sound_info', type: 'gauge',
+    help: 'Always 1, labelled with the sound output and the sound mode the TV\'s settings are set to, such as tv_speaker, external_arc, or bt_soundbar, and standard, ai_sound_plus, or movie.',
+    samples: function (s) {
+      var output = path(s, ['sound', 'output_raw']);
+      var mode = path(s, ['sound', 'mode']);
+      var labels = {
+        output: typeof output === 'string' && output ? names.soundOutput(output).label : '',
+        mode: typeof mode === 'string' && mode ? snakeCase(mode) : ''
+      };
+      return labels.output || labels.mode ? [[labels, 1]] : [];
+    }
+  },
+  {
+    name: 'glasshouse_volume_ratio', type: 'gauge',
+    help: 'Volume of the sound output from 0 to 1, while the TV sets the level rather than only stepping it or not controlling it.',
+    samples: function (s) {
+      // With steps or none the TV reports no real level: 0, or -1 over optical.
+      return one(s.volume_control === 'level' ? percent(s.volume) : null);
+    }
+  },
+  {
+    name: 'glasshouse_muted', type: 'gauge',
+    help: '1 while the sound is muted, 0 otherwise.',
+    samples: function (s) { return one(bool(s.muted)); }
+  },
+  {
     name: 'glasshouse_foreground_app_info', type: 'gauge',
     help: 'Always 1 for the app in the foreground, whether or not glasshouse_screen_on reports the screen lit, labelled with its id and its name: the name given an input in the TV\'s settings, an app\'s title, or the short id.',
     samples: function (s) {
