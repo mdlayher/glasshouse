@@ -46,3 +46,41 @@ assert.deepEqual(both(names.hdmiHdcp('HDCP14')), ['HDCP 1.4', '1_4']);
 assert.deepEqual(both(names.hdmiHdcp('HDCP0')), ['None', 'none']);
 assert.deepEqual(both(names.hdmiHdcp('HDCP2X')), ['HDCP2X', 'hdcp2_x']);
 console.log('  ✓ HDCP, and an unknown version shown as given');
+
+function range(raw) {
+  var r = names.dynamicRange(raw);
+  return [r.display, r.label, r.lowLatency];
+}
+
+assert.deepEqual(range('sdr'), ['SDR', 'sdr', false]);
+assert.deepEqual(range('hdr'), ['HDR', 'hdr', false]);
+assert.deepEqual(range('dolbyHdr'), ['Dolby Vision', 'dolby_vision', false]);
+assert.deepEqual(range('technicolorHdr'), ['Technicolor HDR', 'technicolor', false]);
+assert.deepEqual(range('hdrALLM'), ['HDR · Low latency', 'hdr', true]);
+assert.deepEqual(range('dolbyHdrALLM'), ['Dolby Vision · Low latency', 'dolby_vision', true]);
+assert.deepEqual(range('technicolorHdrALLM'), ['Technicolor HDR · Low latency', 'technicolor', true]);
+console.log('  ✓ dynamic range, with ALLM read off as low latency');
+
+assert.deepEqual(range('hdr10Plus'), ['HDR10 Plus', 'hdr10_plus', false]);
+assert.deepEqual(range('hlgALLM'), ['HLG · Low latency', 'hlg', true]);
+console.log('  ✓ an unknown dynamic range is shown readably and keeps its own label');
+
+assert.strictEqual(names.signalHdrType('NONE').label, 'sdr');
+assert.strictEqual(names.signalHdrType('HDR10').label, 'hdr10');
+assert.strictEqual(names.signalHdrType('DOLBY_VISION').label, 'dolby_vision');
+assert.strictEqual(names.signalHdrType('DOLBY_LL').label, 'dolby_vision_low_latency');
+assert.strictEqual(names.signalHdrType('HdrTypeNew').label, 'hdr_type_new');
+console.log('  ✓ HDR type, snake-cased where the table has no name');
+
+assert.deepEqual([0, 1, 2, 3].map(function (c) { return names.signalEotf(c).label; }), ['sdr', 'hdr', 'pq', 'hlg']);
+assert.strictEqual(names.signalEotf(4), null);
+console.log('  ✓ EOTF, with no name for a reserved code');
+
+assert.strictEqual(names.signalColorimetry('BT2020_RGBORYCbCr').label, 'bt2020_rgb_or_ycbcr');
+assert.strictEqual(names.signalColorimetry('BT709').label, 'bt709');
+assert.strictEqual(names.signalEncoding('RGB').label, 'rgb_444');
+assert.strictEqual(names.signalEncoding('YCbCr444').label, 'ycbcr_444');
+assert.strictEqual(names.signalEncoding('YCbCr422').label, 'ycbcr_422');
+assert.strictEqual(names.signalEncoding('YCbCr420').label, 'ycbcr_420');
+assert.strictEqual(names.signalEncoding('YCbCr440').label, 'ycb_cr440');
+console.log('  ✓ colorimetry and pixel encoding, and unknown ones in snake case');

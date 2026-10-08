@@ -70,19 +70,6 @@ function memoryRead(s) {
 var EMMC_EOL_STATES = ['Normal', 'Warning', 'Urgent'];
 
 /*
- * The picture settings' dynamic range, with the ALLM suffix (low latency)
- * read off separately. The settings service accepts these four, each with or
- * without ALLM, and nothing else: /etc/palm/description.json on a CX (webOS 5)
- * and a C4 (webOS 9) declares the same eight.
- */
-var DYNAMIC_RANGES = {
-  sdr: 'sdr',
-  hdr: 'hdr',
-  dolbyHdr: 'dolby_vision',
-  technicolorHdr: 'technicolor'
-};
-
-/*
  * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
  * the label is the base, since the range has its own. LG's display names are
  * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
@@ -104,15 +91,6 @@ var PICTURE_MODES = {
   expert1: 'expert_bright', expert2: 'expert_dark',
   hdrEffect: 'hdr_effect'
 };
-
-/*
- * The video output service's colorimetry names: BT.2020 in RGB or YCbCr, one
- * name for either.
- */
-var SIGNAL_COLORIMETRY = { BT2020_RGBORYCbCr: 'bt2020_rgb_or_ycbcr' };
-
-// Its pixel encodings, named as the HDMI link's chroma is.
-var SIGNAL_ENCODING = { RGB: 'rgb_444', YCbCr444: 'ycbcr_444', YCbCr422: 'ycbcr_422', YCbCr420: 'ycbcr_420' };
 
 function hdmiLinks(s) {
   return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
@@ -137,8 +115,7 @@ function hdmiInput(link) {
 function dynamicRange(s) {
   var raw = path(s, ['picture', 'dynamicRange_raw']);
   if (typeof raw !== 'string' || !raw) return null;
-  var lowLatency = /ALLM$/.test(raw);
-  return { range: mapped(DYNAMIC_RANGES, lowLatency ? raw.slice(0, -4) : raw), lowLatency: lowLatency };
+  return names.dynamicRange(raw);
 }
 
 // 1 when the Pixel Refresher is in the given state, 0 when in another, and
@@ -413,7 +390,7 @@ var FAMILIES = [
       var dr = dynamicRange(s);
       var mode = path(s, ['picture', 'mode_raw']);
       var labels = {
-        dynamic_range: dr ? dr.range : '',
+        dynamic_range: dr ? dr.label : '',
         picture_mode: typeof mode === 'string' && mode ? mapped(PICTURE_MODES, mode) : ''
       };
       return labels.dynamic_range || labels.picture_mode ? [[labels, 1]] : [];
@@ -465,8 +442,8 @@ var FAMILIES = [
       return [[{
         type: typeof format.type === 'string' ? format.type : '',
         eotf: typeof format.eotf === 'string' ? format.eotf : '',
-        colorimetry: typeof format.colorimetry === 'string' ? mapped(SIGNAL_COLORIMETRY, format.colorimetry) : '',
-        encoding: typeof format.encoding === 'string' ? mapped(SIGNAL_ENCODING, format.encoding) : ''
+        colorimetry: typeof format.colorimetry === 'string' ? names.signalColorimetry(format.colorimetry).label : '',
+        encoding: typeof format.encoding === 'string' ? names.signalEncoding(format.encoding).label : ''
       }, 1]];
     }
   },
