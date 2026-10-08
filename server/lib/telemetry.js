@@ -14,6 +14,7 @@ var toInt = require('./util').toInt;
 var path = require('path');
 var execFile = require('child_process').execFile;
 var ha = require('./ha');
+var names = require('./names');
 var timers = require('./timers');
 
 var SOUND_OUTPUT_MAP = ha.SOUND_OUTPUT_MAP;
@@ -604,40 +605,6 @@ function hdmiDiagnostics(raw, port) {
   var vrrMatch = raw.match(/isFreeSync\[(\d+)\]/i);
   var vrrMinMax = raw.match(/VRR Min\[(\d+)\]\/Max\[(\d+)\]/i);
 
-  var phyMode = null;
-  if (link.phy_mode) {
-    var rawPhy = link.phy_mode;
-    if (/FRL 12G 4L/i.test(rawPhy)) phyMode = 'FRL 48 Gbps';
-    else if (/FRL 10G 4L/i.test(rawPhy)) phyMode = 'FRL 40 Gbps';
-    else if (/FRL 8G 4L/i.test(rawPhy)) phyMode = 'FRL 32 Gbps';
-    else if (/FRL 6G 4L/i.test(rawPhy)) phyMode = 'FRL 24 Gbps';
-    else if (/FRL 6G 3L/i.test(rawPhy)) phyMode = 'FRL 18 Gbps';
-    else if (/FRL 3G 3L/i.test(rawPhy)) phyMode = 'FRL 9 Gbps';
-    else if (/3G/i.test(rawPhy)) phyMode = 'TMDS (3G)';
-    else if (/6G/i.test(rawPhy)) phyMode = 'TMDS (6G)';
-    else phyMode = rawPhy;
-  }
-
-  var format = null;
-  if (link.chroma) {
-    var rawFmt = link.chroma;
-    if (rawFmt === 'R444') format = 'RGB 4:4:4';
-    else if (rawFmt === 'Y444') format = 'YCbCr 4:4:4';
-    else if (rawFmt === 'Y422') format = 'YCbCr 4:2:2';
-    else if (rawFmt === 'Y420') format = 'YCbCr 4:2:0';
-    else format = rawFmt;
-  }
-
-  var hdcp = null;
-  if (link.hdcp) {
-    var rawHdcp = link.hdcp;
-    if (rawHdcp === 'HDCP23') hdcp = 'HDCP 2.3';
-    else if (rawHdcp === 'HDCP22') hdcp = 'HDCP 2.2';
-    else if (rawHdcp === 'HDCP14') hdcp = 'HDCP 1.4';
-    else if (rawHdcp === 'HDCP0') hdcp = 'None';
-    else hdcp = rawHdcp;
-  }
-
   // isFreeSync is the VRR mode rather than a flag: 1 for FreeSync, 2 for
   // HDMI Forum VRR, which G-SYNC uses over HDMI (a PC at 4K120 on a C4,
   // webOS 24, #475). Any mode but 0 is VRR.
@@ -646,9 +613,9 @@ function hdmiDiagnostics(raw, port) {
 
   return {
     port: port,
-    phy_mode: phyMode,
-    chroma: format,
-    hdcp: hdcp,
+    phy_mode: link.phy_mode ? names.hdmiPhyMode(link.phy_mode, link.tmds_clock_khz).display : null,
+    chroma: link.chroma ? names.hdmiChroma(link.chroma).display : null,
+    hdcp: link.hdcp ? names.hdmiHdcp(link.hdcp).display : null,
     allm: allmMatch ? (allmMatch[1] === '1') : null,
     vrr: (vrrMatch || vrrMinMax) ? !!isVrr : null,
     qms: link.qms
@@ -1139,16 +1106,16 @@ function sampleCpuTicks() {
   } catch (e) {
     return null;
   }
-  var names;
-  try { names = fs.readdirSync('/proc'); } catch (e2) { return null; }
-  for (var n = 0; n < names.length; n++) {
-    if (!/^\d+$/.test(names[n])) continue;
+  var entries;
+  try { entries = fs.readdirSync('/proc'); } catch (e2) { return null; }
+  for (var n = 0; n < entries.length; n++) {
+    if (!/^\d+$/.test(entries[n])) continue;
     try {
-      var raw = fs.readFileSync('/proc/' + names[n] + '/stat', 'utf8');
+      var raw = fs.readFileSync('/proc/' + entries[n] + '/stat', 'utf8');
       var close = raw.lastIndexOf(')');
       if (close < 0) continue;
       var f = raw.slice(close + 2).split(' ');
-      out.procs[names[n]] = {
+      out.procs[entries[n]] = {
         ticks: (parseInt(f[11], 10) || 0) + (parseInt(f[12], 10) || 0),
         comm: raw.slice(raw.indexOf('(') + 1, close)
       };

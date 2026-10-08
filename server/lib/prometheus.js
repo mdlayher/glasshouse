@@ -15,6 +15,10 @@ var USER_HZ = 100;
 var PANEL_UNIT_SECONDS = 600;
 var MEBIBYTE = 1024 * 1024;
 
+var names = require('./names');
+var snakeCase = names.snakeCase;
+var mapped = names.mapped;
+
 function num(v) {
   return typeof v === 'number' && isFinite(v) ? v : null;
 }
@@ -100,40 +104,6 @@ var PICTURE_MODES = {
   expert1: 'expert_bright', expert2: 'expert_dark',
   hdrEffect: 'hdr_effect'
 };
-
-function snakeCase(v) {
-  return v.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-}
-
-// A value outside the table keeps its own name rather than being dropped.
-function mapped(table, v) {
-  return table.hasOwnProperty(v) ? table[v] : snakeCase(v);
-}
-
-// The receiver's names for the chroma format and the HDCP version in use.
-var HDMI_CHROMA = { R444: 'rgb_444', Y444: 'ycbcr_444', Y422: 'ycbcr_422', Y420: 'ycbcr_420' };
-var HDMI_HDCP = { HDCP23: '2_3', HDCP22: '2_2', HDCP14: '1_4', HDCP0: 'none' };
-
-/*
- * The PHY mode as a label and the link's rate. FRL runs at its lane rate on
- * every lane, "FRL 12G 4L" being 48 Gbps. TMDS's "3G" and "6G" are ceilings
- * rather than rates: the rate is the character clock, ten bits a character,
- * on the three data channels. A mode named neither way is other, with no rate.
- */
-function hdmiPhyMode(link) {
-  var mode = String(link.phy_mode || '');
-  var frl = mode.match(/^FRL\s+(\d+)G\s+(\d+)L\b/i);
-  if (frl) {
-    var gbps = parseInt(frl[1], 10) * parseInt(frl[2], 10);
-    return { label: 'frl_' + gbps, bitsPerSecond: gbps * 1e9 };
-  }
-  var tmds = mode.match(/^(?:TMDS\s*)?([36])G$/i);
-  if (tmds) {
-    var clock = positive(link.tmds_clock_khz);
-    return { label: 'tmds_' + tmds[1] + 'g', bitsPerSecond: clock === null ? null : clock * 1000 * 10 * 3 };
-  }
-  return { label: 'other', bitsPerSecond: null };
-}
 
 /*
  * The video output service's colorimetry names: BT.2020 in RGB or YCbCr, one
@@ -540,9 +510,9 @@ var FAMILIES = [
     samples: function (s) {
       return hdmiLinks(s).map(function (link) {
         var labels = hdmiInput(link);
-        labels.phy_mode = hdmiPhyMode(link).label;
-        labels.chroma = link.chroma ? mapped(HDMI_CHROMA, link.chroma) : '';
-        labels.hdcp = link.hdcp ? mapped(HDMI_HDCP, link.hdcp) : '';
+        labels.phy_mode = names.hdmiPhyMode(link.phy_mode, link.tmds_clock_khz).label;
+        labels.chroma = link.chroma ? names.hdmiChroma(link.chroma).label : '';
+        labels.hdcp = link.hdcp ? names.hdmiHdcp(link.hdcp).label : '';
         return [labels, 1];
       });
     }
@@ -553,7 +523,7 @@ var FAMILIES = [
     samples: function (s) {
       var out = [];
       hdmiLinks(s).forEach(function (link) {
-        var rate = hdmiPhyMode(link).bitsPerSecond;
+        var rate = names.hdmiPhyMode(link.phy_mode, link.tmds_clock_khz).bitsPerSecond;
         if (rate !== null) out.push([hdmiInput(link), rate]);
       });
       return out;
