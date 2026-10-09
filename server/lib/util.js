@@ -45,4 +45,16 @@ function lanAddress() {
   return best;
 }
 
-module.exports = { toInt: toInt, mkdirp: mkdirp, readTrimmed: readTrimmed, lanAddress: lanAddress };
+// Milliseconds on CLOCK_MONOTONIC, which a step of the wall clock does not move.
+function monotonicMs() {
+  var t = process.hrtime();
+  return t[0] * 1000 + t[1] / 1e6;
+}
+
+module.exports = {
+  toInt: toInt,
+  mkdirp: mkdirp,
+  readTrimmed: readTrimmed,
+  lanAddress: lanAddress,
+  monotonicMs: monotonicMs
+};
