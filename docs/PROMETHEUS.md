@@ -50,7 +50,7 @@ It downloads a standalone Prometheus binary into `~/.cache/glasshouse-prometheus
 
 ## Metrics
 
-These names are stable: one is not renamed or removed, so dashboards and alerts built on them keep working. Labels carry only values that rarely change. Values are in base units: bytes, hertz, seconds, and ratios from 0 to 1 rather than percentages. A reading the TV does not give, such as the panel figures on an LCD or the remote's battery with no remote paired, has no sample rather than a 0.
+These names are stable: one is not renamed or removed, so dashboards and alerts built on them keep working. Labels carry only values that rarely change. Values are in base units: bytes, hertz, seconds, and ratios from 0 to 1 rather than percentages. A family the TV gives no reading for, such as the panel figures on an LCD or the remote's battery with no remote paired, is left out of the scrape, HELP and TYPE too, rather than given a 0.
 
 The OLED protections are `asbl`, the Automatic Static Brightness Limiter (Temporal Peak Control on the TV), which lowers brightness while a bright image is held, and `gsr`, Global Stress Reduction, which dims the screen when it detects a stationary element. They come from the TV's panel service, or from its panel maintenance records where it has none; a TV that reports neither has no sample for them.
 

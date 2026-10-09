@@ -4,9 +4,9 @@
  *
  * The names in STABLE are what dashboards and alerts are built on, so one is
  * never renamed or dropped; test-prometheus.js pins them. Labels hold only what
- * rarely changes, since every new label value starts a new series. Every
- * family is declared on every scrape, and one the TV gives no reading for has
- * no sample rather than a made-up 0.
+ * rarely changes, since every new label value starts a new series. A family
+ * the TV gives no reading for is left out of the scrape, HELP and TYPE too,
+ * rather than given a made-up 0.
  */
 
 // /proc/stat counts in USER_HZ ticks, which is 100 on every Linux the TVs run.
@@ -570,8 +570,9 @@ function render(stats, version, syslog) {
   var out = '';
   for (var i = 0; i < FAMILIES.length; i++) {
     var f = FAMILIES[i];
-    out += '# HELP ' + f.name + ' ' + f.help + '\n# TYPE ' + f.name + ' ' + f.type + '\n';
     var samples = f.samples(s, version, syslog || null);
+    if (!samples.length) continue;
+    out += '# HELP ' + f.name + ' ' + f.help + '\n# TYPE ' + f.name + ' ' + f.type + '\n';
     for (var j = 0; j < samples.length; j++) {
       out += f.name + labelSet(samples[j][0]) + ' ' + samples[j][1] + '\n';
     }
