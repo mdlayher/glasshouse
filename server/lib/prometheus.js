@@ -133,6 +133,24 @@ var FAMILIES = [
     samples: function (s) { return one(bool(path(s, ['powerState', 'screenOn']))); }
   },
   {
+    name: 'glasshouse_power_on_info', type: 'gauge',
+    help: 'Always 1, labelled with the reason the TV\'s power service gives for the TV last powering on, such as remote_key, wake_on_wifi, or reboot_by_on_regular.',
+    samples: function (s) {
+      var reason = path(s, ['powerState', 'onReason']);
+      return typeof reason === 'string' && reason ? [[{ reason: names.powerOnReason(reason).label }, 1]] : [];
+    }
+  },
+  {
+    name: 'glasshouse_power_on_time_seconds', type: 'gauge',
+    help: 'Time the TV last powered on, in seconds since the Unix epoch, from the time on its power service reports. No sample in standby.',
+    samples: function (s) {
+      var ontime = positive(path(s, ['powerState', 'onTime', 'ontime']));
+      if (ontime === null || num(s.time) === null) return [];
+      // To the millisecond, as the stats' own time is.
+      return one(Math.round(s.time - ontime * 1000) / 1000);
+    }
+  },
+  {
     name: 'glasshouse_soc_temperature_celsius', type: 'gauge',
     help: 'Temperature of the SoC in degrees Celsius.',
     samples: function (s) { return one(prefer(positive(s.tempMillidegrees) === null ? null : s.tempMillidegrees / 1000, num(s.temp))); }

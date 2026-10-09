@@ -152,6 +152,20 @@ function signalEncoding(raw) {
 }
 
 /*
+ * Why tvpower says the TV last powered on, labelled by its own name, as its
+ * log lines give it. /etc/tvpowerd/tvpowerd.json lists 104 on a C4 (webOS 9.2),
+ * many of them named after apps, such as netflix. Only names snake case splits
+ * wrongly are here.
+ */
+var POWER_ON_REASONS = {
+  wakeOnWiFi: 'wake_on_wifi'
+};
+
+function powerOnReason(raw) {
+  return labelled(POWER_ON_REASONS, raw);
+}
+
+/*
  * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
  * the label is the base, since the range has its own. LG's display names are
  * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
@@ -266,6 +280,7 @@ module.exports = {
   signalEotf: signalEotf,
   signalColorimetry: signalColorimetry,
   signalEncoding: signalEncoding,
+  powerOnReason: powerOnReason,
   PICTURE_MODES: PICTURE_MODES,
   pictureMode: pictureMode,
   SOUND_OUTPUTS: SOUND_OUTPUTS,

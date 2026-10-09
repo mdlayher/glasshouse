@@ -446,6 +446,19 @@ uptime reset to 60s, with services and the webosbrew boot hook all returning
 cleanly. The reboot control therefore uses the kernel path, replying to the
 client first because the process is about to go down with the system.
 
+## Why the TV powered on
+
+`com.webos.service.tvpower/power/getPowerOnReason` answers why the TV last
+powered on, such as `remoteKey`, `wakeOnWiFi`, `alwaysOn`, or
+`rebootByOnRegular`, and `power/getPowerOnTime` answers `uptime`, since boot,
+and `ontime`, since the TV last powered on and 0 in standby, as strings of
+seconds. Glasshouse reads both at start, logs
+`power: on by rebootByOnRegular, up 12 s`, and reads them again after each power
+transition, never for a request. `/api/stats` gives them under `powerState` as
+`onReason` and `onTime`, null on a TV without the methods, with the times moved
+on by the time since the read. Transitions come from the power-state
+subscription, which runs whether or not MQTT is on; the MQTT bridge shares it.
+
 ## The thermal sensor lags boot
 
 `/proc/lg/pm/temperature` reads a literal `0` for roughly the first 80 seconds

@@ -61,6 +61,7 @@ var piccapTransport = require('./lib/piccap');
 var remotebuttons = require('./lib/remotebuttons');
 var logsModule = require('./lib/logs');
 var syslogForwarder = require('./lib/syslog');
+var power = require('./lib/power');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -486,6 +487,7 @@ telemetry.init({
   privacy: privacy,
   screensavers: screensavers,
   game: game,
+  power: power,
   tvwebVersion: TVWEB_DISPLAY_VERSION,
   mapPowerState: mapPowerState,
   isScreenSaver: isScreenSaver
@@ -1484,6 +1486,13 @@ if (!CLI_MODE) {
   // config it sends nothing until it has the device name to send as.
   syslogForwarder.init({ config: CONFIG });
   syslogForwarder.start();
+  power.init({ luna: luna });
+  power.start();
+  liveState.state.onChange(function (ev) {
+    if (ev.group === 'power' && ev.key === 'state') power.stateChanged(ev.value);
+  });
+  // Its own start, as the MQTT bridge starts every group only with a broker.
+  liveState.startGroup('power');
 
   telemetry.detectDeviceInfo(function() {
     syslogForwarder.setHostname(CONFIG.device && CONFIG.device.name);

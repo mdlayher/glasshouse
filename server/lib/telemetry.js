@@ -35,6 +35,8 @@ var privacyModule = null;
 var screensaversModule = null;
 /** @type {typeof import('./game')} */
 var gameModule = null;
+/** @type {typeof import('./power')} */
+var powerModule = null;
 var alwaysReadyScreenOn = false;
 var tvwebVersionStr = '0.0.0';
 var mapPowerStateFn = null;
@@ -151,6 +153,7 @@ function init(opts) {
   privacyModule = opts.privacy;
   screensaversModule = opts.screensavers;
   gameModule = opts.game;
+  powerModule = opts.power || null;
   tvwebVersionStr = opts.tvwebVersion || '0.0.0';
   mapPowerStateFn = opts.mapPowerState;
   isScreenSaverFn = opts.isScreenSaver;
@@ -1614,6 +1617,11 @@ function collectStats(cb) {
      * out, the live state keeps what it last knew.
      */
     out.powerState = mapPowerStateFn && rawPower ? mapPowerStateFn(rawPower) : null;
+    if (out.powerState) {
+      var on = powerModule ? powerModule.current() : { onReason: null, onTime: null };
+      out.powerState.onReason = on.onReason;
+      out.powerState.onTime = on.onTime;
+    }
     out.screenSaver = isScreenSaverFn ? isScreenSaverFn(out.powerState) : false;
     out.screensaverMode = screensaversModule ? screensaversModule.screensaverMode() : 'stock';
     out.screensaverLevel = screensaversModule ? screensaversModule.screensaverLevel() : 'dim';

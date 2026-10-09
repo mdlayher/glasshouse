@@ -167,4 +167,28 @@ scoped.groups.power.subscription.handlers.message({ returnValue: true, state: 'A
 assert.deepEqual(stale, ['audio', 'application', 'picture']);
 console.log('  ✓ a live event names the group that changed');
 
+// The power group runs for the power module and the MQTT bridge alike, and
+// stops only when both have stopped it.
+var shared = stateModule.init({ mapPowerState: mapPowerState });
+var subs = {};
+Object.keys(shared.groups).forEach(function (name) {
+  var sub = shared.groups[name].subscription;
+  subs[name] = { starts: 0, stops: 0 };
+  sub.start = function () { subs[name].starts++; };
+  sub.stop = function () { subs[name].stops++; };
+});
+shared.startGroup('power');
+assert.deepEqual(subs.power, { starts: 1, stops: 0 });
+assert.deepEqual(subs.audio, { starts: 0, stops: 0 }, 'only the group asked for');
+shared.start();
+assert.deepEqual(subs.power, { starts: 1, stops: 0 }, 'one subscription for both');
+assert.deepEqual(subs.audio, { starts: 1, stops: 0 });
+shared.stop();
+assert.deepEqual(subs.power, { starts: 1, stops: 0 }, 'still wanted by the power module');
+assert.deepEqual(subs.audio, { starts: 1, stops: 1 });
+shared.stopGroup('power');
+shared.stopGroup('power');
+assert.deepEqual(subs.power, { starts: 1, stops: 1 }, 'stopped once, by the last user');
+console.log('  ✓ a group shared by two users subscribes once and stops with the last');
+
 console.log('ALL test-power-state.js assertions passed!');
