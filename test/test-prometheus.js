@@ -32,7 +32,8 @@ function sampleLines(text) {
   return text.split('\n').filter(function (line) { return line && line.charAt(0) !== '#'; });
 }
 
-// 1. Every rendering declares exactly the stable names, and nothing else
+// 1. Every rendering declares only stable names, each with a sample, and the
+// fixtures between them declare every stable name
 (function testStableNames() {
   // Renaming or dropping one of these breaks dashboards built on it.
   assert.deepEqual(prometheus.STABLE, [
@@ -101,16 +102,24 @@ function sampleLines(text) {
   var renderings = {
     b8: prometheus.render(require('./fixtures/stats-b8-webos4.json'), '0.80.1'),
     g4: prometheus.render(require('./fixtures/stats-g4-webos9.json'), '0.80.1'),
-    c4: prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1'),
+    c4: prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1', { messages: { system: 12 }, errors: 0 }),
+    c4hdr: prometheus.render(require('./fixtures/stats-c4-webos9-hdr.json'), '0.80.1'),
     c4standby: prometheus.render(require('./fixtures/stats-c4-webos9-standby.json'), '0.80.1'),
     cx: prometheus.render(require('./fixtures/stats-cx-webos5.json'), '0.80.1'),
     cxhdr: prometheus.render(require('./fixtures/stats-cx-webos5-hdr.json'), '0.80.1'),
     empty: prometheus.render({}, '0.80.1'),
     failed: prometheus.render({ ok: false, error: 'timeout' }, '0.80.1')
   };
+  var declared = {};
   Object.keys(renderings).forEach(function (k) {
     var text = renderings[k];
-    assert.deepEqual(declaredNames(text), prometheus.STABLE, k);
+    var sampled = {};
+    sampleLines(text).forEach(function (line) { sampled[/^[a-z_]+/.exec(line)[0]] = true; });
+    declaredNames(text).forEach(function (name) {
+      assert.ok(prometheus.STABLE.indexOf(name) !== -1, k + ': ' + name + ' is not a stable name');
+      assert.ok(sampled[name], k + ': ' + name + ' is declared without a sample');
+      declared[name] = true;
+    });
     assert.ok(/\n$/.test(text), 'the exposition ends with a newline');
     sampleLines(text).forEach(function (line) {
       var m = /^([a-z_]+)(\{[^}]*\})? (-?[0-9.]+(e[+-]?[0-9]+)?)$/.exec(line);
@@ -127,7 +136,11 @@ function sampleLines(text) {
     'glasshouse_info{model="",firmware="",webos="",version="0.80.1"} 1'
   ]);
   assert.deepEqual(sampleLines(renderings.failed), sampleLines(renderings.empty));
-  console.log('  ✓ every rendering declares exactly the stable metric names');
+  assert.deepEqual(declaredNames(renderings.empty), ['glasshouse_info']);
+
+  // A family no fixture renders would go unchecked here.
+  assert.deepEqual(prometheus.STABLE.filter(function (name) { return !declared[name]; }), []);
+  console.log('  ✓ every rendering declares only stable metric names, each with a sample');
 })();
 
 // 1b. The syslog counters have samples only while forwarding is on
@@ -138,8 +151,9 @@ function sampleLines(text) {
     'glasshouse_syslog_messages_total{source="glasshouse"} 3',
     'glasshouse_syslog_errors_total 1'
   ]);
-  var off = sampleLines(prometheus.render({}, '0.80.1', null));
-  assert.strictEqual(off.length, 1);
+  var off = prometheus.render({}, '0.80.1', null);
+  assert.strictEqual(sampleLines(off).length, 1);
+  assert.ok(!/^# HELP glasshouse_syslog_/m.test(off), 'no HELP for the syslog counters while forwarding is off');
   console.log('  ✓ the syslog counters are sampled only while forwarding is on');
 })();
 
