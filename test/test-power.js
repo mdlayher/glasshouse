@@ -12,17 +12,22 @@ var C4_REASON = { reason: 'alwaysOn', returnValue: true };
 var C4_TIME = { returnValue: true, time: { uptime: '27196.63', ontime: '0' } };
 var UNKNOWN = { returnValue: false, errorCode: -1, errorText: 'Unknown method "getPowerOnReason" for category "/power"' };
 
+var ON = { 'Active': true, 'Screen Off': true, 'Active Standby': false, 'Suspend': false };
+function mapPowerState(raw) { return { systemOn: !!ON[raw] }; }
+
 /*
- * A TV answering from replies, and the lines logged. Each luna answer comes on
- * the next tick, as luna-send's would.
+ * A TV answering from replies, a forwarder counting flushes and the lines
+ * logged. Each luna answer comes on the next tick, as luna-send's would.
  */
 function fakeTv(replies) {
-  var tv = { calls: [], lines: [] };
+  var tv = { calls: [], flushes: 0, lines: [] };
   power.init({
     luna: function (uri, payload, cb) {
       tv.calls.push(uri);
       process.nextTick(function () { cb(replies[uri] || null, ''); });
     },
+    syslog: /** @type {any} */ ({ flush: function () { tv.flushes++; } }),
+    mapPowerState: mapPowerState,
     log: function (line) { tv.lines.push(line); },
     clock: function () { return 0; }
   });
@@ -71,30 +76,42 @@ function testUnknown(next) {
     power.stateChanged('Active');
     later(function () {
       assert.deepEqual(power.current(), { onReason: null, onTime: null });
-      assert.deepEqual(tv.lines, ['power: the TV gives no power-on reason']);
+      assert.deepEqual(tv.lines, ['power: the TV gives no power-on reason', 'power: Active Standby -> Active']);
       console.log('  ✓ a TV without the methods gets nulls and says so once');
       next();
     });
   });
 }
 
-// 4. Both are read again after each transition, and only then
+// 4. Each transition is logged and flushed; turning on waits for the reason
 function testTransitions(next) {
   var replies = {};
   replies[REASON_URI] = C4_REASON;
   replies[TIME_URI] = C4_TIME;
   var tv = fakeTv(replies);
   power.stateChanged('Active');
-  assert.strictEqual(tv.calls.length, 0, 'the first reading is no transition');
-  replies[REASON_URI] = { reason: 'remoteKey', returnValue: true };
+  assert.deepEqual(tv.lines, [], 'the first reading is no transition');
+  assert.strictEqual(tv.calls.length, 0);
+
   power.stateChanged('Active Standby');
+  // Before any luna answer: a power-off may follow at once.
+  assert.deepEqual(tv.lines, ['power: Active -> Active Standby']);
+  assert.strictEqual(tv.flushes, 1);
+
   later(function () {
-    assert.deepEqual(tv.calls, [REASON_URI, TIME_URI]);
-    assert.strictEqual(power.current().onReason, 'remoteKey');
-    power.stateChanged('Active Standby');
+    assert.deepEqual(tv.calls, [REASON_URI, TIME_URI], 'read again after the transition');
+    replies[REASON_URI] = { reason: 'remoteKey', returnValue: true };
+    power.stateChanged('Active');
+    assert.strictEqual(tv.lines.length, 1, 'turning on waits for the reason');
+    assert.strictEqual(tv.flushes, 1);
     later(function () {
-      assert.strictEqual(tv.calls.length, 2, 'the same state again is no transition');
-      console.log('  ✓ both are read again after each transition');
+      assert.deepEqual(tv.lines, ['power: Active -> Active Standby', 'power: Active Standby -> Active, on by remoteKey']);
+      assert.strictEqual(tv.flushes, 2);
+      assert.strictEqual(power.current().onReason, 'remoteKey');
+
+      power.stateChanged('Active');
+      assert.strictEqual(tv.lines.length, 2, 'the same state again is no transition');
+      console.log('  ✓ each transition is logged and flushed, the way down before any read');
       next();
     });
   });
@@ -108,6 +125,7 @@ function testAging(next) {
   var now = 5000;
   power.init({
     luna: function (uri, payload, cb) { process.nextTick(function () { cb(replies[uri], ''); }); },
+    mapPowerState: mapPowerState,
     log: function () {},
     clock: function () { return now; }
   });
@@ -131,7 +149,7 @@ function testStats(next) {
   var telemetry = require('../server/lib/telemetry');
   mockEnv.luna[REASON_URI] = C4_REASON;
   mockEnv.luna[TIME_URI] = C4_TIME;
-  power.init({ luna: mockEnv.mockLuna, clock: function () { return 0; } });
+  power.init({ luna: mockEnv.mockLuna, syslog: null, mapPowerState: mapPowerState, clock: function () { return 0; } });
   telemetry.init({
     luna: mockEnv.mockLuna,
     lunaCached: mockEnv.mockLunaCached,

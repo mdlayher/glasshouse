@@ -1,10 +1,13 @@
 'use strict';
 /*
- * Why the TV last powered on.
+ * Why the TV last powered on, and a log line at each power transition.
  * Strict ES5 for Node 0.12.2 on webOS 4.
  *
  * tvpower answers the reason and the times only when asked, so they are read
- * at start and after each transition, never for a request.
+ * at start and after each transition, never for a request. tvpower has no
+ * method for the reason for a power-off, and its log line for one is in the
+ * system log, on tmpfs, so the transition's line goes to the syslog forwarder
+ * at once rather than at its next poll, which a power-off can beat.
  */
 
 var REASON_URI = 'com.webos.service.tvpower/power/getPowerOnReason';
@@ -13,6 +16,9 @@ var TIME_URI = 'com.webos.service.tvpower/power/getPowerOnTime';
 var luna = null;
 var log = console.log;
 var clockFn = monotonicMs;
+/** @type {typeof import('./syslog')} */
+var syslogModule = null;
+var mapPowerStateFn = null;
 var onReason = null;
 var onTime = null;
 // When onTime was read, on clockFn.
@@ -94,6 +100,10 @@ function current() {
   };
 }
 
+function flush() {
+  if (syslogModule) syslogModule.flush();
+}
+
 // Reads once at start and logs why the TV is on.
 function start() {
   refresh(function () {
@@ -107,7 +117,9 @@ function start() {
 }
 
 /**
- * Reads both again after each change of the raw power state.
+ * A line for each change of the raw power state, then a forwarder poll.
+ * Turning on, the line waits for the reason read after it; anything else is
+ * logged before the read, since the TV may be about to power off.
  * @param {string} state the raw state, as tvpower gives it
  */
 function stateChanged(state) {
@@ -115,12 +127,25 @@ function stateChanged(state) {
   lastState = to;
   // The first reading is where the TV was at start, not a transition.
   if (from === null || from === to) return;
-  refresh();
+  var line = 'power: ' + from + ' -> ' + to;
+  var turningOn = !!mapPowerStateFn && mapPowerStateFn(to).systemOn && !mapPowerStateFn(from).systemOn;
+  if (!turningOn) {
+    log(line);
+    flush();
+    refresh();
+    return;
+  }
+  refresh(function () {
+    log(line + (onReason ? ', on by ' + onReason : ''));
+    flush();
+  });
 }
 
 /**
  * @param {Object} opts
  * @param {function(string, Object, function(any, string=): void): void} opts.luna
+ * @param {typeof import('./syslog')} opts.syslog
+ * @param {function(string): {systemOn: boolean}} opts.mapPowerState
  * @param {function(string): void} [opts.log] where the lines go, for tests
  * @param {function(): number} [opts.clock] monotonic milliseconds, for tests
  */
@@ -128,6 +153,8 @@ function init(opts) {
   luna = opts.luna;
   log = opts.log || console.log;
   clockFn = opts.clock || monotonicMs;
+  syslogModule = opts.syslog || null;
+  mapPowerStateFn = opts.mapPowerState || null;
   onReason = null;
   onTime = null;
   lastState = null;

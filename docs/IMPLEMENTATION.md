@@ -459,6 +459,15 @@ transition, never for a request. `/api/stats` gives them under `powerState` as
 on by the time since the read. Transitions come from the power-state
 subscription, which runs whether or not MQTT is on; the MQTT bridge shares it.
 
+Each change of the raw power state is logged, as in
+`power: Active -> Active Standby`. A transition to on waits for the reason read
+after it and ends `on by remoteKey`; any other is logged before the read.
+tvpower has no method for the reason for a power-off, and its line for it is in
+`/var/log/messages`, on tmpfs, so after each line the [syslog
+forwarder](#forwarding-the-logs-to-syslog) polls at once rather than at its next
+5-second tick, which a C4 (webOS 9.2) powering off beat. The kernel log keeps
+its 30-second schedule.
+
 ## The thermal sensor lags boot
 
 `/proc/lg/pm/temperature` reads a literal `0` for roughly the first 80 seconds

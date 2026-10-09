@@ -1486,7 +1486,7 @@ if (!CLI_MODE) {
   // config it sends nothing until it has the device name to send as.
   syslogForwarder.init({ config: CONFIG });
   syslogForwarder.start();
-  power.init({ luna: luna });
+  power.init({ luna: luna, syslog: syslogForwarder, mapPowerState: mapPowerState });
   power.start();
   liveState.state.onChange(function (ev) {
     if (ev.group === 'power' && ev.key === 'state') power.stateChanged(ev.value);
