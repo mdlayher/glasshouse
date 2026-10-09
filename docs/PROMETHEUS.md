@@ -72,6 +72,8 @@ The HDMI link families describe every input with a source linked to it, whicheve
 
 The syslog counters count since the server started and have samples only while [syslog forwarding](IMPLEMENTATION.md#forwarding-the-logs-to-syslog) is on. `source` is `system`, `glasshouse`, or `kernel`, one for each source forwarded. Compared with what the receiver counts per `source` as MSGID, they show lines lost on the way.
 
+The NTP families have samples only while [setting the clock from NTP](IMPLEMENTATION.md#setting-the-clock-from-ntp) is on, and the offset, round trip, stratum, and last answer only once the server has answered. The counters count since the server started. The offset is the server's time less the TV's at that answer, before the clock was set from it. How long since the last answer is `time() - glasshouse_ntp_last_answer_timestamp_seconds`.
+
 `version` is the Glasshouse version. A label the TV does not report is present with an empty value. The panel usage since the last compensation cycle is `glasshouse_oled_panel_usage_seconds_total - glasshouse_oled_last_compensation_usage_seconds`, the uptime is `time() - glasshouse_boot_time_seconds`, and the processor's busy share is `1 - avg without (cpu, mode) (rate(glasshouse_cpu_seconds_total{mode="idle"}[5m]))`.
 
 | Metric                                            | Type    | Labels                                  | Value                                                       |
@@ -138,3 +140,9 @@ The syslog counters count since the server started and have samples only while [
 | `glasshouse_hdmi_source_powered`                  | gauge   | `input`                                 | 1 while a powered source is on the input's cable            |
 | `glasshouse_syslog_messages_total`                | counter | `source`                                | Log lines sent to the syslog server                         |
 | `glasshouse_syslog_errors_total`                  | counter |                                         | Log lines that could not be sent, and were dropped          |
+| `glasshouse_ntp_clock_sets_total`                 | counter |                                         | Times the clock was set from the NTP server                 |
+| `glasshouse_ntp_errors_total`                     | counter |                                         | NTP syncs that set no clock                                 |
+| `glasshouse_ntp_offset_seconds`                   | gauge   |                                         | The server's time less the TV's at the last answer          |
+| `glasshouse_ntp_round_trip_seconds`               | gauge   |                                         | Round trip to the server for the last answer                |
+| `glasshouse_ntp_stratum`                          | gauge   |                                         | The server's stratum in the last answer                     |
+| `glasshouse_ntp_last_answer_timestamp_seconds`    | gauge   |                                         | When the last answer came, as a Unix time                   |

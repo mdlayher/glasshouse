@@ -800,6 +800,7 @@ routes.init({
   installer: installer,
   prometheus: prometheus,
   syslog: syslogForwarder,
+  ntp: ntpClient,
   configFile: CONFIG_FILE,
   controls: controls,
   telemetry: telemetry,

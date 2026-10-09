@@ -561,6 +561,36 @@ var FAMILIES = [
     name: 'glasshouse_syslog_errors_total', type: 'counter',
     help: 'Log lines that could not be sent to the syslog server since the server started. They are dropped, not sent again.',
     samples: function (s, version, syslog) { return syslog ? one(syslog.errors) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_clock_sets_total', type: 'counter',
+    help: 'Times the TV\'s clock was set from the NTP server since the server started.',
+    samples: function (s, version, syslog, ntp) { return ntp ? one(ntp.sets) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_errors_total', type: 'counter',
+    help: 'NTP syncs since the server started that set no clock: no answer, an answer not used, or the time service refusing the time.',
+    samples: function (s, version, syslog, ntp) { return ntp ? one(ntp.errors) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_offset_seconds', type: 'gauge',
+    help: 'How far the NTP server\'s time was ahead of the TV\'s clock at the last answer, negative when behind it.',
+    samples: function (s, version, syslog, ntp) { return ntp && ntp.last ? one(ntp.last.offsetMs / 1000) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_round_trip_seconds', type: 'gauge',
+    help: 'Round trip to the NTP server for the last answer, less the server\'s own time to answer.',
+    samples: function (s, version, syslog, ntp) { return ntp && ntp.last ? one(ntp.last.roundTripMs / 1000) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_stratum', type: 'gauge',
+    help: 'The NTP server\'s stratum in the last answer.',
+    samples: function (s, version, syslog, ntp) { return ntp && ntp.last ? one(ntp.last.stratum) : []; }
+  },
+  {
+    name: 'glasshouse_ntp_last_answer_timestamp_seconds', type: 'gauge',
+    help: 'When the last answer came from the NTP server, as a Unix time.',
+    samples: function (s, version, syslog, ntp) { return ntp && ntp.last ? one(ntp.last.at / 1000) : []; }
   }
 ];
 
@@ -582,13 +612,14 @@ function labelSet(labels) {
 }
 
 // stats is telemetry's collectStats result; version is Glasshouse's own;
-// syslog is the syslog module's counters, null while forwarding is off.
-function render(stats, version, syslog) {
+// syslog is the syslog module's counters, null while forwarding is off; ntp is
+// the NTP client's status, null while it is off.
+function render(stats, version, syslog, ntp) {
   var s = stats && typeof stats === 'object' ? stats : {};
   var out = '';
   for (var i = 0; i < FAMILIES.length; i++) {
     var f = FAMILIES[i];
-    var samples = f.samples(s, version, syslog || null);
+    var samples = f.samples(s, version, syslog || null, ntp || null);
     if (!samples.length) continue;
     out += '# HELP ' + f.name + ' ' + f.help + '\n# TYPE ' + f.name + ' ' + f.type + '\n';
     for (var j = 0; j < samples.length; j++) {

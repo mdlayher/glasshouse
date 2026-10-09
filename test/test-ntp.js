@@ -151,7 +151,7 @@ function reply(request, serverMs, fields) {
     { ahead: 200, calls: 1, why: 'within a second, once set: left alone' },
     { ahead: 5000, refuse: true, calls: 2, why: 'five seconds out: set, and refused' },
     { ahead: 5000, lunaSilent: true, calls: 3, why: 'set again, and the time service silent' },
-    { silent: true, calls: 3, why: 'no answer: nothing set' },
+    { silent: true, calls: 3, counted: [1, 3], why: 'no answer: nothing set, all three counted' },
     { start: true, ahead: 100, calls: 4, why: 'the first answer of a start is always sent' },
     { ahead: 100, calls: 4, why: 'the next one within a second is not' }
   ];
@@ -165,6 +165,10 @@ function reply(request, serverMs, fields) {
     lunaSilent = !!step.lunaSilent;
     function check() {
       assert.strictEqual(calls.length, step.calls, step.why);
+      if (step.counted) {
+        var st = ntp.getStatus();
+        assert.deepEqual([st.sets, st.errors], step.counted, step.why);
+      }
       run(i + 1);
     }
     if (step.start) assert.strictEqual(ntp.start(check), true);
@@ -177,7 +181,13 @@ function reply(request, serverMs, fields) {
     var serverSec = (Date.now() + steps[0].ahead) / 1000;
     assert.ok(Math.abs(calls[0].payload.utc - serverSec) < 5, 'to the server time');
 
+    var st = ntp.getStatus();
+    assert.deepEqual([st.sets, st.errors], [1, 0], 'counted since the last start');
+    assert.ok(Math.abs(st.last.offsetMs - 100) < 100, String(st.last.offsetMs));
+    assert.strictEqual(st.last.stratum, 2);
+
     ntp.stop();
+    assert.strictEqual(ntp.getStatus(), null, 'no status while off');
     server.close();
     clearTimeout(deadline);
     console.log('  ✓ against a server: set when out by a second or more, and once at each start');

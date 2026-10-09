@@ -56,6 +56,10 @@ var generation = 0;
 
 // Whether this start has set the clock yet.
 var appliedOnce = false;
+/** @type {?Answer} */
+var lastAnswer = null;
+// Clocks set and syncs that failed since start, or null while off.
+var counters = null;
 
 /*
  * config.ntp as used, or null while no server is set.
@@ -286,6 +290,7 @@ function schedule(ms) {
 }
 
 function syncFailed(text) {
+  counters.errors++;
   setError(text);
   schedule(RETRY_MS);
 }
@@ -316,6 +321,7 @@ function setClock(answer, gen, done) {
     }
     setError(null);
     appliedOnce = true;
+    counters.sets++;
     console.log('ntp: set the clock from ' + settings.server +
                 ' (stratum ' + answer.stratum + '), ' + formatOffset(answer.offsetMs));
     schedule(RESYNC_MS);
@@ -343,6 +349,7 @@ function sync(done) {
       syncFailed(r.error);
       return done();
     }
+    lastAnswer = r.answer;
     if (needsSetting(r.answer)) return setClock(r.answer, gen, done);
 
     setError(null);
@@ -372,6 +379,7 @@ function start(done) {
   stop();
   settings = readSettings(config);
   if (!settings) return false;
+  counters = { sets: 0, errors: 0 };
   console.log('ntp: setting the clock from ' + settings.server +
               (settings.port !== NTP_PORT ? ':' + settings.port : ''));
   sync(done);
@@ -386,6 +394,18 @@ function stop() {
   querying = false;
   errorState = null;
   appliedOnce = false;
+  lastAnswer = null;
+  counters = null;
+}
+
+/**
+ * Clocks set and syncs that failed since start, and the last answer, null
+ * before one. Null while off.
+ * @returns {?{sets: number, errors: number, last: ?Answer}}
+ */
+function getStatus() {
+  if (!counters) return null;
+  return { sets: counters.sets, errors: counters.errors, last: lastAnswer };
 }
 
 module.exports = {
@@ -393,6 +413,7 @@ module.exports = {
   start: start,
   stop: stop,
   sync: sync,
+  getStatus: getStatus,
   readSettings: readSettings,
   buildRequest: buildRequest,
   answersRequest: answersRequest,
