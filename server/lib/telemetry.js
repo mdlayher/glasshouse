@@ -9,8 +9,10 @@
 
 var msg = require('./say').msg;
 var fs = require('fs');
+var dns = require('dns');
 var readTrimmed = require('./util').readTrimmed;
 var toInt = require('./util').toInt;
+var lanAddress = require('./util').lanAddress;
 var path = require('path');
 var execFile = require('child_process').execFile;
 var names = require('./names');
@@ -412,6 +414,57 @@ function macAddress(iface) {
   if (mac === '00:00:00:00:00:00') return null;
   MAC_CACHE[iface] = mac;
   return mac;
+}
+
+/*
+ * The TV's DNS name, from a reverse lookup of its LAN address. Most home
+ * networks have no reverse zone, so no name is the usual answer, and it is
+ * cached for the same hour as a name: a network without one is asked that
+ * often, not every scrape. The record's own TTL would be the right lifetime,
+ * but node's dns gives none for a PTR (node 0.12 for no record type; later
+ * versions only for A and AAAA), so it is fixed at 3600 seconds, the TTL
+ * hand-run reverse zones commonly give.
+ * dns.reverse has no timeout of its own either, so a late answer is dropped
+ * and counts as no name.
+ */
+var HOSTNAME_TTL_MS = 3600000;
+var HOSTNAME_TIMEOUT_MS = 3000;
+var hostnameCache = { address: null, name: null, time: 0 };
+var hostnameAsking = null;
+
+function reverseName(address, timeoutMs, cb) {
+  var done = false;
+  var timer = setTimeout(function () { finish(null); }, timeoutMs);
+  function finish(name) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    cb(name);
+  }
+  try {
+    dns.reverse(address, function (err, hostnames) {
+      var name = !err && hostnames && hostnames[0] ? String(hostnames[0]).replace(/\.$/, '') : null;
+      finish(name);
+    });
+  } catch (e) { finish(null); }
+}
+
+// The cached name for address, or null; a stale or missing one is looked up
+// behind the answer, so a caller never waits on DNS.
+function lanHostname(address) {
+  if (!address) return null;
+  var c = hostnameCache;
+  var known = c.address === address;
+  if ((!known || Date.now() - c.time >= HOSTNAME_TTL_MS) && hostnameAsking !== address) {
+    hostnameAsking = address;
+    reverseName(address, HOSTNAME_TIMEOUT_MS, function (name) {
+      // An answer for an address the TV has since left is not kept.
+      if (hostnameAsking !== address) return;
+      hostnameAsking = null;
+      hostnameCache = { address: address, name: name, time: Date.now() };
+    });
+  }
+  return known ? c.name : null;
 }
 
 function netBytes() {
@@ -1514,6 +1567,7 @@ function collectStats(cb) {
   var uptimeSec = Math.floor(parseFloat(readTrimmed('/proc/uptime') || '0'));
 
   var devCfg = (configObj && configObj.device) || {};
+  var address = lanAddress();
   var out = {
     ok: true,
     time: Date.now(),
@@ -1565,6 +1619,8 @@ function collectStats(cb) {
     net: rate,
     netTotal: n ? { rx: n.rx, tx: n.tx, iface: n.iface } : null,
     mac: n ? macAddress(n.iface) : null,
+    address: address,
+    hostname: lanHostname(address),
     emmc: emmcInfo(),
     signal: null,
     signal_timing: null,
@@ -2019,6 +2075,8 @@ module.exports = {
   swapBacking: swapBacking,
   wifi: wifi,
   macAddress: macAddress,
+  reverseName: reverseName,
+  lanHostname: lanHostname,
   netBytes: netBytes,
   getVideoSignal: getVideoSignal,
   readRemoteInfo: readRemoteInfo,
