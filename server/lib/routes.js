@@ -8,6 +8,7 @@ var zlib = require('zlib');
 var crypto = require('crypto');
 var http = require('http');
 var say = require('./say');
+var lanAddress = require('./util').lanAddress;
 var msg = say.msg;
 var ha = require('./ha');
 var fetchLib = require('./fetch');
@@ -288,26 +289,6 @@ function setNetworkAccess(open, cb) {
   cb(null);
 }
 
-// The TV's own address on the home network, whatever the server is bound to.
-function lanAddress() {
-  var ifaces = {};
-  try { ifaces = os.networkInterfaces() || {}; } catch (e) { return null; }
-  var best = null;
-  for (var name in ifaces) {
-    if (!ifaces.hasOwnProperty(name)) continue;
-    var list = ifaces[name] || [];
-    for (var i = 0; i < list.length; i++) {
-      var a = list[i];
-      var fam = String(a.family);
-      if (fam !== 'IPv4' && fam !== '4') continue;
-      if (a.internal) continue;
-      // Wired first where a TV has both, otherwise the first that answers.
-      if (!best || /^eth/.test(name)) best = a.address;
-    }
-  }
-  return best;
-}
-
 // Whether the dashboard answers on the network, or only on the TV itself.
 function networkOpen() {
   return !/^(127\.|::1$|localhost$)/.test(String(config.host));
@@ -379,6 +360,7 @@ function setupState() {
     network: networkOpen(),
     token: !!config.token,
     address: lanAddress() ? lanAddress() + ':' + config.port : null,
+    hostname: telemetryModule ? telemetryModule.lanHostname(lanAddress()) : null,
     homeAssistant: { configured: !!(m.enabled && m.host), state: mqttStat.state },
     handoff: HANDOFF.server ? handoffUrl() : null
   };

@@ -40,7 +40,13 @@ q('readouts').innerHTML = ROWS.map(r =>
      <div><div class="lbl">${r.label}</div><div class="sub" id="sub-${r.k}"></div></div>
      <div class="track"><b id="bar-${r.k}" style="width:0%"></b></div>
      <div class="v num" id="val-${r.k}">—</div>
-   </div>`).join('');
+   </div>`).join('') +
+  /* The TV's address and DNS name have a row of their own, without a bar: a
+     name is too long for the narrow column the other rows' details sit in. */
+  `<div class="r r-text" id="row-addr" hidden>
+     <div class="lbl">${t('metrics.addresses', 'Addresses')}</div>
+     <div class="sub" id="sub-addr"></div>
+   </div>`;
 
 let hist = [], lastOk = 0, muted = false, installedApps = [], lastAppId = '';
 
@@ -351,6 +357,9 @@ async function tick() {
     if (nt) netParts.push('↓ ' + bytes(nt.rx) + ' ↑ ' + bytes(nt.tx));
     row('net', rx.toFixed(0) + '<small>kB/s</small>', Math.min(100, rx / 20),
         netParts.join('  ·  ') || t('metrics.net.connected', 'Connected'), 101);
+
+    q('row-addr').hidden = !d.address;
+    q('sub-addr').innerHTML = [d.address, d.hostname].filter(Boolean).map(esc).join('<br>');
 
     // Hardware & System Specifications
     let hasHw = false;

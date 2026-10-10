@@ -146,6 +146,14 @@ from the `scenario` of `com.webos.audio/getSoundOut`: the scenario is
 `tv_speaker_ext` on TV Speaker + Optical, and getSoundOut fails outright on
 TV Speaker + Bluetooth with nothing paired.
 
+The TV's DNS name in the stats, `hostname`, is a reverse lookup of its IPv4
+address on the home network, `address`. It is looked up in the background and
+never on a request: the stats carry the cached answer, and the first after a
+start or an address change has none. A name, no name, an error, and no answer
+within 3 seconds are all cached for an hour, so a network without a reverse
+zone is not asked on every scrape. `dns.reverse` has no timeout of its own, so
+a later answer is dropped.
+
 webOS 3.9 has no temperature source at all: `/proc/lg/pm/temperature` is absent,
 nothing under `/proc/lg` or `/sys` is named for temperature, `/sys/class/thermal` is
 empty, there is no `hwmon`, and `systemproperty` rejects every temperature key. The

@@ -5,6 +5,7 @@ The **Metrics** tab, `/?tab=metrics`, exposes information about what the TV is d
 This is useful both for monitoring and for troubleshooting. It shows whether a high-temperature condition is accompanied by CPU load, what Wi-Fi signal the TV actually has, what HDMI mode a connected device negotiated, and what software is currently running.
 
 * SoC temperature, CPU and per-core load, GPU clock, memory and swap, Wi-Fi RSSI and network throughput.
+* The TV's IPv4 address on the home network, with its DNS name under it where the network's DNS has a reverse entry for it.
 * eMMC flash wear with JEDEC health translation, and free space on the app partition.
 * HDMI link state per port, refresh rate, colour depth, pixel clock, and HDMI 2.1 diagnostics where supported (link rate, chroma format, HDCP version, ALLM, VRR, QMS and colorimetry).
 * The source's HDR format (SDR, HDR10, HLG, Dolby Vision, or player-led Dolby Vision as "Dolby Vision (low latency)"), picture mode, OLED light level, the raw HDMI signal (`3840x2160 @ 120Hz`), audio output routing, and the running app with friendly input names (`Apple TV (HDMI2)`).

@@ -194,6 +194,8 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:24p
    readable on a Wi-Fi set, where the dBm prefix would otherwise push them
    past the ellipsis. */
 #sub-net{white-space:normal}
+/* A row of text only, which takes the full width. */
+.r.r-text{display:block}
 
 /* ---- panel block: the second thing worth looking at ---- */
 

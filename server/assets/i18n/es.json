@@ -1079,6 +1079,10 @@
   "text": "Derecha {n}",
   "from": "Right {n}"
  },
+ "metrics.addresses": {
+  "text": "Direcciones",
+  "from": "Addresses"
+ },
  "metrics.ambient": {
   "text": "Ambiente",
   "from": "Ambient"
