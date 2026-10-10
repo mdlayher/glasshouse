@@ -11,6 +11,8 @@
 var msg = require('./say').msg;
 var fs = require('fs');
 var mkdirp = require('./util').mkdirp;
+var readTrimmed = require('./util').readTrimmed;
+var unlinkQuiet = require('./util').unlinkQuiet;
 var path = require('path');
 var execFile = require('child_process').execFile;
 
@@ -72,24 +74,15 @@ var isScreenSaverFn = null;
 var switchingSince = 0;
 
 function clearStagedScreensaver() {
-  try {
-    var marker = path.join(SCREENSAVER_DIR, SCREENSAVER_MARKER);
-    if (fs.existsSync(marker)) fs.unlinkSync(marker);
-  } catch (e) {}
-  try {
-    var levelMarker = path.join(SCREENSAVER_DIR, SCREENSAVER_LEVEL_MARKER);
-    if (fs.existsSync(levelMarker)) fs.unlinkSync(levelMarker);
-  } catch (e) {}
-  try {
-    var appinfo = path.join(SCREENSAVER_DIR, 'appinfo.json');
-    if (fs.existsSync(appinfo)) fs.unlinkSync(appinfo);
-  } catch (e) {}
+  unlinkQuiet(path.join(SCREENSAVER_DIR, SCREENSAVER_MARKER));
+  unlinkQuiet(path.join(SCREENSAVER_DIR, SCREENSAVER_LEVEL_MARKER));
+  unlinkQuiet(path.join(SCREENSAVER_DIR, 'appinfo.json'));
   try {
     var qmlDir = path.join(SCREENSAVER_DIR, 'qml');
     if (fs.existsSync(qmlDir)) {
       var files = fs.readdirSync(qmlDir);
       for (var i = 0; i < files.length; i++) {
-        try { fs.unlinkSync(path.join(qmlDir, files[i])); } catch (e) {}
+        unlinkQuiet(path.join(qmlDir, files[i]));
       }
       try { fs.rmdirSync(qmlDir); } catch (e) {}
     }
@@ -147,11 +140,8 @@ function rememberStockType(json) {
 // webOS 10), so going to or from it restarts sam. Unknown until the stock
 // manifest has been seen once.
 function slowSwitch() {
-  try {
-    var t = fs.readFileSync(STOCK_TYPE_FILE, 'utf8').trim();
-    return !!t && t !== 'qml';
-  } catch (e) {}
-  return false;
+  var t = readTrimmed(STOCK_TYPE_FILE);
+  return !!t && t !== 'qml';
 }
 
 // Where the stock screen saver is not QML (Flutter on webOS 10 and 11), custom
@@ -200,19 +190,12 @@ function waitForRunner(type) {
 }
 
 function screensaverLevel() {
-  try {
-    var v = fs.readFileSync(path.join(SCREENSAVER_APP_DIR, SCREENSAVER_LEVEL_MARKER), 'utf8').trim();
-    if (v === 'bright') return 'bright';
-  } catch (e) {}
-  return 'dim';
+  return readTrimmed(path.join(SCREENSAVER_APP_DIR, SCREENSAVER_LEVEL_MARKER)) === 'bright' ? 'bright' : 'dim';
 }
 
 function screensaverMode() {
-  try {
-    var m = fs.readFileSync(path.join(SCREENSAVER_APP_DIR, SCREENSAVER_MARKER), 'utf8').trim();
-    if (SCREENSAVERS[m] && m !== 'stock') return m;
-  } catch (e) {}
-  return 'stock';
+  var m = readTrimmed(path.join(SCREENSAVER_APP_DIR, SCREENSAVER_MARKER));
+  return SCREENSAVERS[m] && m !== 'stock' ? m : 'stock';
 }
 
 function detectExternal() {

@@ -9,6 +9,9 @@ var crypto = require('crypto');
 var http = require('http');
 var say = require('./say');
 var lanAddress = require('./util').lanAddress;
+var writeJsonAtomic = require('./util').writeJsonAtomic;
+var unlinkQuiet = require('./util').unlinkQuiet;
+var existsQuiet = require('./util').existsQuiet;
 var msg = say.msg;
 var ha = require('./ha');
 var fetchLib = require('./fetch');
@@ -160,7 +163,7 @@ function luna(uri, payload, cb) { return lunaFn(uri, payload, cb); }
 function getMqttStatus() { return getMqttStatusFn(); }
 
 function setupPending() {
-  try { return fs.existsSync(SETUP_PENDING); } catch (e) { return false; }
+  return existsQuiet(SETUP_PENDING);
 }
 
 /*
@@ -264,10 +267,7 @@ function writeSettings(patch, cb) {
   }
   try {
     if (!configFilePath) return cb(new Error('no config file path configured'));
-    var tmp = configFilePath + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(file, null, 2), 'utf8');
-    fs.chmodSync(tmp, parseInt('600', 8));
-    fs.renameSync(tmp, configFilePath);   // atomic: never leave a half-written config
+    writeJsonAtomic(configFilePath, file, parseInt('600', 8));
   } catch (err) {
     return cb(err);
   }
@@ -283,10 +283,7 @@ function setNetworkAccess(open, cb) {
   file.host = open ? '0.0.0.0' : '127.0.0.1';
   try {
     if (!configFilePath) return cb(new Error('no config file path configured'));
-    var tmp = configFilePath + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(file, null, 2), 'utf8');
-    fs.chmodSync(tmp, parseInt('600', 8));
-    fs.renameSync(tmp, configFilePath);
+    writeJsonAtomic(configFilePath, file, parseInt('600', 8));
   } catch (err) { return cb(err); }
   cb(null);
 }
@@ -1039,7 +1036,7 @@ function handleRequest(req, res) {
         return send(res, 200, JSON.stringify({ ok: true }));
       }
       if (a.action === 'done') {
-        try { fs.unlinkSync(SETUP_PENDING); } catch (e) {}
+        unlinkQuiet(SETUP_PENDING);
         return send(res, 200, JSON.stringify({ ok: true }));
       }
       send(res, 400, JSON.stringify({ ok: false, error: 'unknown action' }));

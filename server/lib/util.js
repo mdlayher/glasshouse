@@ -51,10 +51,52 @@ function monotonicMs() {
   return t[0] * 1000 + t[1] / 1e6;
 }
 
+// node 0.12 has no Buffer.from or Buffer.alloc.
+function toBuffer(data, enc) {
+  return typeof Buffer.from === 'function' ? Buffer.from(data, enc) : new Buffer(data, enc);
+}
+
+function allocBuffer(n) {
+  if (typeof Buffer.alloc === 'function') return Buffer.alloc(n);
+  var b = new Buffer(n);
+  b.fill(0);
+  return b;
+}
+
+// A file's parsed JSON, or dflt when it is missing or does not parse.
+function readJson(filePath, dflt) {
+  try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); }
+  catch (e) { return dflt; }
+}
+
+// Written beside the file and renamed over it, so a reader never sees half of
+// it. Throws on failure.
+function writeJsonAtomic(filePath, obj, mode) {
+  var tmp = filePath + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2), 'utf8');
+  if (mode !== undefined) fs.chmodSync(tmp, mode);
+  fs.renameSync(tmp, filePath);
+}
+
+// Removes a file that may not be there.
+function unlinkQuiet(filePath) {
+  try { fs.unlinkSync(filePath); } catch (e) {}
+}
+
+function existsQuiet(filePath) {
+  try { return fs.existsSync(filePath); } catch (e) { return false; }
+}
+
 module.exports = {
   toInt: toInt,
   mkdirp: mkdirp,
   readTrimmed: readTrimmed,
   lanAddress: lanAddress,
-  monotonicMs: monotonicMs
+  monotonicMs: monotonicMs,
+  toBuffer: toBuffer,
+  allocBuffer: allocBuffer,
+  readJson: readJson,
+  writeJsonAtomic: writeJsonAtomic,
+  unlinkQuiet: unlinkQuiet,
+  existsQuiet: existsQuiet
 };

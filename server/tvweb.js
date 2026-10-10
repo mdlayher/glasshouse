@@ -24,6 +24,10 @@ var TVWEB_VERSION = '0.83.0';
 var http = require('http');
 var fs = require('fs');
 var toInt = require('./lib/util').toInt;
+var readTrimmed = require('./lib/util').readTrimmed;
+var readJson = require('./lib/util').readJson;
+var writeJsonAtomic = require('./lib/util').writeJsonAtomic;
+var existsQuiet = require('./lib/util').existsQuiet;
 var url = require('url');
 var net = require('net');
 var tls = require('tls');
@@ -330,8 +334,9 @@ loadConfig();
 
 // Old config keys folded or preserved on upgrade.
 (function migrateConfigFile() {
+  var raw = readJson(CONFIG_FILE, null);
+  if (!raw) return;
   try {
-    var raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     var changed = false;
     if (piccapTransport.migrateConfig(raw)) {
       changed = true;
@@ -344,10 +349,7 @@ loadConfig();
       console.log('config: existing tile hiding preserved (allowTileHiding: true)');
     }
     if (!changed) return;
-    var tmp = CONFIG_FILE + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(raw, null, 2), 'utf8');
-    fs.chmodSync(tmp, parseInt('600', 8));
-    fs.renameSync(tmp, CONFIG_FILE);
+    writeJsonAtomic(CONFIG_FILE, raw, parseInt('600', 8));
   } catch (e) {}
 })();
 
@@ -637,7 +639,7 @@ say.init(path.join(path.dirname(assetPath('i18n.js') || path.join(ASSET_DIRS[0],
 // Put in place by the app the Homebrew Channel installs, rather than deploy.sh.
 var HBC_MARK = '/var/lib/tvweb/.from-homebrew-channel';
 function fromHomebrewChannel() {
-  try { return fs.existsSync(HBC_MARK); } catch (e) { return false; }
+  return existsQuiet(HBC_MARK);
 }
 
 /*
@@ -657,9 +659,7 @@ var HBC_CHECK_MS = 5 * 60000;
 var hbcMissing = 0, hbcTried = null;
 
 function hbcAppDir() {
-  var dir = '';
-  try { dir = fs.readFileSync(HBC_MARK, 'utf8').trim(); } catch (e) {}
-  return dir || HBC_APP_DEFAULT;
+  return readTrimmed(HBC_MARK) || HBC_APP_DEFAULT;
 }
 
 function checkHomebrewChannelApp() {

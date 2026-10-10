@@ -12,6 +12,7 @@
 var dgram = require('dgram');
 var dns = require('dns');
 var monotonicMs = require('./util').monotonicMs;
+var allocBuffer = require('./util').allocBuffer;
 
 var NTP_PORT = 123;
 var PACKET_BYTES = 48;
@@ -101,14 +102,6 @@ function writeTimestamp(buf, off, ms) {
   buf.writeUInt32BE(frac, off + 4);
 }
 
-// Buffer.alloc where there is one: new Buffer warns on newer node.
-function newPacket() {
-  if (typeof Buffer.alloc === 'function') return Buffer.alloc(PACKET_BYTES);
-  var buf = new Buffer(PACKET_BYTES);
-  buf.fill(0);
-  return buf;
-}
-
 /**
  * A client request: LI 0, version 4, mode 3, and the transmit timestamp the
  * reply must echo as its originate timestamp. Its low 16 bits, about 15
@@ -118,7 +111,7 @@ function newPacket() {
  * @returns {Buffer}
  */
 function buildRequest(nowMs) {
-  var buf = newPacket();
+  var buf = allocBuffer(PACKET_BYTES);
   buf[0] = (0 << 6) | (4 << 3) | 3;
   writeTimestamp(buf, TRANSMIT, nowMs);
   buf[TRANSMIT + 6] = Math.floor(Math.random() * 256);

@@ -397,14 +397,13 @@ function wifi() {
 function ifaceRank(name) {
   var st = readTrimmed('/sys/class/net/' + name + '/operstate');
   if (st) {
-    st = st.trim();
     if (st === 'up') return 2;
     if (st === 'down') return 0;
     return 1;
   }
   var car = readTrimmed('/sys/class/net/' + name + '/carrier');
   if (!car) return 1;
-  return car.trim() === '1' ? 2 : 0;
+  return car === '1' ? 2 : 0;
 }
 
 function macAddress(iface) {
@@ -412,7 +411,7 @@ function macAddress(iface) {
   if (MAC_CACHE[iface]) return MAC_CACHE[iface];
   var raw = readTrimmed('/sys/class/net/' + iface + '/address');
   if (!raw) return null;
-  var mac = raw.trim().toLowerCase();
+  var mac = raw.toLowerCase();
   if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) return null;
   if (mac === '00:00:00:00:00:00') return null;
   MAC_CACHE[iface] = mac;
@@ -1225,7 +1224,7 @@ function sampleCpuTicks() {
   var out = { total: 0, procs: {} };
   try {
     var cpu = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].split(/\s+/);
-    for (var i = 1; i < cpu.length; i++) out.total += parseInt(cpu[i], 10) || 0;
+    for (var i = 1; i < cpu.length; i++) out.total += toInt(cpu[i], 0);
   } catch (e) {
     return null;
   }
@@ -1239,7 +1238,7 @@ function sampleCpuTicks() {
       if (close < 0) continue;
       var f = raw.slice(close + 2).split(' ');
       out.procs[entries[n]] = {
-        ticks: (parseInt(f[11], 10) || 0) + (parseInt(f[12], 10) || 0),
+        ticks: toInt(f[11], 0) + toInt(f[12], 0),
         comm: raw.slice(raw.indexOf('(') + 1, close)
       };
     } catch (e3) {}
@@ -1469,7 +1468,7 @@ function detectFrontLights(cb) {
 
 // LG stores the hour and minute as separate strings, "1" and "0" for 01:00.
 function clockTime(h, m) {
-  function pad2(v) { v = parseInt(v, 10) || 0; return (v < 10 ? '0' : '') + v; }
+  function pad2(v) { v = toInt(v, 0); return (v < 10 ? '0' : '') + v; }
   return pad2(h) + ':' + pad2(m);
 }
 

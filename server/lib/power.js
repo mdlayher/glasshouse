@@ -10,11 +10,14 @@
  * at once rather than at its next poll, which a power-off can beat.
  */
 
+var monotonicMs = require('./util').monotonicMs;
+
 var REASON_URI = 'com.webos.service.tvpower/power/getPowerOnReason';
 var TIME_URI = 'com.webos.service.tvpower/power/getPowerOnTime';
 
 var luna = null;
 var log = console.log;
+// Not Date.now(): the clock steps forward years when it syncs.
 var clockFn = monotonicMs;
 /** @type {typeof import('./syslog')} */
 var syslogModule = null;
@@ -25,12 +28,6 @@ var onTime = null;
 var onTimeReadAt = 0;
 // The raw power state last seen, null until the first.
 var lastState = null;
-
-// Not Date.now(): the clock steps forward years when it syncs.
-function monotonicMs() {
-  var t = process.hrtime();
-  return t[0] * 1000 + t[1] / 1e6;
-}
 
 // tvpower gives the times as strings of seconds: "27196.63".
 function seconds(v) {

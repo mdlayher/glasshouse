@@ -1,9 +1,9 @@
 // Strict ES5 - node v0.12.2 on webOS 4 (LG OLED B8) has no ES6 support.
 var fs = require('fs');
 var toInt = require('./util').toInt;
+var allocBuffer = require('./util').allocBuffer;
 var execFile = require('child_process').execFile;
 var msg = require('./say').msg;
-var zeroBuffer = require('./mqtt').zeroBuffer;
 var timers = require('./timers');
 
 /*
@@ -126,7 +126,7 @@ function injectKey(code, cb, delayMs) {
   }
   var delay = (typeof delayMs === 'number') ? Math.max(10, Math.min(2000, delayMs)) : 50;
   function makeEv(type, c, val) {
-    var b = zeroBuffer(16);
+    var b = allocBuffer(16);
     b.writeUInt16LE(type, 8);
     b.writeUInt16LE(c, 10);
     b.writeInt32LE(val, 12);
