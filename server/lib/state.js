@@ -54,6 +54,8 @@ function StateGroup(name, subscription, mapResponse, onError) {
   this.onRefused = null;
   this.listeners = [];
   this.snapshotPending = true;
+  // Starts not yet matched by a stop: the subscription runs while any remain.
+  this.users = 0;
 
   subscription.handlers.message = function (response) {
     self._message(response);
@@ -72,12 +74,13 @@ StateGroup.prototype.onState = function (listener) {
 };
 
 StateGroup.prototype.start = function () {
-  this.subscription.start();
+  if (this.users++ === 0) this.subscription.start();
   return this;
 };
 
 StateGroup.prototype.stop = function () {
-  this.subscription.stop();
+  if (this.users === 0) return this;
+  if (--this.users === 0) this.subscription.stop();
   return this;
 };
 
@@ -243,6 +246,15 @@ function init(opts) {
     for (key in groups) groups[key].stop();
   }
 
+  // One group for a user of its own, alongside or without start().
+  function startGroup(name) {
+    if (groups[name]) groups[name].start();
+  }
+
+  function stopGroup(name) {
+    if (groups[name]) groups[name].stop();
+  }
+
   for (var groupName in groups) {
     (function (name) {
       groups[name].onState(function (event) {
@@ -259,7 +271,9 @@ function init(opts) {
     groups: groups,
     reconcile: reconcile,
     start: start,
-    stop: stop
+    stop: stop,
+    startGroup: startGroup,
+    stopGroup: stopGroup
   };
 }
 

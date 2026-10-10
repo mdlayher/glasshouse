@@ -93,6 +93,12 @@ assert.strictEqual(names.signalEncoding('YCbCr420').label, 'ycbcr_420');
 assert.strictEqual(names.signalEncoding('YCbCr440').label, 'ycb_cr440');
 console.log('  ✓ colorimetry and pixel encoding, and unknown ones in snake case');
 
+assert.strictEqual(names.powerOnReason('wakeOnWiFi').label, 'wake_on_wifi');
+assert.strictEqual(names.powerOnReason('remoteKey').label, 'remote_key');
+assert.strictEqual(names.powerOnReason('rebootByOnRegular').label, 'reboot_by_on_regular');
+assert.strictEqual(names.powerOnReason('netflix').label, 'netflix');
+console.log('  ✓ power-on reason, in snake case with Wi-Fi spelled as one word');
+
 function mode(raw) { return both(names.pictureMode(raw)); }
 
 assert.deepEqual(mode('normal'), ['Standard', 'standard']);

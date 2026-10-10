@@ -354,6 +354,14 @@ function poll(done) {
   });
 }
 
+/*
+ * Polls now rather than at the next tick, for lines a power-off may not leave
+ * time for. The kernel's read keeps its own schedule.
+ */
+function flush() {
+  if (settings && !polling) poll();
+}
+
 /**
  * @param {Object} opts
  * @param {any} opts.config the server's config, read at start()
@@ -430,6 +438,7 @@ module.exports = {
   start: start,
   stop: stop,
   poll: poll,
+  flush: flush,
   setHostname: setHostname,
   getCounters: getCounters,
   readSettings: readSettings,
