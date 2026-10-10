@@ -1,6 +1,6 @@
 # Tested TVs
 
-Confirmed on 39 TVs across 26 series so far (webOS 3.4 through 26). Other rooted models should work.
+Confirmed on 40 TVs across 26 series so far (webOS 3.4 through 26). Other rooted models should work.
 
 Sizes and regional variants of one series run the same software, so the table below has one row per series. Years are LG's model years; many TVs have since been updated to a later webOS.
 
@@ -32,7 +32,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | G4            | 2024 | OLED  | 24 – 25           | 2       |
 | UT81          | 2024 | LCD   | 25                | 1       |
 | C5            | 2025 | OLED  | 25                | 3       |
-| G5            | 2025 | OLED  | 26                | 1       |
+| G5            | 2025 | OLED  | 25 – 26           | 2       |
 | NU80          | 2026 | LCD   | 26                | 1       |
 
 <details markdown="1">
@@ -75,6 +75,7 @@ The Luna service names and `/proc/lg` paths this relies on may differ across web
 | OLED48C55LA | 25 (10.3.1)  | 33.31.68 | OLED  | Installed over telnet; in-app update to 0.37.2 confirmed       |
 | OLED77C57LA | 25 (10.3.1)  | 33.31.68 | OLED  | MQTT, privacy, screen saver and web dashboard confirmed        |
 | OLED48C5PUA | 25 (10.3.1)  | 33.31.69 | OLED  | Rooted with slopbro; dashboard, telemetry and API .ipk installs |
+| OLED65G5WUA | 25           | 33.30.69 | OLED  | No screen saver tab; volume stuck at +10 on optical output     |
 | 42LX3Q6LA   | —            | 33.31.68 | OLED  | Flex; model number has no OLED prefix                          |
 | 43NU800BPSC | 26 (11.0.0)  | 43.02.50 | LCD   | Rooted with slopbro; privacy controls confirmed                |
 | OLED65G36LA | 26 (11.2.0)  | 43.21.71 | OLED  | Rooted with DualBro; privacy and app installs confirmed        |
