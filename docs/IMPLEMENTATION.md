@@ -580,6 +580,8 @@ To prevent this while preserving full platform blocking:
 * On a restart (warm boot) or when toggling the blocker while the TV is already running,
   `getSystemTime` reports that the time is already valid. The grace period is skipped
   entirely, and `nextlgsdp.com` is blocked immediately.
+* With an [NTP server](#setting-the-clock-from-ntp) configured, the first answer it
+  gives sets the time as `sdp`, which ends the wait at once.
 
 ## Entity state must come from the TV, not from the command
 
@@ -698,6 +700,42 @@ UDP syslog is everywhere. Glasshouse logs one line when forwarding starts and
 one at each change of error state. `glasshouse_syslog_messages_total` and
 `glasshouse_syslog_errors_total` on the [Prometheus endpoint](PROMETHEUS.md)
 count what was sent and what was dropped.
+
+---
+
+## Setting the clock from NTP
+
+The time service, `com.webos.service.systemservice`, takes time from named
+sources and registers no `ntp` source. With a server set in `config.json`,
+Glasshouse asks it for the time over SNTP (RFC 4330) and hands the answer to
+`clock/setTime` as an `sdp` time. The service then sets the clock, its source
+and `timeValid` as it does for LG's own sync, and the ad blocker's
+[wait for the clock](#cold-boot-clock-synchronization-nextlgsdpcom) ends.
+
+```json
+"ntp": {
+  "server": "time.lan",
+  "port": 123
+}
+```
+
+The server is asked at start, hourly, and when the TV switches on. Until an
+answer is used, and after a failure, it is asked every 30 seconds. An answer
+is not used when:
+
+* it is not a server reply;
+* the server is not synchronised: stratum 0, above 15, or leap indicator 3;
+* it does not echo the request's transmit time, or has none of its own;
+* the round trip took longer than a second;
+* the time it gives is before 2026.
+
+A time within a second of the clock is left alone, except for the first answer
+of each start, which is always handed over.
+
+`clock/setTime` takes whole seconds. Each call carries the monotonic time of
+the server's answer, and the service adds the time since then. Glasshouse logs
+one line when it starts, one each time it sets the clock, and one at each
+change of error state.
 
 ---
 

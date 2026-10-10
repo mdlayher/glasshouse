@@ -98,13 +98,21 @@ function sampleLines(text) {
     'glasshouse_hdmi_qms',
     'glasshouse_hdmi_source_powered',
     'glasshouse_syslog_messages_total',
-    'glasshouse_syslog_errors_total'
+    'glasshouse_syslog_errors_total',
+    'glasshouse_ntp_clock_sets_total',
+    'glasshouse_ntp_errors_total',
+    'glasshouse_ntp_offset_seconds',
+    'glasshouse_ntp_round_trip_seconds',
+    'glasshouse_ntp_stratum',
+    'glasshouse_ntp_last_answer_timestamp_seconds'
   ]);
 
+  var C4_NTP = { at: 1791576408500, offsetMs: -606.25, roundTripMs: 1.5, stratum: 4 };
   var renderings = {
     b8: prometheus.render(require('./fixtures/stats-b8-webos4.json'), '0.80.1'),
     g4: prometheus.render(require('./fixtures/stats-g4-webos9.json'), '0.80.1'),
-    c4: prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1', { messages: { system: 12 }, errors: 0 }),
+    c4: prometheus.render(require('./fixtures/stats-c4-webos9.json'), '0.80.1', { messages: { system: 12 }, errors: 0 },
+      { sets: 1, errors: 0, last: C4_NTP }),
     c4hdr: prometheus.render(require('./fixtures/stats-c4-webos9-hdr.json'), '0.80.1'),
     c4standby: prometheus.render(require('./fixtures/stats-c4-webos9-standby.json'), '0.80.1'),
     cx: prometheus.render(require('./fixtures/stats-cx-webos5.json'), '0.80.1'),
@@ -157,6 +165,25 @@ function sampleLines(text) {
   assert.strictEqual(sampleLines(off).length, 1);
   assert.ok(!/^# HELP glasshouse_syslog_/m.test(off), 'no HELP for the syslog counters while forwarding is off');
   console.log('  ✓ the syslog counters are sampled only while forwarding is on');
+})();
+
+// 1c. The NTP families have samples only while the client is on, the last
+// answer's only once there is one
+(function testNtp() {
+  var last = { at: 1791576408500, offsetMs: -606.25, roundTripMs: 1.5, stratum: 4 };
+  var on = sampleLines(prometheus.render({}, '0.80.1', null, { sets: 2, errors: 1, last: last }));
+  assert.deepEqual(on.slice(1), [
+    'glasshouse_ntp_clock_sets_total 2',
+    'glasshouse_ntp_errors_total 1',
+    'glasshouse_ntp_offset_seconds -0.60625',
+    'glasshouse_ntp_round_trip_seconds 0.0015',
+    'glasshouse_ntp_stratum 4',
+    'glasshouse_ntp_last_answer_timestamp_seconds 1791576408.5'
+  ]);
+  var unanswered = sampleLines(prometheus.render({}, '0.80.1', null, { sets: 0, errors: 3, last: null }));
+  assert.deepEqual(unanswered.slice(1), ['glasshouse_ntp_clock_sets_total 0', 'glasshouse_ntp_errors_total 3']);
+  assert.strictEqual(sampleLines(prometheus.render({}, '0.80.1', null, null)).length, 1);
+  console.log('  ✓ the NTP families are sampled only while the client is on');
 })();
 
 // 2. Values are in base units: bytes, hertz, seconds and ratios

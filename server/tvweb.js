@@ -61,6 +61,7 @@ var piccapTransport = require('./lib/piccap');
 var remotebuttons = require('./lib/remotebuttons');
 var logsModule = require('./lib/logs');
 var syslogForwarder = require('./lib/syslog');
+var ntpClient = require('./lib/ntp');
 var power = require('./lib/power');
 var msg = say.msg;
 var luna = lunaTransport.call;
@@ -218,6 +219,15 @@ var CONFIG = {
     hostname: '',
     sources: ['system', 'glasshouse'],
     redact: true
+  },
+
+  /*
+   * Setting the TV's clock from an NTP server, hourly and when the TV switches
+   * on. Off while server is empty.
+   */
+  ntp: {
+    server: '',
+    port: 123
   },
 
   device: {
@@ -790,6 +800,7 @@ routes.init({
   installer: installer,
   prometheus: prometheus,
   syslog: syslogForwarder,
+  ntp: ntpClient,
   configFile: CONFIG_FILE,
   controls: controls,
   telemetry: telemetry,
@@ -1493,6 +1504,13 @@ if (!CLI_MODE) {
   });
   // Its own start, as the MQTT bridge starts every group only with a broker.
   liveState.startGroup('power');
+
+  ntpClient.init({ config: CONFIG, luna: luna });
+  if (ntpClient.start()) {
+    liveState.state.onChange(function (ev) {
+      if (ev.group === 'power' && ev.key === 'systemOn' && ev.value === true) ntpClient.sync();
+    });
+  }
 
   telemetry.detectDeviceInfo(function() {
     syslogForwarder.setHostname(CONFIG.device && CONFIG.device.name);
