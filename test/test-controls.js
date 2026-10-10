@@ -4,7 +4,7 @@
 
 var assert = require('assert');
 var controls = require('../server/lib/controls');
-var INPUTS = require('../server/lib/ha').INPUTS;
+var INPUTS = require('../server/lib/names').INPUTS;
 
 console.log('Running test-controls.js ...');
 

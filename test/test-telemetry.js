@@ -47,11 +47,7 @@ telemetry.init({
   oled: oledMock,
   privacy: privacyMock,
   screensavers: screensaversMock,
-  tvwebVersion: '0.36.0',
-  mapPowerState: function (raw) {
-    return { raw: raw, label: 'On', systemOn: true, screenOn: true };
-  },
-  isScreenSaver: function () { return false; }
+  tvwebVersion: '0.36.0'
 });
 
 console.log('Running test-telemetry.js ...');

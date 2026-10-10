@@ -5,6 +5,7 @@ var allocBuffer = require('./util').allocBuffer;
 var execFile = require('child_process').execFile;
 var msg = require('./say').msg;
 var timers = require('./timers');
+var names = require('./names');
 
 /*
  * Measured on a B8 against the built-in player, watching playStateNow move:
@@ -54,11 +55,8 @@ var KEY_VOLUMEDOWN = 114;
 var KEY_BACK = 158;
 
 var SLEEP_TIMER_VALUES = ['off', '10', '30', '60', '90', '120'];
-var ENERGY_SAVING_VALUES = ['auto', 'off', 'min', 'med', 'max', 'screen_off'];
-
-// What the settings service accepts for logoLuminanceAdjust, per
-// getSystemSettingValues on a B8. "strong" is the strongest, not an on/off.
-var LOGO_DIMMING_VALUES = ['off', 'light', 'strong'];
+var ENERGY_SAVING_VALUES = names.ENERGY_SAVING_STEPS;
+var LOGO_DIMMING_VALUES = Object.keys(names.LOGO_DIMMING);
 
 var luna = null;
 var clearLunaCache = function () {};

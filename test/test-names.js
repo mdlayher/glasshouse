@@ -134,3 +134,55 @@ console.log('  ✓ sound output, labelled by its own key');
 
 assert.deepEqual(output('usb_speaker'), ['Usb Speaker', 'usb_speaker']);
 console.log('  ✓ an unknown sound output is spelled out and keeps its own label');
+
+var power = names.powerState('Active Standby');
+assert.strictEqual(power.display, 'Standby');
+assert.strictEqual(power.systemOn, false);
+assert.strictEqual(names.powerState('Screen Saver'), names.POWER_STATES.screensaver);
+assert.strictEqual(names.powerState('screen_off'), names.POWER_STATES.screenoff);
+assert.deepEqual(names.powerState('Warm Boot'), { display: 'Warm Boot', systemOn: false, screenOn: false });
+assert.deepEqual(names.powerState(null), { display: 'Unknown', systemOn: false, screenOn: false });
+Object.keys(names.POWER_STATES).forEach(function (key) {
+  assert.strictEqual(names.powerState(key), names.POWER_STATES[key], key);
+});
+console.log('  ✓ power state, by tvpower\'s name in any spacing or case, and off outside the table');
+
+Object.keys(names.INPUTS).forEach(function (id) {
+  assert.deepEqual(names.input(id), { display: names.INPUTS[id], label: id });
+});
+assert.deepEqual(names.input('hdmi2'), { display: 'HDMI 2', label: 'hdmi2' });
+assert.deepEqual(names.input('livetv'), { display: 'Live TV', label: 'livetv' });
+assert.deepEqual(names.input('av1'), { display: 'av1', label: 'av1' });
+console.log('  ✓ inputs, labelled by their id');
+
+assert.strictEqual(names.inputTitle('hdmi2', 'Apple TV'), 'Apple TV (HDMI2)');
+assert.strictEqual(names.inputTitle('hdmi1', 'HDMI 1'), 'HDMI 1 (HDMI1)');
+assert.strictEqual(names.inputTitle('hdmi1', 'hdmi1'), 'hdmi1');
+assert.strictEqual(names.inputTitle('netflix', undefined), 'netflix');
+console.log('  ✓ an input\'s title is its name with its id, or the id alone');
+
+assert.deepEqual(names.LOGO_DIMMING, { off: 'Off', light: 'Light', strong: 'High' });
+assert.deepEqual(names.ENERGY_SAVING_STEPS, ['auto', 'off', 'min', 'med', 'max', 'screen_off']);
+console.log('  ✓ logo dimming and energy saving steps');
+
+assert.strictEqual(names.refresherStatus('cancel_schedule'), 'Scheduled');
+assert.strictEqual(names.refresherStatus('processing'), 'Running');
+assert.strictEqual(names.refresherStatus('schedule'), 'Idle');
+assert.strictEqual(names.refresherStatus(undefined), 'Idle');
+assert.deepEqual(names.compensationStatus(true), { display: 'Running', detail: 'Completing Panel Maintenance (Short Cycle)' });
+assert.deepEqual(names.compensationStatus(false), { display: 'Idle', detail: 'Idle' });
+console.log('  ✓ Pixel Refresher and compensation status');
+
+assert.deepEqual(names.emmcEol(1), { display: 'Normal', label: 'normal' });
+assert.deepEqual(names.emmcEol(2), { display: 'Warning', label: 'warning' });
+assert.deepEqual(names.emmcEol(3), { display: 'Urgent', label: 'urgent' });
+assert.strictEqual(names.emmcEol(0), null);
+assert.strictEqual(names.emmcEol(NaN), null);
+console.log('  ✓ eMMC pre-end-of-life state, none for an undefined code');
+
+assert.deepEqual(names.vrrType('gsync'), { label: 'gsync' });
+assert.deepEqual(names.vrrType('freeSync'), { label: 'free_sync' });
+assert.deepEqual(names.vrrType('off'), { label: 'off' });
+assert.deepEqual(names.vrrType(''), { label: 'off' });
+assert.deepEqual(names.vrrType(null), { label: 'off' });
+console.log('  ✓ VRR type, off without one');

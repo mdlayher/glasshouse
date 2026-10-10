@@ -8,6 +8,7 @@
 var assert = require('assert');
 var telemetry = require('../server/lib/telemetry');
 var ha = require('../server/lib/ha');
+var names = require('../server/lib/names');
 
 console.log('Running test-sound-outputs.js ...');
 
@@ -81,9 +82,9 @@ assert.deepEqual(known.options, ['TV Speaker', 'Optical', 'TV Speaker + Optical'
   'TV Speaker + Bluetooth', 'LG WOWCAST', 'Line Out', 'Headphone / AUX', 'TV Speaker + Headphone', 'Mobile Phone']);
 var before = soundSelect({});
 var everyName = [];
-Object.keys(ha.SOUND_OUTPUT_MAP).forEach(function (id) {
+Object.keys(names.SOUND_OUTPUTS).forEach(function (id) {
   // Outputs sharing a name (optical and external_optical) are one option.
-  if (everyName.indexOf(ha.SOUND_OUTPUT_MAP[id]) === -1) everyName.push(ha.SOUND_OUTPUT_MAP[id]);
+  if (everyName.indexOf(names.SOUND_OUTPUTS[id]) === -1) everyName.push(names.SOUND_OUTPUTS[id]);
 });
 assert.deepEqual(before.options, everyName, 'every known output before the TV says');
 console.log('  ✓ Home Assistant\'s select lists the 11, and every known output until the TV has said');

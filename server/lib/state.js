@@ -4,6 +4,8 @@
  */
 
 var luna = require('./luna');
+var powerModule = require('./power');
+var names = require('./names');
 
 function StateManager() {
   this.values = {};
@@ -110,11 +112,10 @@ StateGroup.prototype._message = function (response) {
 function applicationValues(appId, inputNames) {
   var full = String(appId || '');
   var short = full.replace('com.webos.app.', '');
-  var name = inputNames[short] || short;
   return {
     app_id: full,
     app: short,
-    display_title: (name && name !== short) ? name + ' (' + short.toUpperCase() + ')' : short
+    display_title: names.inputTitle(short, inputNames[short])
   };
 }
 
@@ -173,8 +174,7 @@ function init(opts) {
     if (!rawState && response.processing) rawState = response.processing;
     // A reply without a state is a failed read, not a TV switched off.
     if (!rawState) return null;
-    var mapped = opts.mapPowerState ? opts.mapPowerState(rawState) : null;
-    if (!mapped) return null;
+    var mapped = powerModule.mapState(rawState);
     var screenOn = !!(mapped.systemOn && mapped.screenOn);
     return { state: mapped.raw, screenOn: screenOn, systemOn: mapped.systemOn };
   });

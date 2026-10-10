@@ -15,6 +15,7 @@ var readTrimmed = require('./util').readTrimmed;
 var unlinkQuiet = require('./util').unlinkQuiet;
 var path = require('path');
 var execFile = require('child_process').execFile;
+var power = require('./power');
 
 var SCREENSAVER_APP_DIR = '/usr/palm/applications/com.webos.app.screensaver';
 var SCREENSAVER_DIR = '/var/lib/tvweb/screensaver';
@@ -69,8 +70,6 @@ var assetPathFn = null;
 var configObj = null;
 var injectKeyFn = null;
 var keyBackVal = null;
-var mapPowerStateFn = null;
-var isScreenSaverFn = null;
 var switchingSince = 0;
 
 function clearStagedScreensaver() {
@@ -111,8 +110,6 @@ function init(opts) {
   configObj = opts.config;
   injectKeyFn = opts.injectKey;
   keyBackVal = opts.KEY_BACK;
-  mapPowerStateFn = opts.mapPowerState;
-  isScreenSaverFn = opts.isScreenSaver;
 
   // Auto-heal: If the screensaver is currently stock (no active bind-mount on SCREENSAVER_APP_DIR),
   // but an orphaned marker remains in SCREENSAVER_DIR, remove it so the boot hook does not
@@ -402,7 +399,7 @@ function restageScreensaver() {
 function restartScreensaverApp(cb) {
   if (!lunaFn) return cb();
   lunaFn('com.webos.service.tvpower/power/getPowerState', {}, function (pw) {
-    var isSS = isScreenSaverFn && mapPowerStateFn && isScreenSaverFn(mapPowerStateFn(pw && pw.state));
+    var isSS = power.isScreenSaver(power.mapState(pw && pw.state));
     if (!isSS) {
       return lunaFn('com.webos.applicationManager/closeByAppId',
                     { id: 'com.webos.app.screensaver' }, function () { cb(); });
@@ -428,7 +425,7 @@ function trigger(cb) {
   // "Screen Saver Ready" until a reboot.
   if (switching()) return cb({ ok: false, error: SWITCHING_ERROR });
   lunaFn('com.webos.service.tvpower/power/getPowerState', {}, function (pw) {
-    var isSS = isScreenSaverFn && mapPowerStateFn && isScreenSaverFn(mapPowerStateFn(pw && pw.state));
+    var isSS = power.isScreenSaver(power.mapState(pw && pw.state));
     if (isSS) {
       if (!injectKeyFn || !keyBackVal) {
         return cb({ ok: false, error: 'key injection not available' });

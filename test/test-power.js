@@ -12,9 +12,6 @@ var C4_REASON = { reason: 'alwaysOn', returnValue: true };
 var C4_TIME = { returnValue: true, time: { uptime: '27196.63', ontime: '0' } };
 var UNKNOWN = { returnValue: false, errorCode: -1, errorText: 'Unknown method "getPowerOnReason" for category "/power"' };
 
-var ON = { 'Active': true, 'Screen Off': true, 'Active Standby': false, 'Suspend': false };
-function mapPowerState(raw) { return { systemOn: !!ON[raw] }; }
-
 /*
  * A TV answering from replies, a forwarder counting flushes and the lines
  * logged. Each luna answer comes on the next tick, as luna-send's would.
@@ -27,7 +24,6 @@ function fakeTv(replies) {
       process.nextTick(function () { cb(replies[uri] || null, ''); });
     },
     syslog: /** @type {any} */ ({ flush: function () { tv.flushes++; } }),
-    mapPowerState: mapPowerState,
     log: function (line) { tv.lines.push(line); },
     clock: function () { return 0; }
   });
@@ -125,7 +121,6 @@ function testAging(next) {
   var now = 5000;
   power.init({
     luna: function (uri, payload, cb) { process.nextTick(function () { cb(replies[uri], ''); }); },
-    mapPowerState: mapPowerState,
     log: function () {},
     clock: function () { return now; }
   });
@@ -149,15 +144,13 @@ function testStats(next) {
   var telemetry = require('../server/lib/telemetry');
   mockEnv.luna[REASON_URI] = C4_REASON;
   mockEnv.luna[TIME_URI] = C4_TIME;
-  power.init({ luna: mockEnv.mockLuna, syslog: null, mapPowerState: mapPowerState, clock: function () { return 0; } });
+  power.init({ luna: mockEnv.mockLuna, syslog: null, clock: function () { return 0; } });
   telemetry.init({
     luna: mockEnv.mockLuna,
     lunaCached: mockEnv.mockLunaCached,
     config: { port: 8080 },
     power: power,
-    tvwebVersion: '0.0.0',
-    mapPowerState: function (raw) { return { raw: raw, label: 'On', systemOn: true, screenOn: true }; },
-    isScreenSaver: function () { return false; }
+    tvwebVersion: '0.0.0'
   });
   power.refresh(function () {
     telemetry.collectStats(function (stats) {

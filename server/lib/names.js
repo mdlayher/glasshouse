@@ -5,6 +5,7 @@
  *
  * Strict ES5 for Node 0.12.2 on webOS 4.
  */
+var msg = require('./say').msg;
 
 function snakeCase(v) {
   return v.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
@@ -166,6 +167,60 @@ function powerOnReason(raw) {
 }
 
 /*
+ * tvpower's power state, lowercased without spaces, dashes or underscores:
+ * "Screen Saver" is screensaver. tvpower reports the panel separately from the
+ * system: a set can be "Active" with the screen lit, or "ScreenOff"
+ * with the system running and the panel blanked, which is what the Screen Off
+ * control does.
+ */
+var POWER_STATES = {
+  active: { display: msg('srv.power.on', 'On'), systemOn: true, screenOn: true },
+  on: { display: msg('srv.power.on', 'On'), systemOn: true, screenOn: true },
+  screenoff: { display: msg('srv.power.screenOff', 'Screen off'), systemOn: true, screenOn: false },
+  screensaver: { display: msg('srv.power.screenSaver', 'Screen Saver'), systemOn: true, screenOn: true },
+  // LG's Always Ready display: switched off, showing a clock or artwork.
+  alwaysready: { display: msg('srv.power.alwaysReady', 'Always Ready'), systemOn: false, screenOn: false },
+  activestandby: { display: msg('srv.power.standby', 'Standby'), systemOn: false, screenOn: false },
+  standby: { display: msg('srv.power.standby', 'Standby'), systemOn: false, screenOn: false },
+  suspend: { display: msg('srv.power.standby', 'Standby'), systemOn: false, screenOn: false },
+  preparesuspend: { display: msg('srv.power.standby', 'Standby'), systemOn: false, screenOn: false },
+  requestpoweroff: { display: msg('srv.power.off', 'Off'), systemOn: false, screenOn: false },
+  poweroff: { display: msg('srv.power.off', 'Off'), systemOn: false, screenOn: false },
+  off: { display: msg('srv.power.off', 'Off'), systemOn: false, screenOn: false },
+  prepared: { display: msg('srv.power.starting', 'Starting up'), systemOn: true, screenOn: false },
+  processing: { display: msg('srv.power.standby', 'Standby'), systemOn: false, screenOn: false }
+};
+
+// The inputs the dashboards and Home Assistant switch to, by short app id,
+// which is also their label.
+var INPUTS = {
+  hdmi1: 'HDMI 1',
+  hdmi2: 'HDMI 2',
+  hdmi3: 'HDMI 3',
+  hdmi4: 'HDMI 4',
+  livetv: 'Live TV'
+};
+
+function input(id) {
+  return { display: INPUTS.hasOwnProperty(id) ? INPUTS[id] : id, label: id };
+}
+
+/*
+ * An input in the foreground, as the TV's settings name it with the short app
+ * id after it: "Apple TV (HDMI2)". Without a name of its own it is the id.
+ */
+function inputTitle(id, name) {
+  return name && name !== id ? name + ' (' + id.toUpperCase() + ')' : id;
+}
+
+// A state outside the table, or none, is taken as system and screen off.
+function powerState(raw) {
+  var key = String(raw || '').toLowerCase().replace(/[\s_-]/g, '');
+  return POWER_STATES.hasOwnProperty(key) ? POWER_STATES[key] :
+    { display: raw || 'Unknown', systemOn: false, screenOn: false };
+}
+
+/*
  * A picture mode is the range's prefix (none, hdr, dolbyHdr) and a base mode;
  * the label is the base, since the range has its own. LG's display names are
  * no use as labels: they differ by webOS version (dolbyHdrCinema is "Cinema"
@@ -269,6 +324,59 @@ function soundOutput(raw) {
   };
 }
 
+/*
+ * What the settings service accepts for logoLuminanceAdjust, per
+ * getSystemSettingValues on a B8, and its names. "strong" is the strongest,
+ * not an on/off; the TV's own menu shows it as High.
+ */
+var LOGO_DIMMING = {
+  off: 'Off',
+  light: 'Light',
+  strong: 'High'
+};
+
+// The energy saving steps the picture service accepts, in the TV's own order.
+var ENERGY_SAVING_STEPS = ['auto', 'off', 'min', 'med', 'max', 'screen_off'];
+
+/*
+ * The panel service's Pixel Refresher status. cancel_schedule is a run queued
+ * for the next standby; anything else is Idle.
+ */
+var REFRESHER_STATUSES = {
+  cancel_schedule: 'Scheduled',
+  processing: 'Running'
+};
+
+function refresherStatus(raw) {
+  return REFRESHER_STATUSES.hasOwnProperty(raw) ? REFRESHER_STATUSES[raw] : 'Idle';
+}
+
+// The short compensation cycle, which the TV gives only as running or not.
+var COMPENSATION_STATUSES = {
+  running: { display: 'Running', detail: 'Completing Panel Maintenance (Short Cycle)' },
+  idle: { display: 'Idle', detail: 'Idle' }
+};
+
+function compensationStatus(running) {
+  return COMPENSATION_STATUSES[running ? 'running' : 'idle'];
+}
+
+// The JEDEC eMMC PRE_EOL_INFO states; other values are not defined.
+var EMMC_EOL_STATES = {
+  1: { display: 'Normal', label: 'normal' },
+  2: { display: 'Warning', label: 'warning' },
+  3: { display: 'Urgent', label: 'urgent' }
+};
+
+function emmcEol(code) {
+  return EMMC_EOL_STATES.hasOwnProperty(code) ? EMMC_EOL_STATES[code] : null;
+}
+
+// The kind of VRR in use, such as gsync, or off without one.
+function vrrType(raw) {
+  return { label: typeof raw === 'string' && raw ? snakeCase(raw) : 'off' };
+}
+
 module.exports = {
   snakeCase: snakeCase,
   mapped: mapped,
@@ -281,8 +389,22 @@ module.exports = {
   signalColorimetry: signalColorimetry,
   signalEncoding: signalEncoding,
   powerOnReason: powerOnReason,
+  INPUTS: INPUTS,
+  input: input,
+  inputTitle: inputTitle,
+  POWER_STATES: POWER_STATES,
+  powerState: powerState,
   PICTURE_MODES: PICTURE_MODES,
   pictureMode: pictureMode,
   SOUND_OUTPUTS: SOUND_OUTPUTS,
-  soundOutput: soundOutput
+  soundOutput: soundOutput,
+  LOGO_DIMMING: LOGO_DIMMING,
+  ENERGY_SAVING_STEPS: ENERGY_SAVING_STEPS,
+  REFRESHER_STATUSES: REFRESHER_STATUSES,
+  refresherStatus: refresherStatus,
+  COMPENSATION_STATUSES: COMPENSATION_STATUSES,
+  compensationStatus: compensationStatus,
+  EMMC_EOL_STATES: EMMC_EOL_STATES,
+  emmcEol: emmcEol,
+  vrrType: vrrType
 };

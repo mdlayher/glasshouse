@@ -67,6 +67,7 @@ var logsModule = require('./lib/logs');
 var syslogForwarder = require('./lib/syslog');
 var ntpClient = require('./lib/ntp');
 var power = require('./lib/power');
+var names = require('./lib/names');
 var msg = say.msg;
 var luna = lunaTransport.call;
 
@@ -430,52 +431,6 @@ var LIVE_STALE = {
   picture: ['"category":"picture"']
 };
 
-/*
- * Power state. tvpower reports the panel separately from the system: a set can
- * be "Active" with the screen lit, or "ScreenOff" with the system running and
- * the panel blanked - which is exactly what the Screen Off control does. The
- * dashboard previously showed neither, so blanking the panel changed nothing
- * on screen and the source kept reading as though something were displayed.
- */
-var POWER_STATES = {
-  'active':          [msg('srv.power.on', 'On'),          true,  true],
-  'on':              [msg('srv.power.on', 'On'),          true,  true],
-  'screenoff':       [msg('srv.power.screenOff', 'Screen off'),  true,  false],
-  'screensaver':     [msg('srv.power.screenSaver', 'Screen Saver'),true,  true],
-  // LG's Always Ready display: switched off, showing a clock or artwork.
-  'alwaysready':     [msg('srv.power.alwaysReady', 'Always Ready'), false, false],
-  'activestandby':   [msg('srv.power.standby', 'Standby'),     false, false],
-  'standby':         [msg('srv.power.standby', 'Standby'),     false, false],
-  'suspend':         [msg('srv.power.standby', 'Standby'),     false, false],
-  'preparesuspend':  [msg('srv.power.standby', 'Standby'),     false, false],
-  'requestpoweroff': [msg('srv.power.off', 'Off'),         false, false],
-  'poweroff':        [msg('srv.power.off', 'Off'),         false, false],
-  'off':             [msg('srv.power.off', 'Off'),         false, false],
-  'prepared':        [msg('srv.power.starting', 'Starting up'), true,  false],
-  'processing':      [msg('srv.power.standby', 'Standby'),     false, false]
-};
-
-/*
- * Whether a screen saver is on screen. tvpower reports it as a power state of
- * its own, which is the only source that tracks it: the foreground app does
- * not change - the screen saver draws over whatever is running - and the
- * running-apps list keeps the screen saver app long after it has gone.
- *
- * Measured on a B8: "Screen Saver" while one draws, "Active" once a key
- * dismisses it.
- */
-function isScreenSaver(ps) {
-  return !!(ps && String(ps.raw || '').toLowerCase().replace(/[\s_-]/g, '') === 'screensaver');
-}
-
-function mapPowerState(raw) {
-  var key = String(raw || '').toLowerCase().replace(/[\s_-]/g, '');
-  var m = POWER_STATES[key];
-  if (m) return { raw: raw, label: m[0], systemOn: m[1], screenOn: m[2] };
-  // Unknown or absent state: default safely to screen and system off.
-  return { raw: raw || null, label: raw || 'Unknown', systemOn: false, screenOn: false };
-}
-
 lgSettings.init({ luna: luna, lunaCached: lunaCached, clearLunaCache: clearLunaCache });
 game.init({ lunaCached: lunaCached });
 privacy.init({ luna: luna, lunaCached: lunaCached, config: CONFIG, lgSettings: lgSettings });
@@ -487,9 +442,7 @@ screensavers.init({
   assetPath: assetPath,
   config: CONFIG,
   injectKey: controls.injectKey,
-  KEY_BACK: controls.KEY_BACK,
-  mapPowerState: mapPowerState,
-  isScreenSaver: isScreenSaver
+  KEY_BACK: controls.KEY_BACK
 });
 telemetry.init({
   luna: luna,
@@ -500,14 +453,11 @@ telemetry.init({
   screensavers: screensavers,
   game: game,
   power: power,
-  tvwebVersion: TVWEB_DISPLAY_VERSION,
-  mapPowerState: mapPowerState,
-  isScreenSaver: isScreenSaver
+  tvwebVersion: TVWEB_DISPLAY_VERSION
 });
 
 var liveState = stateModule.init({
   inputNameMap: telemetry.inputNameMap,
-  mapPowerState: mapPowerState,
   formatSoundOutput: telemetry.formatSoundOutput,
   clearCache: function (group) {
     telemetry.expireStats();
@@ -544,7 +494,6 @@ var piccap = piccapTransport.init({
 var notificationState = notifications.init({ luna: luna });
 
 // ---------------------------------------------------------------- controls
-var INPUTS = ha.INPUTS;
 
 // Hiding tiles restarts the app manager at boot, the kind of step that can
 // make a boot fail, which the Homebrew Channel asks its apps not to risk.
@@ -583,7 +532,7 @@ controls.init({
   updateSummary: routes.updateSummary,
   writeSettings: routes.writeSettings,
   fromHomebrewChannel: fromHomebrewChannel,
-  inputs: INPUTS,
+  inputs: names.INPUTS,
   browserApp: BROWSER_APP,
   toastSource: TOAST_SOURCE,
   tileHidingOff: TILE_HIDING_OFF
@@ -1497,7 +1446,7 @@ if (!CLI_MODE) {
   // config it sends nothing until it has the device name to send as.
   syslogForwarder.init({ config: CONFIG });
   syslogForwarder.start();
-  power.init({ luna: luna, syslog: syslogForwarder, mapPowerState: mapPowerState });
+  power.init({ luna: luna, syslog: syslogForwarder });
   power.start();
   liveState.state.onChange(function (ev) {
     if (ev.group === 'power' && ev.key === 'state') power.stateChanged(ev.value);

@@ -109,7 +109,12 @@ instead:
 
 The receiver's PHY mode, chroma, and HDCP version are named in
 `server/lib/names.js`, which gives both the display string in `hdmi_diag` and
-the Prometheus label from the one raw value.
+the Prometheus label from the one raw value. The module holds the server's
+other tables of raw values and their names as well: the power states and
+whether each has the system and the screen on, the inputs, the picture modes,
+the sound outputs, logo dimming, the energy saving steps, the Pixel Refresher
+and compensation status, and the eMMC pre-end-of-life state. The dashboards'
+scripts run in the browser and keep their own translated names.
 
 The `port<n>` receivers are not numbered as the inputs are, and each keeps its
 link whichever input is on screen. configd holds the board's wiring as

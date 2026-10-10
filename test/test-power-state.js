@@ -8,29 +8,7 @@ var stateModule = require('../server/lib/state');
 var mqttState = require('../server/lib/mqtt-state');
 var ha = require('../server/lib/ha');
 
-// Replicate mapPowerState and POWER_STATES as defined in tvweb.js
-var POWER_STATES = {
-  'active':          ['On',          true,  true],
-  'on':              ['On',          true,  true],
-  'screenoff':       ['Screen off',  true,  false],
-  'screensaver':     ['Screen Saver',true,  true],
-  'activestandby':   ['Standby',     false, false],
-  'standby':         ['Standby',     false, false],
-  'suspend':         ['Standby',     false, false],
-  'preparesuspend':  ['Standby',     false, false],
-  'requestpoweroff': ['Off',         false, false],
-  'poweroff':        ['Off',         false, false],
-  'off':             ['Off',         false, false],
-  'prepared':        ['Starting up', true,  false],
-  'processing':      ['Standby',     false, false]
-};
-
-function mapPowerState(raw) {
-  var key = String(raw || '').toLowerCase().replace(/[\s_-]/g, '');
-  var m = POWER_STATES[key];
-  if (m) return { raw: raw, label: m[0], systemOn: m[1], screenOn: m[2] };
-  return { raw: raw || null, label: raw || 'Unknown', systemOn: false, screenOn: false };
-}
+var mapPowerState = require('../server/lib/power').mapState;
 
 // ---------------------------------------------------------------- mapPowerState
 console.log('Running test-power-state.js ...');
@@ -146,7 +124,7 @@ assert.strictEqual(defPanel.payload.name, 'OLED Display Panel');
 console.log('  ✓ ha entity name is "OLED Display Panel" on OLED and "Display Panel" on LCD');
 
 // A power reply without a state is a failed read: it leaves the TV as it was.
-var live = stateModule.init({ mapPowerState: mapPowerState });
+var live = stateModule.init({});
 var feed = live.groups.power.subscription.handlers.message;
 feed({ returnValue: true, subscribed: true });
 assert.strictEqual((live.state.snapshot().power || {}).systemOn, undefined);
@@ -159,7 +137,7 @@ console.log('  ✓ a power reply or stats read without a state does not switch t
 
 // A live event names its group, so only the reads it bears on are dropped.
 var stale = [];
-var scoped = stateModule.init({ mapPowerState: mapPowerState, clearCache: function (g) { stale.push(g); } });
+var scoped = stateModule.init({ clearCache: function (g) { stale.push(g); } });
 scoped.groups.audio.subscription.handlers.message({ returnValue: true, volume: 12, muted: false, scenario: 'mastervolume_tv_speaker' });
 scoped.groups.application.subscription.handlers.message({ returnValue: true, appId: 'netflix' });
 scoped.groups.picture.subscription.handlers.message({ returnValue: true, settings: { backlight: '80' } });
@@ -169,7 +147,7 @@ console.log('  ✓ a live event names the group that changed');
 
 // The power group runs for the power module and the MQTT bridge alike, and
 // stops only when both have stopped it.
-var shared = stateModule.init({ mapPowerState: mapPowerState });
+var shared = stateModule.init({});
 var subs = {};
 Object.keys(shared.groups).forEach(function (name) {
   var sub = shared.groups[name].subscription;

@@ -65,8 +65,7 @@ function memoryRead(s) {
   return positive(path(s, ['mem', 'total'])) !== null;
 }
 
-// The JEDEC eMMC PRE_EOL_INFO states, as telemetry names them.
-var EMMC_EOL_STATES = ['Normal', 'Warning', 'Urgent'];
+var EMMC_EOL_STATES = Object.keys(names.EMMC_EOL_STATES).map(function (code) { return names.EMMC_EOL_STATES[code]; });
 
 function hdmiLinks(s) {
   return Array.isArray(s.hdmi_links) ? s.hdmi_links : [];
@@ -232,9 +231,10 @@ var FAMILIES = [
     help: 'eMMC pre-end-of-life state from its PRE_EOL_INFO register, 1 for the current one: normal, warning (80% of reserved blocks used) or urgent (90%).',
     samples: function (s) {
       var eol = path(s, ['emmc', 'eol']);
-      if (EMMC_EOL_STATES.indexOf(eol) === -1) return [];
+      var known = EMMC_EOL_STATES.some(function (st) { return st.display === eol; });
+      if (!known) return [];
       return EMMC_EOL_STATES.map(function (st) {
-        return [{ state: st.toLowerCase() }, st === eol ? 1 : 0];
+        return [{ state: st.label }, st.display === eol ? 1 : 0];
       });
     }
   },
@@ -310,7 +310,7 @@ var FAMILIES = [
     help: '1 while a short compensation cycle is running, 0 otherwise.',
     samples: function (s) {
       var st = path(s, ['oled', 'comp_status']);
-      return one(typeof st === 'string' ? (st === 'Running' ? 1 : 0) : null);
+      return one(typeof st === 'string' ? (st === names.COMPENSATION_STATUSES.running.display ? 1 : 0) : null);
     }
   },
   {
@@ -336,12 +336,12 @@ var FAMILIES = [
   {
     name: 'glasshouse_oled_refresher_running', type: 'gauge',
     help: '1 while a Pixel Refresher run is in progress, 0 otherwise.',
-    samples: function (s) { return one(refresherStatus(s, 'Running')); }
+    samples: function (s) { return one(refresherStatus(s, names.REFRESHER_STATUSES.processing)); }
   },
   {
     name: 'glasshouse_oled_refresher_scheduled', type: 'gauge',
     help: '1 while a Pixel Refresher run is queued for the next standby, 0 otherwise.',
-    samples: function (s) { return one(refresherStatus(s, 'Scheduled')); }
+    samples: function (s) { return one(refresherStatus(s, names.REFRESHER_STATUSES.cancel_schedule)); }
   },
   {
     name: 'glasshouse_oled_failure_alerts_total', type: 'counter',
@@ -450,7 +450,7 @@ var FAMILIES = [
     samples: function (s) {
       var hz = positive(path(s, ['source_frame_rate', 'hz']));
       var type = path(s, ['source_frame_rate', 'vrr_type']);
-      return hz === null ? [] : [[{ vrr_type: typeof type === 'string' && type ? snakeCase(type) : 'off' }, hz]];
+      return hz === null ? [] : [[{ vrr_type: names.vrrType(type).label }, hz]];
     }
   },
   {

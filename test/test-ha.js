@@ -216,10 +216,6 @@ console.log('Running test-ha.js ...');
   assert.strictEqual(tmpl, "{{ (value_json.sound.output) if (value_json.sound.output) in ['TV Speaker', 'HDMI ARC'] else 'None' }}");
 
   // Output mappings
-  assert.strictEqual(ha.SOUND_OUTPUT_MAP.tv_speaker, 'TV Speaker');
-  assert.strictEqual(ha.SOUND_OUTPUT_MAP.external_arc, 'HDMI ARC');
-  assert.strictEqual(ha.PIC_MODE_MAP.cinema, 'Cinema');
-
   // appNames deduplication and collision resolution
   var apps = [
     { id: 'app.one', title: 'Media Player' },

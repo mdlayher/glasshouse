@@ -11,6 +11,7 @@
  */
 
 var monotonicMs = require('./util').monotonicMs;
+var names = require('./names');
 
 var REASON_URI = 'com.webos.service.tvpower/power/getPowerOnReason';
 var TIME_URI = 'com.webos.service.tvpower/power/getPowerOnTime';
@@ -21,7 +22,6 @@ var log = console.log;
 var clockFn = monotonicMs;
 /** @type {typeof import('./syslog')} */
 var syslogModule = null;
-var mapPowerStateFn = null;
 var onReason = null;
 var onTime = null;
 // When onTime was read, on clockFn.
@@ -125,7 +125,7 @@ function stateChanged(state) {
   // The first reading is where the TV was at start, not a transition.
   if (from === null || from === to) return;
   var line = 'power: ' + from + ' -> ' + to;
-  var turningOn = !!mapPowerStateFn && mapPowerStateFn(to).systemOn && !mapPowerStateFn(from).systemOn;
+  var turningOn = names.powerState(to).systemOn && !names.powerState(from).systemOn;
   if (!turningOn) {
     log(line);
     flush();
@@ -139,10 +139,31 @@ function stateChanged(state) {
 }
 
 /**
+ * A raw tvpower state as /api/stats gives it: label is the display name.
+ * @param {string} raw
+ */
+function mapState(raw) {
+  var name = names.powerState(raw);
+  return { raw: raw || null, label: name.display, systemOn: name.systemOn, screenOn: name.screenOn };
+}
+
+/*
+ * Whether a screen saver is on screen. tvpower reports it as a power state of
+ * its own, which is the only source that tracks it: the foreground app does
+ * not change - the screen saver draws over whatever is running - and the
+ * running-apps list keeps the screen saver app long after it has gone.
+ *
+ * Measured on a B8: "Screen Saver" while one draws, "Active" once a key
+ * dismisses it.
+ */
+function isScreenSaver(ps) {
+  return !!ps && names.powerState(ps.raw) === names.POWER_STATES.screensaver;
+}
+
+/**
  * @param {Object} opts
  * @param {function(string, Object, function(any, string=): void): void} opts.luna
  * @param {typeof import('./syslog')} opts.syslog
- * @param {function(string): {systemOn: boolean}} opts.mapPowerState
  * @param {function(string): void} [opts.log] where the lines go, for tests
  * @param {function(): number} [opts.clock] monotonic milliseconds, for tests
  */
@@ -151,7 +172,6 @@ function init(opts) {
   log = opts.log || console.log;
   clockFn = opts.clock || monotonicMs;
   syslogModule = opts.syslog || null;
-  mapPowerStateFn = opts.mapPowerState || null;
   onReason = null;
   onTime = null;
   lastState = null;
@@ -163,6 +183,8 @@ module.exports = {
   refresh: refresh,
   current: current,
   stateChanged: stateChanged,
+  mapState: mapState,
+  isScreenSaver: isScreenSaver,
   parseReason: parseReason,
   parseTime: parseTime
 };
